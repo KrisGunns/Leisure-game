@@ -161,8 +161,7 @@ class Player {
     constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.width = 36;
-        this.height = 48; // Taller, stylized proportions matching your references
+        this.size = 32;
         this.speed = 180;
     }
 
@@ -183,64 +182,29 @@ class Player {
         let nextY = this.y + dy * this.speed * dt;
 
         let padding = 30; 
-        if (nextX >= padding && nextX <= canvas.width - this.width - padding) {
+        if (nextX >= padding && nextX <= canvas.width - this.size - padding) {
             this.x = nextX;
         }
-        if (nextY >= padding && nextY <= canvas.height - this.height - padding) {
+        if (nextY >= padding && nextY <= canvas.height - this.size - padding) {
             this.y = nextY;
         }
     }
 
     draw() {
-        const px = 3; // Pixel size for the grid layout
-        
-        // Dynamic color palettes for shadows and highlights
-        const H_DARK  = '#4a2f13'; // Dark brown hair shadow
-        const H_MID   = '#664227'; // Hair midtone
-        const H_LIGHT = '#8b5a2b'; // Hair highlight
-        const S_SHAD  = '#e0a370'; // Skin shadow
-        const S_MID   = '#ffcc99'; // Skin midtone
-        const S_LIGHT = '#ffe5cc'; // Skin highlight
-        const D_SHAD  = '#dcdcdc'; // Sundress shading shadow
-        const D_MID   = '#ffffff'; // White dress fabric
-        const E_COLOR = '#333333'; // Deep charcoal eyes
-        
-        // 12x16 Sprite Pixel Map Grid Array
-        const spriteMap = [
-            [0,0,0,H_DARK,H_MID,H_MID,H_MID,H_MID,H_DARK,0,0,0],
-            [0,0,H_DARK,H_MID,H_LIGHT,H_LIGHT,H_LIGHT,H_MID,H_MID,H_DARK,0,0],
-            [0,H_DARK,H_MID,H_LIGHT,H_LIGHT,H_LIGHT,H_LIGHT,H_LIGHT,H_MID,H_MID,H_DARK,0],
-            [0,H_DARK,H_MID,H_MID,S_MID,S_MID,S_MID,S_MID,H_MID,H_MID,H_DARK,0],
-            [0,H_DARK,H_MID,S_SHAD,S_MID,S_MID,S_MID,S_MID,S_MID,H_MID,H_DARK,0],
-            [0,0,H_DARK,S_SHAD,E_COLOR,E_COLOR,S_MID,E_COLOR,E_COLOR,H_DARK,0,0],
-            [0,0,0,H_DARK,S_SHAD,S_MID,S_MID,S_SHAD,H_DARK,0,0,0],
-            [0,0,0,0,D_MID,D_MID,D_MID,D_MID,0,0,0,0],
-            [0,0,0,D_SHAD,D_MID,D_MID,D_MID,D_MID,D_SHAD,0,0,0],
-            [0,0,D_SHAD,D_MID,D_MID,D_MID,D_MID,D_MID,D_MID,D_SHAD,0,0],
-            [0,0,D_SHAD,D_MID,D_MID,D_MID,D_MID,D_MID,D_MID,D_SHAD,0,0],
-            [0,0,D_SHAD,D_SHAD,D_MID,D_MID,D_MID,D_MID,D_SHAD,D_SHAD,0,0],
-            [0,0,0,S_SHAD,D_SHAD,D_SHAD,D_SHAD,D_SHAD,S_SHAD,0,0,0],
-            [0,0,0,0,S_MID,0,0,S_MID,0,0,0,0],
-            [0,0,0,0,E_COLOR,0,0,E_COLOR,0,0,0,0],
-            [0,0,0,0,E_COLOR,0,0,E_COLOR,0,0,0,0]
-        ];
+        ctx.fillStyle = '#664227'; 
+        ctx.fillRect(this.x + 4, this.y, 24, 14);
+        ctx.fillRect(this.x, this.y + 6, 6, 22);
+        ctx.fillRect(this.x + 26, this.y + 6, 6, 22);
 
-        // Soft Standing Sprite Base Shadow Ring
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
-        ctx.beginPath();
-        ctx.ellipse(this.x + this.width / 2, this.y + this.height - 2, 14, 5, 0, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fillStyle = '#ffcc99'; 
+        ctx.fillRect(this.x + 6, this.y + 8, 20, 12);
 
-        // Draw the complete pixel array map safely onto canvas coordinates
-        for (let row = 0; row < spriteMap.length; row++) {
-            for (let col = 0; col < spriteMap[row].length; col++) {
-                const color = spriteMap[row][col];
-                if (color !== 0) {
-                    ctx.fillStyle = color;
-                    ctx.fillRect(this.x + (col * px), this.y + (row * px), px, px);
-                }
-            }
-        }
+        ctx.fillStyle = '#000000'; 
+        ctx.fillRect(this.x + 10, this.y + 11, 4, 4);
+        ctx.fillRect(this.x + 18, this.y + 11, 4, 4);
+
+        ctx.fillStyle = '#ffffff'; 
+        ctx.fillRect(this.x + 6, this.y + 20, 20, 12);
     }
 }
 
@@ -259,20 +223,15 @@ class Item {
     }
 
     draw() {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-        ctx.beginPath();
-        ctx.arc(this.x, this.y + 6, this.size / 2, 0, Math.PI * 2);
-        ctx.fill();
-
         if (this.type === 'food') {
             ctx.fillStyle = '#d35400';
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
             ctx.fill();
             ctx.fillStyle = '#f1c40f';
-            ctx.fillRect(this.x - 4, this.y - 4, 3, 3);
+            ctx.fillRect(this.x - 4, this.y - 4, 2, 2);
             ctx.fillRect(this.x + 2, this.y - 2, 2, 2);
-            ctx.fillRect(this.x - 2, this.y + 2, 3, 2);
+            ctx.fillRect(this.x - 2, this.y + 3, 2, 2);
         } else {
             ctx.fillStyle = '#3498db';
             ctx.beginPath();
@@ -281,8 +240,6 @@ class Item {
             ctx.lineTo(this.x - this.size / 2, this.y + this.size / 2);
             ctx.closePath();
             ctx.fill();
-            ctx.fillStyle = '#85c1e9';
-            ctx.fillRect(this.x - 2, this.y, 3, 4);
         }
     }
 }
@@ -294,8 +251,7 @@ class Pet {
         this.color = color;
         this.x = 200;
         this.y = 200;
-        this.width = 42;
-        this.height = 42;
+        this.size = 36;
         this.level = 1;
         this.exp = 0;
         
@@ -322,8 +278,8 @@ class Pet {
 
     pickNewWanderTarget() {
         let padding = 40;
-        this.targetX = Math.random() * (canvas.width - this.width - padding * 2) + padding;
-        this.targetY = Math.random() * (canvas.height - this.height - padding * 2) + padding;
+        this.targetX = Math.random() * (canvas.width - this.size - padding * 2) + padding;
+        this.targetY = Math.random() * (canvas.height - this.size - padding * 2) + padding;
     }
 
     update(dt, regionFoods, regionWaters) {
@@ -354,8 +310,8 @@ class Pet {
 
             if (targetItem) {
                 this.state = 'forage';
-                this.targetX = targetItem.item.x - this.width / 2;
-                this.targetY = targetItem.item.y - this.height / 2;
+                this.targetX = targetItem.item.x - this.size / 2;
+                this.targetY = targetItem.item.y - this.size / 2;
                 
                 let dx = this.targetX - this.x;
                 let dy = this.targetY - this.y;
@@ -368,7 +324,7 @@ class Pet {
                         respawnQueue.push({ type: targetItem.type, time: Date.now() + 10000 });
                         
                         if (Math.random() < 0.20) {
-                            // Pet eats item internally
+                            // Pet eats it
                         } else {
                             if (targetItem.type === 'food') inventory.food++;
                             else inventory.water++;
@@ -399,87 +355,49 @@ class Pet {
     }
 
     draw() {
-        const px = 3; 
-        let grid = [];
-        
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
-        ctx.beginPath();
-        ctx.ellipse(this.x + this.width / 2, this.y + this.height - 2, 16, 5, 0, 0, Math.PI * 2);
-        ctx.fill();
-
         if (this.type === 'dog') {
-            const G1 = '#ca9e1b'; // Darker gold shade
-            const G2 = '#f1c40f'; // Golden Retriever midtone
-            const G3 = '#fddf63'; // Cream fluff highlight
-            const BK = '#111111'; // Nose/Eyes
-            const PN = '#ff9999'; // Collar tongue accent
-            
-            grid = [
-                [0,0,0,0,0,G1,G1,G1,G1,0,0,0,0,0],
-                [0,0,0,0,G1,G2,G3,G3,G2,G1,0,0,0,0],
-                [0,0,0,G1,G2,G3,BK,G3,BK,G2,G1,0,0,0],
-                [0,0,0,G1,G1,G2,G2,BK,G2,G2,G1,0,0,0],
-                [0,0,0,0,G1,G1,PN,G2,G2,G1,G1,0,0,0],
-                [0,G1,G1,G1,G1,G2,G2,G2,G2,G2,G2,G1,G1,0],
-                [G1,G2,G2,G2,G2,G2,G3,G3,G2,G2,G2,G2,G2,G1],
-                [G1,G2,G3,G3,G2,G2,G3,G3,G2,G2,G2,G2,G2,G1],
-                [G1,G2,G2,G2,G2,G2,G2,G2,G2,G2,G2,G2,G2,G1],
-                [0,G1,G1,G2,G1,G1,G1,G1,G1,G2,G1,G1,G1,0],
-                [0,0,0,G1,BK,0,0,0,0,G1,BK,0,0,0],
-                [0,0,0,G1,BK,0,0,0,0,G1,BK,0,0,0]
-            ];
+            // Golden Retriever
+            ctx.fillStyle = '#f1c40f'; 
+            ctx.fillRect(this.x + 4, this.y + 10, 28, 18); // Body
+            ctx.fillRect(this.x + 20, this.y + 2, 10, 10); // Head
+            ctx.fillStyle = '#f39c12'; 
+            ctx.fillRect(this.x + 18, this.y + 4, 4, 10);  // Floppy Ear
+            ctx.fillRect(this.x, this.y + 12, 4, 4);       // Tail
+            ctx.fillStyle = '#000000'; 
+            ctx.fillRect(this.x + 28, this.y + 4, 2, 2);   // Eye
+            ctx.fillRect(this.x + 30, this.y + 6, 2, 2);   // Snout Nose
+            ctx.fillStyle = '#d35400'; 
+            ctx.fillRect(this.x + 6, this.y + 28, 4, 8);   // Legs
+            ctx.fillRect(this.x + 26, this.y + 28, 4, 8);
         } 
         else if (this.type === 'elephant') {
-            const E1 = '#687375'; // Elephant shadow gray
-            const E2 = '#95a5a6'; // Body gray midtone
-            const E3 = '#bdc3c7'; // Ear/Head highlight gray
-            const BK = '#222222'; // Eye
-            const WT = '#ffffff'; // Tusk white
-            
-            grid = [
-                [0,0,0,0,0,E1,E2,E2,E2,E1,0,0,0,0],
-                [0,0,0,0,E1,E2,E3,E3,E2,E2,E1,0,0,0],
-                [0,0,0,E1,E3,E3,BK,E3,E2,E2,E2,E1,0,0],
-                [0,0,0,E1,E3,E3,E3,E2,E2,E2,E1,0,0,0],
-                [0,E1,E1,E1,E1,E2,WT,E2,E1,E1,0,0,0,0],
-                [E1,E2,E2,E2,E2,E2,E2,E1,E2,E2,E1,0,0,0],
-                [E1,E2,E3,E3,E2,E2,E2,E2,E2,E2,E2,E1,0,0],
-                [E1,E2,E3,E3,E2,E2,E2,E2,E2,E2,E2,E1,0,0],
-                [E1,E2,E2,E2,E2,E2,E2,E2,E2,E2,E2,E1,0,0],
-                [0,E1,E1,E2,E1,E1,E1,E1,E2,E1,E1,0,0,0],
-                [0,0,0,E1,BK,0,0,0,E1,BK,0,0,0,0],
-                [0,0,0,E1,BK,0,0,0,E1,BK,0,0,0,0]
-            ];
+            // Baby Elephant
+            ctx.fillStyle = '#95a5a6'; 
+            ctx.fillRect(this.x + 6, this.y + 8, 24, 20);  // Body
+            ctx.fillRect(this.x + 24, this.y, 10, 12);     // Head
+            ctx.fillStyle = '#7f8c8d'; 
+            ctx.fillRect(this.x + 20, this.y + 2, 6, 12);  // Large Ear
+            ctx.fillRect(this.x + 32, this.y + 8, 4, 14);  // Curving Trunk
+            ctx.fillStyle = '#000000'; 
+            ctx.fillRect(this.x + 28, this.y + 4, 2, 2);   // Eye
+            ctx.fillStyle = '#7f8c8d'; 
+            ctx.fillRect(this.x + 8, this.y + 28, 6, 8);   // Heavy Legs
+            ctx.fillRect(this.x + 20, this.y + 28, 6, 8);
         } 
         else if (this.type === 'squirrel') {
-            const S1 = this.color === '#95a5a6' ? '#687375' : '#3d1d00'; // Shadow
-            const S2 = this.color === '#95a5a6' ? '#95a5a6' : '#5a2a00'; // Midtone
-            const S3 = this.color === '#95a5a6' ? '#bdc3c7' : '#8e4a00'; // Highlight
-            const BK = '#111111';
-            
-            grid = [
-                [0,0,0,0,0,S1,S3,0,S1,S3,0,0,0,0],
-                [0,0,0,0,S1,S2,S3,S2,S2,S3,0,0,0,0],
-                [0,0,0,0,S1,S2,BK,S3,S2,S2,0,0,0,0],
-                [0,0,0,0,0,S1,S2,S2,S2,S1,0,0,0,0],
-                [0,S1,S3,S3,0,S1,S2,S2,S1,0,0,0,0,0],
-                [S1,S2,S2,S3,S1,S2,S2,S2,S2,S1,0,0,0,0],
-                [S1,S2,S2,S2,S2,S2,S3,S3,S2,S2,S1,0,0,0],
-                [0,S1,S2,S2,S2,S2,S3,S3,S2,S2,S1,0,0,0],
-                [0,0,S1,S1,S2,S2,S2,S2,S2,S2,S1,0,0,0],
-                [0,0,0,0,S1,S1,S2,S1,S1,S2,S1,0,0,0],
-                [0,0,0,0,0,0,S1,BK,0,0,S1,BK,0,0]
-            ];
-        }
-
-        for (let row = 0; row < grid.length; row++) {
-            for (let col = 0; col < grid[row].length; col++) {
-                const colorToken = grid[row][col];
-                if (colorToken !== 0) {
-                    ctx.fillStyle = colorToken;
-                    ctx.fillRect(this.x + (col * px), this.y + (row * px), px, px);
-                }
-            }
+            // Squirrel (Grey / Brown)
+            ctx.fillStyle = this.color; 
+            ctx.fillRect(this.x + 8, this.y + 14, 16, 14);  // Body
+            ctx.fillRect(this.x + 16, this.y + 4, 10, 10);  // Head
+            ctx.fillRect(this.x + 22, this.y, 2, 4);       // Pointed Ear
+            // Bushy Curved Tail
+            ctx.fillRect(this.x + 2, this.y + 6, 6, 14);   
+            ctx.fillRect(this.x + 4, this.y + 4, 4, 4);   
+            ctx.fillStyle = '#000000'; 
+            ctx.fillRect(this.x + 22, this.y + 6, 2, 2);   // Eye
+            ctx.fillStyle = this.color === '#95a5a6' ? '#7f8c8d' : '#a04000';
+            ctx.fillRect(this.x + 10, this.y + 28, 3, 4);  // Tiny Feet
+            ctx.fillRect(this.x + 18, this.y + 28, 3, 4);
         }
 
         ctx.fillStyle = '#fff';
@@ -488,7 +406,7 @@ class Pet {
         let text = `${this.label} Lv.${this.level}`;
         if (this.level < 2) text += ` (${this.exp}/10)`;
         else text += ` [${this.state.toUpperCase()}]`;
-        ctx.fillText(text, this.x + (this.width / 2), this.y - 8);
+        ctx.fillText(text, this.x + this.size / 2, this.y - 8);
     }
 }
 
@@ -513,8 +431,8 @@ resizeCanvas();
 function checkCollisions() {
     for (let i = foods.length - 1; i >= 0; i--) {
         let f = foods[i];
-        if (player.x < f.x + 10 && player.x + player.width > f.x - 10 &&
-            player.y < f.y + 10 && player.y + player.height > f.y - 10) {
+        if (player.x < f.x + 10 && player.x + player.size > f.x - 10 &&
+            player.y < f.y + 10 && player.y + player.size > f.y - 10) {
             foods.splice(i, 1);
             inventory.food++;
             updateUI();
@@ -524,8 +442,8 @@ function checkCollisions() {
 
     for (let i = waters.length - 1; i >= 0; i--) {
         let w = waters[i];
-        if (player.x < w.x + 10 && player.x + player.width > w.x - 10 &&
-            player.y < w.y + 10 && player.y + player.height > w.y - 10) {
+        if (player.x < w.x + 10 && player.x + player.size > w.x - 10 &&
+            player.y < w.y + 10 && player.y + player.size > w.y - 10) {
             waters.splice(i, 1);
             inventory.water++;
             updateUI();
@@ -579,8 +497,8 @@ const handleInteract = (e) => {
     let activePets = petsByRegion[currentRegion];
     if (Array.isArray(activePets)) {
         activePets.forEach(pet => {
-            let dx = (pet.x + pet.width/2) - (player.x + player.width/2);
-            let dy = (pet.y + pet.height/2) - (player.y + player.height/2);
+            let dx = (pet.x + pet.size/2) - (player.x + player.size/2);
+            let dy = (pet.y + pet.size/2) - (player.y + player.size/2);
             let dist = Math.sqrt(dx*dx + dy*dy);
             if (dist < 80) {
                 pet.giveResources();
@@ -625,11 +543,12 @@ function gameLoop(timestamp) {
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Advanced Biome Ground Rendering
+        // Procedural Biome Floor Grid Generation
         if (currentRegion === 1) {
-            // Region 1: Dog Lawn Biome
+            // Lawn Grass Biome Base
             ctx.fillStyle = '#27ae60';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Grass Blade Pixel Tufts
             ctx.fillStyle = '#2ecc71';
             for (let x = 40; x < canvas.width; x += 80) {
                 for (let y = 40; y < canvas.height; y += 80) {
@@ -638,9 +557,10 @@ function gameLoop(timestamp) {
                 }
             }
         } else if (currentRegion === 2) {
-            // Region 2: Elephant Safari Sand Biome
+            // Safari Dust Biome Base
             ctx.fillStyle = '#f1c40f';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Clay Pixel Grits
             ctx.fillStyle = '#e67e22';
             for (let x = 30; x < canvas.width; x += 70) {
                 for (let y = 50; y < canvas.height; y += 70) {
@@ -649,9 +569,10 @@ function gameLoop(timestamp) {
                 }
             }
         } else if (currentRegion === 3) {
-            // Region 3: Squirrel Park Forest Biome
+            // Dark Park Forest Biome Base
             ctx.fillStyle = '#1e824c';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Mulch and Earth Speckles
             ctx.fillStyle = '#3e2723';
             for (let x = 50; x < canvas.width; x += 90) {
                 for (let y = 30; y < canvas.height; y += 90) {
@@ -661,7 +582,7 @@ function gameLoop(timestamp) {
             }
         }
 
-        // Bounding White Fence Line
+        // Bounding Fence Walls
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 4;
         ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
