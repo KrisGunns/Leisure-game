@@ -418,7 +418,7 @@ const respawnQueue = [];
 const petsByRegion = {
     1: [new Pet('dog', 'Retriever', '#f1c40f')],
     2: [new Pet('elephant', 'Elephant', '#95a5a6')],
-    3: [new Pet('squirrel', 'Squirrel A', '#95a5a6'), new Pet('squirrel', 'Squirrel B', '#e67e22')]
+    3: [new Pet('squirrel', 'Squirrel A', '#95a5a6'), new Pet('squirrel', 'Squirrel B', '#5a2a00')]
 };
 
 function resizeCanvas() {
@@ -543,7 +543,47 @@ function gameLoop(timestamp) {
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        ctx.strokeStyle = '#7f8c8d';
+        // Procedural Biome Floor Grid Generation
+        if (currentRegion === 1) {
+            // Lawn Grass Biome Base
+            ctx.fillStyle = '#27ae60';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Grass Blade Pixel Tufts
+            ctx.fillStyle = '#2ecc71';
+            for (let x = 40; x < canvas.width; x += 80) {
+                for (let y = 40; y < canvas.height; y += 80) {
+                    ctx.fillRect(x, y, 4, 12);
+                    ctx.fillRect(x + 8, y + 4, 4, 8);
+                }
+            }
+        } else if (currentRegion === 2) {
+            // Safari Dust Biome Base
+            ctx.fillStyle = '#f1c40f';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Clay Pixel Grits
+            ctx.fillStyle = '#e67e22';
+            for (let x = 30; x < canvas.width; x += 70) {
+                for (let y = 50; y < canvas.height; y += 70) {
+                    ctx.fillRect(x, y, 6, 6);
+                    ctx.fillRect(x + 12, y + 10, 4, 4);
+                }
+            }
+        } else if (currentRegion === 3) {
+            // Dark Park Forest Biome Base
+            ctx.fillStyle = '#1e824c';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Mulch and Earth Speckles
+            ctx.fillStyle = '#3e2723';
+            for (let x = 50; x < canvas.width; x += 90) {
+                for (let y = 30; y < canvas.height; y += 90) {
+                    ctx.fillRect(x, y, 8, 4);
+                    ctx.fillRect(x + 15, y + 8, 4, 4);
+                }
+            }
+        }
+
+        // Bounding Fence Walls
+        ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 4;
         ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
 
