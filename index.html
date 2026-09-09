@@ -192,19 +192,32 @@ class Player {
 
     draw() {
         ctx.fillStyle = '#664227'; 
-        ctx.fillRect(this.x + 4, this.y, 24, 14);
-        ctx.fillRect(this.x, this.y + 6, 6, 22);
-        ctx.fillRect(this.x + 26, this.y + 6, 6, 22);
+        ctx.beginPath();
+        ctx.arc(this.x + 16, this.y + 10, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillRect(this.x + 6, this.y + 10, 20, 10);
 
         ctx.fillStyle = '#ffcc99'; 
-        ctx.fillRect(this.x + 6, this.y + 8, 20, 12);
+        ctx.beginPath();
+        ctx.arc(this.x + 16, this.y + 13, 7, 0, Math.PI * 2);
+        ctx.fill();
 
         ctx.fillStyle = '#000000'; 
-        ctx.fillRect(this.x + 10, this.y + 11, 4, 4);
-        ctx.fillRect(this.x + 18, this.y + 11, 4, 4);
+        ctx.fillRect(this.x + 13, this.y + 11, 2, 3);
+        ctx.fillRect(this.x + 18, this.y + 11, 2, 3);
 
         ctx.fillStyle = '#ffffff'; 
-        ctx.fillRect(this.x + 6, this.y + 20, 20, 12);
+        ctx.beginPath();
+        ctx.moveTo(this.x + 10, this.y + 20);
+        ctx.lineTo(this.x + 22, this.y + 20);
+        ctx.lineTo(this.x + 26, this.y + 32);
+        ctx.lineTo(this.x + 6, this.y + 32);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#ffcc99';
+        ctx.fillRect(this.x + 11, this.y + 32, 3, 4);
+        ctx.fillRect(this.x + 18, this.y + 32, 3, 4);
     }
 }
 
@@ -223,23 +236,31 @@ class Item {
     }
 
     draw() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y + 6, this.size / 2, 0, Math.PI * 2);
+        ctx.fill();
+
         if (this.type === 'food') {
-            ctx.fillStyle = '#d35400';
+            ctx.fillStyle = '#f4d03f';
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
             ctx.fill();
-            ctx.fillStyle = '#f1c40f';
-            ctx.fillRect(this.x - 4, this.y - 4, 2, 2);
-            ctx.fillRect(this.x + 2, this.y - 2, 2, 2);
-            ctx.fillRect(this.x - 2, this.y + 3, 2, 2);
+            ctx.fillStyle = '#873600';
+            ctx.fillRect(this.x - 3, this.y - 3, 3, 3);
+            ctx.fillRect(this.x + 2, this.y - 1, 2, 2);
+            ctx.fillRect(this.x - 1, this.y + 2, 3, 2);
         } else {
             ctx.fillStyle = '#3498db';
             ctx.beginPath();
             ctx.moveTo(this.x, this.y - this.size / 2);
-            ctx.lineTo(this.x + this.size / 2, this.y + this.size / 2);
-            ctx.lineTo(this.x - this.size / 2, this.y + this.size / 2);
+            ctx.quadraticCurveTo(this.x + this.size / 2, this.y + this.size / 4, this.x + this.size / 2, this.y + this.size / 4);
+            ctx.arc(this.x, this.y + this.size / 4, this.size / 2, 0, Math.PI);
+            ctx.quadraticCurveTo(this.x - this.size / 2, this.y + this.size / 4, this.x, this.y - this.size / 2);
             ctx.closePath();
             ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(this.x - 2, this.y, 2, 4);
         }
     }
 }
@@ -356,48 +377,64 @@ class Pet {
 
     draw() {
         if (this.type === 'dog') {
-            // Golden Retriever
             ctx.fillStyle = '#f1c40f'; 
-            ctx.fillRect(this.x + 4, this.y + 10, 28, 18); // Body
-            ctx.fillRect(this.x + 20, this.y + 2, 10, 10); // Head
+            ctx.fillRect(this.x + 4, this.y + 10, 26, 16); 
+            ctx.fillRect(this.x + 18, this.y + 2, 10, 10); 
             ctx.fillStyle = '#f39c12'; 
-            ctx.fillRect(this.x + 18, this.y + 4, 4, 10);  // Floppy Ear
-            ctx.fillRect(this.x, this.y + 12, 4, 4);       // Tail
+            ctx.fillRect(this.x + 16, this.y + 4, 4, 8);  
             ctx.fillStyle = '#000000'; 
-            ctx.fillRect(this.x + 28, this.y + 4, 2, 2);   // Eye
-            ctx.fillRect(this.x + 30, this.y + 6, 2, 2);   // Snout Nose
+            ctx.fillRect(this.x + 25, this.y + 4, 2, 2);   
+            ctx.fillRect(this.x + 27, this.y + 6, 2, 2);   
             ctx.fillStyle = '#d35400'; 
-            ctx.fillRect(this.x + 6, this.y + 28, 4, 8);   // Legs
-            ctx.fillRect(this.x + 26, this.y + 28, 4, 8);
+            ctx.fillRect(this.x + 6, this.y + 26, 4, 6);   
+            ctx.fillRect(this.x + 22, this.y + 26, 4, 6);
+            ctx.fillStyle = '#f1c40f';
+            ctx.beginPath();
+            ctx.moveTo(this.x + 4, this.y + 12);
+            ctx.quadraticCurveTo(this.x - 6, this.y + 4, this.x - 4, this.y);
+            ctx.lineTo(this.x - 1, this.y + 1);
+            ctx.quadraticCurveTo(this.x - 3, this.y + 6, this.x + 6, this.y + 14);
+            ctx.closePath();
+            ctx.fill();
         } 
         else if (this.type === 'elephant') {
-            // Baby Elephant
             ctx.fillStyle = '#95a5a6'; 
-            ctx.fillRect(this.x + 6, this.y + 8, 24, 20);  // Body
-            ctx.fillRect(this.x + 24, this.y, 10, 12);     // Head
+            ctx.fillRect(this.x + 6, this.y + 8, 24, 18);  
+            ctx.fillRect(this.x + 22, this.y + 2, 10, 10);     
             ctx.fillStyle = '#7f8c8d'; 
-            ctx.fillRect(this.x + 20, this.y + 2, 6, 12);  // Large Ear
-            ctx.fillRect(this.x + 32, this.y + 8, 4, 14);  // Curving Trunk
+            ctx.fillRect(this.x + 18, this.y + 4, 6, 10);  
             ctx.fillStyle = '#000000'; 
-            ctx.fillRect(this.x + 28, this.y + 4, 2, 2);   // Eye
+            ctx.fillRect(this.x + 28, this.y + 4, 2, 2);   
             ctx.fillStyle = '#7f8c8d'; 
-            ctx.fillRect(this.x + 8, this.y + 28, 6, 8);   // Heavy Legs
-            ctx.fillRect(this.x + 20, this.y + 28, 6, 8);
+            ctx.fillRect(this.x + 8, this.y + 26, 5, 6);   
+            ctx.fillRect(this.x + 20, this.y + 26, 5, 6);
+            ctx.fillRect(this.x + 5, this.y + 14, 2, 6);
+            ctx.fillStyle = '#95a5a6';
+            ctx.beginPath();
+            ctx.moveTo(this.x + 30, this.y + 10);
+            ctx.lineTo(this.x + 35, this.y + 18);
+            ctx.lineTo(this.x + 33, this.y + 19);
+            ctx.lineTo(this.x + 29, this.y + 12);
+            ctx.closePath();
+            ctx.fill();
         } 
         else if (this.type === 'squirrel') {
-            // Squirrel (Grey / Brown)
             ctx.fillStyle = this.color; 
-            ctx.fillRect(this.x + 8, this.y + 14, 16, 14);  // Body
-            ctx.fillRect(this.x + 16, this.y + 4, 10, 10);  // Head
-            ctx.fillRect(this.x + 22, this.y, 2, 4);       // Pointed Ear
-            // Bushy Curved Tail
-            ctx.fillRect(this.x + 2, this.y + 6, 6, 14);   
-            ctx.fillRect(this.x + 4, this.y + 4, 4, 4);   
+            ctx.fillRect(this.x + 8, this.y + 14, 16, 12);  
+            ctx.fillRect(this.x + 14, this.y + 6, 10, 10);  
+            ctx.fillRect(this.x + 20, this.y + 2, 2, 4);       
             ctx.fillStyle = '#000000'; 
-            ctx.fillRect(this.x + 22, this.y + 6, 2, 2);   // Eye
-            ctx.fillStyle = this.color === '#95a5a6' ? '#7f8c8d' : '#a04000';
-            ctx.fillRect(this.x + 10, this.y + 28, 3, 4);  // Tiny Feet
-            ctx.fillRect(this.x + 18, this.y + 28, 3, 4);
+            ctx.fillRect(this.x + 20, this.y + 8, 2, 2);   
+            ctx.fillStyle = this.color === '#d35400' ? '#7f8c8d' : '#3d1d00';
+            ctx.fillRect(this.x + 10, this.y + 26, 3, 4);  
+            ctx.fillRect(this.x + 18, this.y + 26, 3, 4);
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.moveTo(this.x + 10, this.y + 24);
+            ctx.quadraticCurveTo(this.x + 2, this.y + 16, this.x + 4, this.y + 6);
+            ctx.quadraticCurveTo(this.x + 10, this.y + 8, this.x + 12, this.y + 18);
+            ctx.closePath();
+            ctx.fill();
         }
 
         ctx.fillStyle = '#fff';
@@ -406,7 +443,7 @@ class Pet {
         let text = `${this.label} Lv.${this.level}`;
         if (this.level < 2) text += ` (${this.exp}/10)`;
         else text += ` [${this.state.toUpperCase()}]`;
-        ctx.fillText(text, this.x + this.size / 2, this.y - 8);
+        ctx.fillText(text, this.x + (this.size / 2), this.y - 8);
     }
 }
 
@@ -418,7 +455,7 @@ const respawnQueue = [];
 const petsByRegion = {
     1: [new Pet('dog', 'Retriever', '#f1c40f')],
     2: [new Pet('elephant', 'Elephant', '#95a5a6')],
-    3: [new Pet('squirrel', 'Squirrel A', '#95a5a6'), new Pet('squirrel', 'Squirrel B', '#5a2a00')]
+    3: [new Pet('squirrel', 'Squirrel A', '#d35400'), new Pet('squirrel', 'Squirrel B', '#5a2a00')]
 };
 
 function resizeCanvas() {
@@ -543,12 +580,11 @@ function gameLoop(timestamp) {
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Procedural Biome Floor Grid Generation
+        // Advanced Biome Ground Rendering
         if (currentRegion === 1) {
-            // Lawn Grass Biome Base
+            // Region 1: Dog Lawn Biome
             ctx.fillStyle = '#27ae60';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            // Grass Blade Pixel Tufts
             ctx.fillStyle = '#2ecc71';
             for (let x = 40; x < canvas.width; x += 80) {
                 for (let y = 40; y < canvas.height; y += 80) {
@@ -557,10 +593,9 @@ function gameLoop(timestamp) {
                 }
             }
         } else if (currentRegion === 2) {
-            // Safari Dust Biome Base
+            // Region 2: Elephant Safari Sand Biome
             ctx.fillStyle = '#f1c40f';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            // Clay Pixel Grits
             ctx.fillStyle = '#e67e22';
             for (let x = 30; x < canvas.width; x += 70) {
                 for (let y = 50; y < canvas.height; y += 70) {
@@ -569,10 +604,9 @@ function gameLoop(timestamp) {
                 }
             }
         } else if (currentRegion === 3) {
-            // Dark Park Forest Biome Base
+            // Region 3: Squirrel Park Forest Biome
             ctx.fillStyle = '#1e824c';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            // Mulch and Earth Speckles
             ctx.fillStyle = '#3e2723';
             for (let x = 50; x < canvas.width; x += 90) {
                 for (let y = 30; y < canvas.height; y += 90) {
@@ -582,7 +616,7 @@ function gameLoop(timestamp) {
             }
         }
 
-        // Bounding Fence Walls
+        // Bounding White Fence Line
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 4;
         ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
