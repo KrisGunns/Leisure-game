@@ -145,6 +145,7 @@ const lblWater = document.getElementById('lblWater');
 const regionSelector = document.getElementById('regionSelector');
 
 let currentRegion = 1;
+let spawnTimer = 0;
 let lastTime = 0;
 const targetFPS = 60;
 const frameInterval = 1000 / targetFPS;
@@ -489,18 +490,26 @@ function checkCollisions() {
     }
 }
 
-function processSpawns() {
+function processSpawns(dt) {
     let now = Date.now();
     for (let i = respawnQueue.length - 1; i >= 0; i--) {
         if (now >= respawnQueue[i].time) {
-            if (respawnQueue[i].type === 'food' && foods.length < 10) {
+            if (respawnQueue[i].type === 'food' && foods.length < 5) {
                 foods.push(new Item('food'));
-            } else if (respawnQueue[i].type === 'water' && waters.length < 10) {
+            } else if (respawnQueue[i].type === 'water' && waters.length < 5) {
                 waters.push(new Item('water'));
             }
             respawnQueue.splice(i, 1);
         }
     }
+
+    spawnTimer += dt;
+    if (spawnTimer >= 10) {
+        if (foods.length < 5) foods.push(new Item('food'));
+        if (waters.length < 5) waters.push(new Item('water'));
+        spawnTimer = 0;
+    }
+}
 
     while (foods.length < 10) foods.push(new Item('food'));
     while (waters.length < 10) waters.push(new Item('water'));
@@ -580,9 +589,7 @@ function gameLoop(timestamp) {
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Advanced Biome Ground Rendering
         if (currentRegion === 1) {
-            // Region 1: Dog Lawn Biome
             ctx.fillStyle = '#27ae60';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = '#2ecc71';
@@ -593,7 +600,6 @@ function gameLoop(timestamp) {
                 }
             }
         } else if (currentRegion === 2) {
-            // Region 2: Elephant Safari Sand Biome
             ctx.fillStyle = '#f1c40f';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = '#e67e22';
@@ -604,7 +610,6 @@ function gameLoop(timestamp) {
                 }
             }
         } else if (currentRegion === 3) {
-            // Region 3: Squirrel Park Forest Biome
             ctx.fillStyle = '#1e824c';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = '#3e2723';
@@ -621,7 +626,7 @@ function gameLoop(timestamp) {
         ctx.lineWidth = 4;
         ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
 
-        processSpawns();
+        processSpawns(dt);
         player.update(dt);
         checkCollisions();
 
