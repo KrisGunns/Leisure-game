@@ -201,25 +201,8 @@
         }
         .codexTamed { color: #2ecc71; font-weight: bold; }
         .codexWild { color: #95a5a6; font-weight: bold; }
-         .codexWild { color: #95a5a6; font-weight: bold; }
-        @media (orientation: portrait) {
-            #gameContainer { display: none !important; }
-            body::after {
-                content: "🔄 Please rotate your device to landscape mode to play!";
-                position: fixed;
-                top: 0; left: 0; right: 0; bottom: 0;
-                background: #111;
-                color: #fff;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                font-family: monospace;
-                font-size: 16px;
-                text-align: center;
-                padding: 20px;
-                z-index: 99999;
-            }
-        }
+        .codexWild { color: #95a5a6; font-weight: bold; }
+        .codexWild { color: #95a5a6; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -236,8 +219,9 @@
         </div>
     </div>
 
-    <div id="canvasWrapper">
+        <div id="canvasWrapper">
         <canvas id="gameCanvas"></canvas>
+
         <div id="utilityContainer">
             <div id="whistleBtn" class="utilBtn">WHISTLE</div>
             <div id="openCodexBtn" class="utilBtn">🎒 PETS</div>
@@ -248,7 +232,6 @@
                 <h2>🐾 PETS CODEX</h2>
                 <button id="codexClose">X</button>
             </div>
-
             <div id="codexList">
                 <div class="codexEntry">
                     <canvas id="viewDog" class="codexCanvasView"></canvas>
@@ -281,6 +264,7 @@
                     </div>
                 </div>
             </div>
+        </div>
 
         <div id="dpad">
             <div id="btnUp" class="dbtn">▲</div>
@@ -293,6 +277,7 @@
 </div>
 
 <script>
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const lblFood = document.getElementById('lblFood');
