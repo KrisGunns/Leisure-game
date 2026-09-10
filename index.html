@@ -109,6 +109,97 @@
         #interactBtn:active {
             background: rgba(211, 84, 0, 1);
         }
+                #interactBtn:active {
+            background: rgba(211, 84, 0, 1);
+        }
+        #utilityContainer {
+            position: absolute;
+            bottom: 200px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .utilBtn {
+            background: rgba(44, 62, 80, 0.9);
+            border: 2px solid #34495e;
+            border-radius: 8px;
+            color: #fff;
+            padding: 10px 16px;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            pointer-events: auto;
+        }
+        .utilBtn:active {
+            background: #34495e;
+        }
+        #codexOverlay {
+            display: none;
+            position: absolute;
+            top: 50px;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(20, 20, 20, 0.95);
+            border: 3px solid #444;
+            border-radius: 12px;
+            color: #fff;
+            z-index: 100;
+            flex-direction: column;
+            padding: 15px;
+        }
+        #codexHeader {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #444;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        #codexClose {
+            background: #c0392b;
+            border: none;
+            color: white;
+            padding: 4px 10px;
+            font-weight: bold;
+            border-radius: 4px;
+        }
+        #codexClose:active {
+            background: #e74c3c;
+        }
+        #codexList {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .codexEntry {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .codexCanvasView {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid #555;
+            border-radius: 6px;
+            width: 70px;
+            height: 70px;
+            flex-shrink: 0;
+        }
+        .codexInfo {
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .codexTamed { color: #2ecc71; font-weight: bold; }
+        .codexWild { color: #95a5a6; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -126,6 +217,31 @@
     </div>
     <div id="canvasWrapper">
         <canvas id="gameCanvas"></canvas>
+        <div id="utilityContainer">
+            <div id="whistleBtn" class="utilBtn">WHISTLE</div>
+            <div id="openCodexBtn" class="utilBtn">🎒 PETS</div>
+        </div>
+
+        <div id="codexOverlay">
+            <div id="codexHeader">
+                <h2>🐾 PETS CODEX</h2>
+                <button id="codexClose">X</button>
+            </div>
+            <div id="codexList">
+                <div class="codexEntry">
+                    <canvas id="viewDog" class="codexCanvasView"></canvas>
+                    <div id="infoDog" class="codexInfo"></div>
+                </div>
+                <div class="codexEntry">
+                    <canvas id="viewElephant" class="codexCanvasView"></canvas>
+                    <div id="infoElephant" class="codexInfo"></div>
+                </div>
+                <div class="codexEntry">
+                    <canvas id="viewSquirrel" class="codexCanvasView"></canvas>
+                    <div id="infoSquirrel" class="codexInfo"></div>
+                </div>
+            </div>
+        </div>
         <div id="dpad">
             <div id="btnUp" class="dbtn">▲</div>
             <div id="btnLeft" class="dbtn">◀</div>
@@ -313,7 +429,19 @@ class Pet {
         update(dt, regionFoods, regionWaters) {
         if (this.level < 2) return;
 
+        if (this.state === 'whistled') {
+            let dx = player.x - this.x;
+            let dy = player.y - this.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist > 60) {
+                this.x += (dx / dist) * this.speed * dt;
+                this.y += (dy / dist) * this.speed * dt;
+            }
+            return;
+        }
+
         this.stateTimer -= dt;
+
         if (this.state === 'idle') {
             if (this.stateTimer <= 0) {
                 this.state = 'wander';
@@ -591,6 +719,14 @@ regionSelector.addEventListener('change', (e) => {
     currentRegion = parseInt(e.target.value);
     foods = regionalItems[currentRegion].foods;
     waters = regionalItems[currentRegion].waters;
+
+    regionSelector.addEventListener('change', (e) => {
+    currentRegion = parseInt(e.target.value);
+    foods = regionalItems[currentRegion].foods;
+    waters = regionalItems[currentRegion].waters;
+    whistleBtn.textContent = 'WHISTLE';
+});
+
 });
 
 
@@ -616,6 +752,26 @@ bindInput('btnUp', 'up');
 bindInput('btnDown', 'down');
 bindInput('btnLeft', 'left');
 bindInput('btnRight', 'right');
+
+const whistleBtn = document.getElementById('whistleBtn');
+whistleBtn.addEventListener('click', () => {
+    let activePets = petsByRegion[currentRegion];
+    if (!Array.isArray(activePets)) return;
+
+    activePets.forEach(pet => {
+        if (pet.level < 2) return;
+
+        if (pet.state !== 'whistled') {
+            pet.state = 'whistled';
+            whistleBtn.textContent = 'RETURN';
+        } else {
+            pet.state = 'wander';
+            pet.pickNewWanderTarget();
+            whistleBtn.textContent = 'WHISTLE';
+        }
+    });
+});
+
 
 const handleInteract = (e) => {
     if(e) e.preventDefault();
@@ -721,6 +877,84 @@ function gameLoop(timestamp) {
     }
     requestAnimationFrame(gameLoop);
 }
+
+const codexOverlay = document.getElementById('codexOverlay');
+const openCodexBtn = document.getElementById('openCodexBtn');
+const codexClose = document.getElementById('codexClose');
+
+function renderMiniPet(pet, elementId) {
+    const miniCanvas = document.getElementById(elementId);
+    const mctx = miniCanvas.getContext('2d');
+    miniCanvas.width = 70;
+    miniCanvas.height = 70;
+    mctx.clearRect(0, 0, 70, 70);
+    
+    let savedX = pet.x;
+    let savedY = pet.y;
+    let savedCtx = ctx;
+    
+    pet.x = 17;
+    pet.y = 17;
+    ctx = mctx;
+    
+    if (pet.level < 2) {
+        mctx.fillStyle = '#111';
+        mctx.fillRect(0, 0, 70, 70);
+        mctx.fillStyle = 'rgba(255,255,255,0.1)';
+        mctx.font = '24px monospace';
+        mctx.textAlign = 'center';
+        mctx.textBaseline = 'middle';
+        mctx.fillText('?', 35, 35);
+    } else {
+        pet.draw();
+        mctx.fillStyle = 'rgba(255,255,255,0.1)';
+        mctx.fillRect(0, 0, 70, 70);
+    }
+    
+    pet.x = savedX;
+    pet.y = savedY;
+    ctx = savedCtx;
+}
+
+function updateCodexData() {
+    const dog = petsByRegion[1][0];
+    const elephant = petsByRegion[2][0];
+    const squirrel = petsByRegion[3][0];
+
+    renderMiniPet(dog, 'viewDog');
+    renderMiniPet(elephant, 'viewElephant');
+    renderMiniPet(squirrel, 'viewSquirrel');
+
+    document.getElementById('infoDog').innerHTML = `
+        <strong>${dog.label}</strong><br>
+        Status: <span class="${dog.level >= 2 ? 'codexTamed' : 'codexWild'}">${dog.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
+        Level: ${dog.level}/5<br>
+        Next: ${dog.level < 5 ? '🍪' + levelRequirements.dog[dog.level - 1].food + ' 💧' + levelRequirements.dog[dog.level - 1].water : 'MAX'}
+    `;
+
+    document.getElementById('infoElephant').innerHTML = `
+        <strong>${elephant.label}</strong><br>
+        Status: <span class="${elephant.level >= 2 ? 'codexTamed' : 'codexWild'}">${elephant.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
+        Level: ${elephant.level}/5<br>
+        Next: ${elephant.level < 5 ? '🍪' + levelRequirements.elephant[elephant.level - 1].food + ' 💧' + levelRequirements.elephant[elephant.level - 1].water : 'MAX'}
+    `;
+
+    document.getElementById('infoSquirrel').innerHTML = `
+        <strong>Squirrel Duo</strong><br>
+        Status: <span class="${squirrel.level >= 2 ? 'codexTamed' : 'codexWild'}">${squirrel.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
+        Level: ${squirrel.level}/5<br>
+        Next: ${squirrel.level < 5 ? '🍪' + levelRequirements.squirrel[squirrel.level - 1].food + ' 💧' + levelRequirements.squirrel[squirrel.level - 1].water : 'MAX'}
+    `;
+}
+
+openCodexBtn.addEventListener('click', () => {
+    updateCodexData();
+    codexOverlay.style.display = 'flex';
+});
+
+codexClose.addEventListener('click', () => {
+    codexOverlay.style.display = 'none';
+});
 
 updateUI();
 requestAnimationFrame(gameLoop);
