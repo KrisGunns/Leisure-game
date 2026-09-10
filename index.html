@@ -451,10 +451,42 @@ class Pet {
         ctx.fillStyle = '#fff';
         ctx.font = '10px monospace';
         ctx.textAlign = 'center';
+        
         let text = `${this.label} Lv.${this.level}`;
-        if (this.level < 2) text += ` (${this.exp}/10)`;
-        else text += ` [${this.state.toUpperCase()}]`;
-        ctx.fillText(text, this.x + (this.size / 2), this.y - 8);
+        if (this.level >= 5) {
+            text += ' [MAX]';
+        } else if (this.level > 1) {
+            text += ` [${this.state.toUpperCase()}]`;
+        }
+        ctx.fillText(text, this.x + (this.size / 2), this.y - 16);
+
+        if (this.level < 5) {
+            let req = levelRequirements[this.type][this.level - 1];
+            let totalNeeded = req.food + req.water;
+            let totalEaten = this.foodEaten + this.waterEaten;
+            let progressRatio = totalEaten / totalNeeded;
+
+            let barWidth = this.size + 8;
+            let barHeight = 4;
+            let barX = this.x + (this.size / 2) - (barWidth / 2);
+            let barY = this.y - 10;
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(barX, barY, barWidth, barHeight);
+
+            let grad = ctx.createLinearGradient(barX, 0, barX + barWidth, 0);
+            grad.addColorStop(0, '#e67e22');
+            grad.addColorStop(1, '#f1c40f');
+
+            ctx.fillStyle = grad;
+            ctx.fillRect(barX, barY, barWidth * progressRatio, barHeight);
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(barX, barY, barWidth, barHeight);
+        }
+
+
     }
 }
 const player = new Player(100, 100);
