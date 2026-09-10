@@ -951,20 +951,10 @@ const codexClose = document.getElementById('codexClose');
 
 function renderMiniPet(pet, elementId) {
     const miniCanvas = document.getElementById(elementId);
-    if (!miniCanvas) return;
     const mctx = miniCanvas.getContext('2d');
     miniCanvas.width = 70;
     miniCanvas.height = 70;
     mctx.clearRect(0, 0, 70, 70);
-    
-    mctx.fillStyle = '#111';
-    mctx.fillRect(0, 0, 70, 70);
-    mctx.fillStyle = 'rgba(255,255,255,0.15)';
-    mctx.font = '20px monospace';
-    mctx.textAlign = 'center';
-    mctx.textBaseline = 'middle';
-    mctx.fillText(pet.level >= 2 ? '🐾' : '❓', 35, 35);
-}
     
     if (pet.level < 2) {
         mctx.fillStyle = '#111';
