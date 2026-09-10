@@ -925,14 +925,73 @@ function renderMiniPet(pet, elementId) {
         
         let savedCtx = ctx;
         ctx = mctx;
-        tempPet.draw();
-        ctx = savedCtx;
         
+        if (tempPet.type === 'dog') {
+            ctx.fillStyle = '#f1c40f'; 
+            ctx.fillRect(tempPet.x + 4, tempPet.y + 10, 26, 16); 
+            ctx.fillRect(tempPet.x + 18, tempPet.y + 2, 10, 10); 
+            ctx.fillStyle = '#f39c12'; 
+            ctx.fillRect(tempPet.x + 16, tempPet.y + 4, 4, 8);  
+            ctx.fillStyle = '#000000'; 
+            ctx.fillRect(tempPet.x + 25, tempPet.y + 4, 2, 2);   
+            ctx.fillRect(tempPet.x + 27, tempPet.y + 6, 2, 2);   
+            ctx.fillStyle = '#d35400'; 
+            ctx.fillRect(tempPet.x + 6, tempPet.y + 26, 4, 6);   
+            ctx.fillRect(tempPet.x + 22, tempPet.y + 26, 4, 6);
+            ctx.fillStyle = '#f1c40f';
+            ctx.beginPath();
+            ctx.moveTo(tempPet.x + 4, tempPet.y + 12);
+            ctx.quadraticCurveTo(tempPet.x - 6, tempPet.y + 4, tempPet.x - 4, tempPet.y);
+            ctx.lineTo(tempPet.x - 1, tempPet.y + 1);
+            ctx.quadraticCurveTo(tempPet.x - 3, tempPet.y + 6, tempPet.x + 6, tempPet.y + 14);
+            ctx.closePath();
+            ctx.fill();
+        } 
+        else if (tempPet.type === 'elephant') {
+            ctx.fillStyle = '#95a5a6'; 
+            ctx.fillRect(tempPet.x + 6, tempPet.y + 8, 24, 18);  
+            ctx.fillRect(tempPet.x + 22, tempPet.y + 2, 10, 10);     
+            ctx.fillStyle = '#7f8c8d'; 
+            ctx.fillRect(tempPet.x + 18, tempPet.y + 4, 6, 10);  
+            ctx.fillStyle = '#000000'; 
+            ctx.fillRect(tempPet.x + 28, tempPet.y + 4, 2, 2);   
+            ctx.fillStyle = '#7f8c8d'; 
+            ctx.fillRect(tempPet.x + 8, tempPet.y + 26, 5, 6);   
+            ctx.fillRect(tempPet.x + 20, tempPet.y + 26, 5, 6);
+            ctx.fillRect(tempPet.x + 5, tempPet.y + 14, 2, 6);
+            ctx.fillStyle = '#95a5a6';
+            ctx.beginPath();
+            ctx.moveTo(tempPet.x + 30, tempPet.y + 10);
+            ctx.lineTo(tempPet.x + 35, tempPet.y + 18);
+            ctx.lineTo(tempPet.x + 33, tempPet.y + 19);
+            ctx.lineTo(tempPet.x + 29, tempPet.y + 12);
+            ctx.closePath();
+            ctx.fill();
+        } 
+        else if (tempPet.type === 'squirrel') {
+            ctx.fillStyle = tempPet.color; 
+            ctx.fillRect(tempPet.x + 8, tempPet.y + 14, 16, 12);  
+            ctx.fillRect(tempPet.x + 14, tempPet.y + 6, 10, 10);  
+            ctx.fillRect(tempPet.x + 20, tempPet.y + 2, 2, 4);       
+            ctx.fillStyle = '#000000'; 
+            ctx.fillRect(tempPet.x + 20, tempPet.y + 8, 2, 2);   
+            ctx.fillStyle = tempPet.color === '#d35400' ? '#7f8c8d' : '#3d1d00';
+            ctx.fillRect(tempPet.x + 10, tempPet.y + 26, 3, 4);  
+            ctx.fillRect(tempPet.x + 18, tempPet.y + 26, 3, 4);
+            ctx.fillStyle = tempPet.color;
+            ctx.beginPath();
+            ctx.moveTo(tempPet.x + 10, tempPet.y + 24);
+            ctx.quadraticCurveTo(tempPet.x + 2, tempPet.y + 16, tempPet.x + 4, tempPet.y + 6);
+            ctx.quadraticCurveTo(tempPet.x + 10, tempPet.y + 8, tempPet.x + 12, tempPet.y + 18);
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        ctx = savedCtx;
         mctx.fillStyle = 'rgba(255,255,255,0.1)';
         mctx.fillRect(0, 0, 70, 70);
     }
 }
-
 
 function updateCodexData() {
     const dog = petsByRegion[1][0];
@@ -944,24 +1003,24 @@ function updateCodexData() {
     renderMiniPet(squirrel, 'viewSquirrel');
 
     document.getElementById('infoDog').innerHTML = `
-        <strong>${dog.label}</strong><br>
+        <strong>${dog.level >= 2 ? dog.label : '???'}</strong><br>
         Status: <span class="${dog.level >= 2 ? 'codexTamed' : 'codexWild'}">${dog.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
         Level: ${dog.level}/5<br>
-        Next: ${dog.level < 5 ? '🍪' + levelRequirements.dog[dog.level - 1].food + ' 💧' + levelRequirements.dog[dog.level - 1].water : 'MAX'}
+        Next Req: ${dog.level < 5 ? '🍪' + levelRequirements.dog[dog.level - 1].food + ' 💧' + levelRequirements.dog[dog.level - 1].water : 'MAX'}
     `;
 
     document.getElementById('infoElephant').innerHTML = `
-        <strong>${elephant.label}</strong><br>
+        <strong>${elephant.level >= 2 ? elephant.label : '???'}</strong><br>
         Status: <span class="${elephant.level >= 2 ? 'codexTamed' : 'codexWild'}">${elephant.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
         Level: ${elephant.level}/5<br>
-        Next: ${elephant.level < 5 ? '🍪' + levelRequirements.elephant[elephant.level - 1].food + ' 💧' + levelRequirements.elephant[elephant.level - 1].water : 'MAX'}
+        Next Req: ${elephant.level < 5 ? '🍪' + levelRequirements.elephant[elephant.level - 1].food + ' 💧' + levelRequirements.elephant[elephant.level - 1].water : 'MAX'}
     `;
 
     document.getElementById('infoSquirrel').innerHTML = `
-        <strong>Squirrel Duo</strong><br>
+        <strong>${squirrel.level >= 2 ? 'Squirrel Duo' : '???'}</strong><br>
         Status: <span class="${squirrel.level >= 2 ? 'codexTamed' : 'codexWild'}">${squirrel.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
         Level: ${squirrel.level}/5<br>
-        Next: ${squirrel.level < 5 ? '🍪' + levelRequirements.squirrel[squirrel.level - 1].food + ' 💧' + levelRequirements.squirrel[squirrel.level - 1].water : 'MAX'}
+        Next Req: ${squirrel.level < 5 ? '🍪' + levelRequirements.squirrel[squirrel.level - 1].food + ' 💧' + levelRequirements.squirrel[squirrel.level - 1].water : 'MAX'}
     `;
 }
 
