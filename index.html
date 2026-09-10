@@ -491,16 +491,6 @@ class Pet {
 }
 const player = new Player(100, 100);
 const respawnQueue = [];
-
-const regionalItems = {
-    1: { foods: [], waters: [] },
-    2: { foods: [], waters: [] },
-    3: { foods: [], waters: [] }
-};
-
-let foods = regionalItems[currentRegion].foods;
-let waters = regionalItems[currentRegion].waters;
-
 const levelRequirements = {
     dog: [
         { food: 5, water: 5 },
@@ -521,6 +511,15 @@ const levelRequirements = {
         { food: 200, water: 100 }
     ]
 };
+
+const regionalItems = {
+    1: { foods: [], waters: [] },
+    2: { foods: [], waters: [] },
+    3: { foods: [], waters: [] }
+};
+
+let foods = regionalItems[currentRegion].foods;
+let waters = regionalItems[currentRegion].waters;
 
 const petsByRegion = {
     1: [new Pet('dog', 'Retriever', '#f1c40f')],
