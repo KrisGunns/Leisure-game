@@ -226,15 +226,16 @@
 
 <div id="gameContainer">
     <div id="topBar">
-        <div>🎒 Cookies: <span id="lblFood">0</span> | Water: <span id="lblWater">0</span></div>
+        <div>🎒 Food: <span id="lblFood">0</span> | Water: <span id="lblWater">0</span></div>
         <div>
             🗺️ <select id="regionSelector">
-                <option value="1">Region 1 (Dog)</option>
-                <option value="2">Region 2 (Elephant)</option>
-                <option value="3">Region 3 (Squirrels)</option>
+                <option value="1">Region 1</option>
+                <option value="2">Region 2</option>
+                <option value="3">Region 3</option>
             </select>
         </div>
     </div>
+
     <div id="canvasWrapper">
         <canvas id="gameCanvas"></canvas>
         <div id="utilityContainer">
@@ -247,21 +248,40 @@
                 <h2>🐾 PETS CODEX</h2>
                 <button id="codexClose">X</button>
             </div>
+
             <div id="codexList">
                 <div class="codexEntry">
                     <canvas id="viewDog" class="codexCanvasView"></canvas>
-                    <div id="infoDog" class="codexInfo"></div>
+                    <div>
+                        <div id="infoDog" class="codexInfo"></div>
+                        <div id="renameBoxDog" style="margin-top: 6px; display: none;">
+                            <input type="text" id="inputDog" placeholder="New Name" style="width: 80px; font-size: 10px;">
+                            <button id="btnRenameDog" style="font-size: 10px; padding: 2px 6px;">Set</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="codexEntry">
                     <canvas id="viewElephant" class="codexCanvasView"></canvas>
-                    <div id="infoElephant" class="codexInfo"></div>
+                    <div>
+                        <div id="infoElephant" class="codexInfo"></div>
+                        <div id="renameBoxElephant" style="margin-top: 6px; display: none;">
+                            <input type="text" id="inputElephant" placeholder="New Name" style="width: 80px; font-size: 10px;">
+                            <button id="btnRenameElephant" style="font-size: 10px; padding: 2px 6px;">Set</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="codexEntry">
                     <canvas id="viewSquirrel" class="codexCanvasView"></canvas>
-                    <div id="infoSquirrel" class="codexInfo"></div>
+                    <div>
+                        <div id="infoSquirrel" class="codexInfo"></div>
+                        <div id="renameBoxSquirrel" style="margin-top: 6px; display: none;">
+                            <input type="text" id="inputSquirrel" placeholder="New Name" style="width: 80px; font-size: 10px;">
+                            <button id="btnRenameSquirrel" style="font-size: 10px; padding: 2px 6px;">Set</button>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
+
         <div id="dpad">
             <div id="btnUp" class="dbtn">▲</div>
             <div id="btnLeft" class="dbtn">◀</div>
@@ -658,6 +678,7 @@ class Pet {
 
     }
 }
+
 const player = new Player(100, 100);
 const respawnQueue = [];
 
@@ -673,7 +694,15 @@ let waters = regionalItems[currentRegion].waters;
 const petsByRegion = {
     1: [new Pet('dog', 'Retriever', '#f1c40f')],
     2: [new Pet('elephant', 'Elephant', '#95a5a6')],
-    3: [new Pet('squirrel', 'Squirrel A', '#d35400'), new Pet('squirrel', 'Squirrel B', '#5a2a00')]
+    3: [
+        new Pet('squirrel', 'Squirrel A', '#d35400'),
+        (() => {
+            let p = new Pet('squirrel', 'Squirrel B', '#5a2a00');
+            p.x = 260;
+            p.y = 200;
+            return p;
+        })()
+    ]
 };
 
 function resizeCanvas() {
@@ -1003,6 +1032,7 @@ function updateCodexData() {
         Level: ${dog.level}/5<br>
         Next Req: ${dog.level < 5 ? '🍪' + levelRequirements.dog[dog.level - 1].food + ' 💧' + levelRequirements.dog[dog.level - 1].water : 'MAX'}
     `;
+    document.getElementById('renameBoxDog').style.display = dog.level >= 2 ? 'block' : 'none';
 
     document.getElementById('infoElephant').innerHTML = `
         <strong>${elephant.level >= 2 ? elephant.label : '???'}</strong><br>
@@ -1010,14 +1040,33 @@ function updateCodexData() {
         Level: ${elephant.level}/5<br>
         Next Req: ${elephant.level < 5 ? '🍪' + levelRequirements.elephant[elephant.level - 1].food + ' 💧' + levelRequirements.elephant[elephant.level - 1].water : 'MAX'}
     `;
+    document.getElementById('renameBoxElephant').style.display = elephant.level >= 2 ? 'block' : 'none';
 
     document.getElementById('infoSquirrel').innerHTML = `
-        <strong>${squirrel.level >= 2 ? 'Squirrel Duo' : '???'}</strong><br>
+        <strong>${squirrel.level >= 2 ? squirrel.label : '???'}</strong><br>
         Status: <span class="${squirrel.level >= 2 ? 'codexTamed' : 'codexWild'}">${squirrel.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
         Level: ${squirrel.level}/5<br>
         Next Req: ${squirrel.level < 5 ? '🍪' + levelRequirements.squirrel[squirrel.level - 1].food + ' 💧' + levelRequirements.squirrel[squirrel.level - 1].water : 'MAX'}
     `;
+    document.getElementById('renameBoxSquirrel').style.display = squirrel.level >= 2 ? 'block' : 'none';
 }
+
+document.getElementById('btnRenameDog').addEventListener('click', () => {
+    let name = document.getElementById('inputDog').value.trim();
+    if (name) { petsByRegion[1][0].label = name; updateCodexData(); }
+});
+document.getElementById('btnRenameElephant').addEventListener('click', () => {
+    let name = document.getElementById('inputElephant').value.trim();
+    if (name) { petsByRegion[2][0].label = name; updateCodexData(); }
+});
+document.getElementById('btnRenameSquirrel').addEventListener('click', () => {
+    let name = document.getElementById('inputSquirrel').value.trim();
+    if (name) {
+        petsByRegion[3][0].label = name;
+        petsByRegion[3][1].label = name + " B";
+        updateCodexData();
+    }
+});
 
 const handleOpenCodex = (e) => {
     if (e) e.preventDefault();
