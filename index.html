@@ -136,9 +136,9 @@
         .utilBtn:active {
             background: #34495e;
         }
-        #codexOverlay {
+            #codexOverlay {
             display: none;
-            position: absolute;
+            position: fixed;
             top: 50px;
             bottom: 20px;
             left: 20px;
@@ -147,10 +147,11 @@
             border: 3px solid #444;
             border-radius: 12px;
             color: #fff;
-            z-index: 100;
+            z-index: 99999;
             flex-direction: column;
             padding: 15px;
         }
+
         #codexHeader {
             display: flex;
             justify-content: space-between;
@@ -908,14 +909,6 @@ function renderMiniPet(pet, elementId) {
     miniCanvas.height = 70;
     mctx.clearRect(0, 0, 70, 70);
     
-    let savedX = pet.x;
-    let savedY = pet.y;
-    let savedCtx = ctx;
-    
-    pet.x = 17;
-    pet.y = 17;
-    ctx = mctx;
-    
     if (pet.level < 2) {
         mctx.fillStyle = '#111';
         mctx.fillRect(0, 0, 70, 70);
@@ -925,20 +918,18 @@ function renderMiniPet(pet, elementId) {
         mctx.textBaseline = 'middle';
         mctx.fillText('?', 35, 35);
     } else {
-        pet.draw();
+        let tempPet = new Pet(pet.type, pet.label, pet.color);
+        tempPet.level = pet.level;
+        tempPet.x = 17;
+        tempPet.y = 17;
+        
+        let savedCtx = ctx;
+        ctx = mctx;
+        tempPet.draw();
+        ctx = savedCtx;
+        
         mctx.fillStyle = 'rgba(255,255,255,0.1)';
         mctx.fillRect(0, 0, 70, 70);
-    }
-    
-        pet.x = savedX;
-    pet.y = savedY;
-    ctx = savedCtx;
-
-    let padding = 40;
-    if (pet.targetX === undefined || pet.x === 17) {
-        pet.pickNewWanderTarget();
-        pet.x = pet.targetX;
-        pet.y = pet.targetY;
     }
 }
 
