@@ -271,7 +271,9 @@ class Pet {
         this.y = 200;
         this.size = 36;
         this.level = 1;
-        this.exp = 0;
+
+        this.foodEaten = 0;
+        this.waterEaten = 0;
         
         this.state = 'wander'; 
         this.stateTimer = 0;
@@ -281,17 +283,26 @@ class Pet {
     }
 
     giveResources() {
-        if (this.level >= 2) return;
-        if (inventory.food > 0 || inventory.water > 0) {
-            if (inventory.food > 0) { inventory.food--; this.exp++; }
-            else if (inventory.water > 0) { inventory.water--; this.exp++; }
-            
-            if (this.exp >= 10) {
-                this.level = 2;
-                this.pickNewWanderTarget();
-            }
-            updateUI();
+        if (this.level >= 5) return;
+        
+        let req = levelRequirements[this.type][this.level - 1];
+
+        if (this.foodEaten < req.food && inventory.food > 0) {
+            inventory.food--;
+            this.foodEaten++;
+        } 
+        else if (this.waterEaten < req.water && inventory.water > 0) {
+            inventory.water--;
+            this.waterEaten++;
         }
+
+        if (this.foodEaten >= req.food && this.waterEaten >= req.water) {
+            this.level++;
+            this.foodEaten = 0;
+            this.waterEaten = 0;
+            this.pickNewWanderTarget();
+        }
+        updateUI();
     }
 
     pickNewWanderTarget() {
@@ -299,11 +310,10 @@ class Pet {
         this.targetX = Math.random() * (canvas.width - this.size - padding * 2) + padding;
         this.targetY = Math.random() * (canvas.height - this.size - padding * 2) + padding;
     }
-    update(dt, regionFoods, regionWaters) {
+        update(dt, regionFoods, regionWaters) {
         if (this.level < 2) return;
 
         this.stateTimer -= dt;
-
         if (this.state === 'idle') {
             if (this.stateTimer <= 0) {
                 this.state = 'wander';
@@ -340,13 +350,16 @@ class Pet {
                         targetItem.list.splice(idx, 1);
                         respawnQueue.push({ type: targetItem.type, time: Date.now() + 10000 });
                         
-                        if (Math.random() < 0.20) {
-                            
+                        if (this.type === 'elephant') {
+                            if (targetItem.type === 'food') inventory.food += 2;
+                            else inventory.water += 3;
+                        } else if (this.type === 'squirrel') {
+                            if (targetItem.type === 'food') inventory.food += 2;
                         } else {
                             if (targetItem.type === 'food') inventory.food++;
                             else inventory.water++;
-                            updateUI();
                         }
+                        updateUI();
                     }
                     this.state = 'idle';
                     this.stateTimer = Math.random() * 2 + 1; 
@@ -370,7 +383,10 @@ class Pet {
             }
         }
     }
+
+
     draw() {
+
         if (this.type === 'dog') {
             ctx.fillStyle = '#f1c40f'; 
             ctx.fillRect(this.x + 4, this.y + 10, 26, 16); 
@@ -442,9 +458,37 @@ class Pet {
     }
 }
 const player = new Player(100, 100);
-const foods = [];
-const waters = [];
 const respawnQueue = [];
+
+const regionalItems = {
+    1: { foods: [], waters: [] },
+    2: { foods: [], waters: [] },
+    3: { foods: [], waters: [] }
+};
+
+let foods = regionalItems[currentRegion].foods;
+let waters = regionalItems[currentRegion].waters;
+
+const levelRequirements = {
+    dog: [
+        { food: 5, water: 5 },
+        { food: 10, water: 10 },
+        { food: 20, water: 20 },
+        { food: 50, water: 50 }
+    ],
+    elephant: [
+        { food: 50, water: 30 },
+        { food: 100, water: 60 },
+        { food: 200, water: 120 },
+        { food: 500, water: 300 }
+    ],
+    squirrel: [
+        { food: 20, water: 10 },
+        { food: 40, water: 20 },
+        { food: 80, water: 40 },
+        { food: 200, water: 100 }
+    ]
+};
 
 const petsByRegion = {
     1: [new Pet('dog', 'Retriever', '#f1c40f')],
@@ -485,12 +529,18 @@ function checkCollisions() {
 
 function processSpawns(dt) {
     let now = Date.now();
+    
     for (let i = respawnQueue.length - 1; i >= 0; i--) {
         if (now >= respawnQueue[i].time) {
-            if (respawnQueue[i].type === 'food' && foods.length < 5) {
-                foods.push(new Item('food'));
-            } else if (respawnQueue[i].type === 'water' && waters.length < 5) {
-                waters.push(new Item('water'));
+            for (let r = 1; r <= 3; r++) {
+                let rItems = regionalItems[r];
+                if (respawnQueue[i].type === 'food' && rItems.foods.length < 5) {
+                    rItems.foods.push(new Item('food'));
+                    break;
+                } else if (respawnQueue[i].type === 'water' && rItems.waters.length < 5) {
+                    rItems.waters.push(new Item('water'));
+                    break;
+                }
             }
             respawnQueue.splice(i, 1);
         }
@@ -498,11 +548,21 @@ function processSpawns(dt) {
 
     spawnTimer += dt;
     if (spawnTimer >= 10) {
-        if (foods.length < 5) foods.push(new Item('food'));
-        if (waters.length < 5) waters.push(new Item('water'));
+        for (let r = 1; r <= 3; r++) {
+            if (regionalItems[r].foods.length < 5) regionalItems[r].foods.push(new Item('food'));
+            if (regionalItems[r].waters.length < 5) regionalItems[r].waters.push(new Item('water'));
+        }
         spawnTimer = 0;
     }
 }
+
+regionSelector.addEventListener('change', (e) => {
+    currentRegion = parseInt(e.target.value);
+    foods = regionalItems[currentRegion].foods;
+    waters = regionalItems[currentRegion].waters;
+});
+
+
 function bindInput(elementId, action) {
     const el = document.getElementById(elementId);
     
@@ -559,12 +619,6 @@ window.addEventListener('keyup', (e) => {
     if (e.key === 'ArrowRight' || e.key === 'd') input.right = false;
 });
 
-regionSelector.addEventListener('change', (e) => {
-    currentRegion = parseInt(e.target.value);
-    foods.length = 0;
-    waters.length = 0;
-    respawnQueue.length = 0;
-});
 function gameLoop(timestamp) {
     if (!lastTime) lastTime = timestamp;
     let elapsed = timestamp - lastTime;
@@ -619,26 +673,18 @@ function gameLoop(timestamp) {
         foods.forEach(f => f.draw());
         waters.forEach(w => w.draw());
 
-        let activePets = petsByRegion[currentRegion];
-        if (Array.isArray(activePets)) {
-            activePets.forEach(pet => {
-                pet.update(dt, foods, waters);
-                pet.draw();
-            });
-        }
-
-        for (let r in petsByRegion) {
-            if (parseInt(r) !== currentRegion) {
-                let backgroundPets = petsByRegion[r];
-                if (Array.isArray(backgroundPets)) {
-                    backgroundPets.forEach(pet => {
-                        if (pet.level >= 2) {
-                            pet.update(dt, [], []);
-                        }
-                    });
-                }
+        for (let r = 1; r <= 3; r++) {
+            let activePets = petsByRegion[r];
+            if (Array.isArray(activePets)) {
+                activePets.forEach(pet => {
+                    pet.update(dt, regionalItems[r].foods, regionalItems[r].waters);
+                    if (r === currentRegion) {
+                        pet.draw();
+                    }
+                });
             }
         }
+
 
         player.draw();
     }
