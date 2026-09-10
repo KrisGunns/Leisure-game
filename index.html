@@ -155,10 +155,13 @@
         }
         #gameContainer {
             max-width: 450px;
+            height: 100vh;
             margin: 0 auto;
             border-left: 2px solid #222;
             border-right: 2px solid #222;
+            position: relative;
         }
+
         #codexList {
             flex: 1;
             overflow-y: auto;
@@ -690,8 +693,9 @@ const petsByRegion = {
 };
 
 function resizeCanvas() {
-    canvas.width = canvas.parentElement.clientWidth;
-    canvas.height = canvas.parentElement.clientHeight;
+    const parent = canvas.parentElement;
+    canvas.width = parent.clientWidth;
+    canvas.height = parent.clientHeight;
 }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
