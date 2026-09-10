@@ -18,14 +18,18 @@
             overflow: hidden;
             background: #111;
             font-family: monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         #gameContainer {
+            position: relative;
+            width: 100%;
             max-width: 450px;
             height: 100dvh;
-            margin: 0 auto;
-            border-left: 2px solid #222;
-            border-right: 2px solid #222;
-            position: relative;
+            background: #222;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
         }
         #topBar {
             background: #222;
@@ -36,16 +40,16 @@
             align-items: center;
             font-size: 14px;
             border-bottom: 2px solid #444;
-            z-index: 10;
+            position: relative;
+            z-index: 20;
         }
         #regionSelector {
-            background: #444;
-            color: #fff;
-            border: 1px solid #666;
-            padding: 4px 8px;
             font-family: monospace;
-            font-size: 14px;
-            outline: none;
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 2px 5px;
+            border-radius: 4px;
         }
         #canvasWrapper {
             position: absolute;
@@ -56,14 +60,14 @@
             background: #2c3e50;
             overflow: hidden;
         }
-        canvas {
+        #gameCanvas {
             display: block;
             width: 100%;
             height: 100%;
         }
         #dpad {
             position: absolute;
-            bottom: 65px;
+            bottom: 35px;
             left: 20px;
             width: 160px;
             height: 160px;
@@ -92,9 +96,10 @@
         #btnLeft { grid-column: 1; grid-row: 2; }
         #btnRight { grid-column: 3; grid-row: 2; }
         #btnDown { grid-column: 2; grid-row: 3; }
+        
         #interactBtn {
             position: absolute;
-            bottom: 65px;
+            bottom: 35px;
             right: 20px;
             width: 75px;
             height: 75px;
@@ -115,17 +120,15 @@
         }
         #whistleBtn {
             position: absolute;
-            bottom: 155px;
+            bottom: 125px;
             right: 20px;
             z-index: 10;
         }
         #openCodexBtn {
             position: absolute;
-            top: 60px;
+            top: 15px;
             left: 15px;
-            z-index: 999999;
-            pointer-events: auto;
-            cursor: pointer;
+            z-index: 10000;
         }
         #settingsBtn {
             position: absolute;
@@ -144,6 +147,7 @@
             font-size: 11px;
             font-weight: bold;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            cursor: pointer;
         }
         .utilBtn:active {
             background: rgba(255, 255, 255, 0.4);
@@ -158,7 +162,7 @@
             border: 2px dashed #e74c3c;
             border-radius: 10px;
             padding: 15px;
-            z-index: 100000;
+            z-index: 100005;
             color: white;
             flex-direction: column;
             gap: 10px;
@@ -178,19 +182,46 @@
             font-weight: bold;
             border-radius: 4px;
             font-size: 11px;
+            cursor: pointer;
         }
         .devBtn:active {
             background: #e74c3c;
         }
-        #gameContainer {
-            max-width: 450px;
-            height: 100vh;
-            margin: 0 auto;
-            border-left: 2px solid #222;
-            border-right: 2px solid #222;
-            position: relative;
+        #codexOverlay {
+            display: none;
+            position: absolute;
+            top: 50px;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(20, 20, 20, 0.95);
+            border: 3px solid #444;
+            border-radius: 12px;
+            color: #fff;
+            z-index: 99999;
+            flex-direction: column;
+            padding: 15px;
         }
-
+        #codexHeader {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #444;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        #codexClose {
+            background: #c0392b;
+            border: none;
+            color: white;
+            padding: 4px 10px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #codexClose:active {
+            background: #e74c3c;
+        }
         #codexList {
             flex: 1;
             overflow-y: auto;
@@ -216,99 +247,95 @@
             flex-shrink: 0;
         }
         .codexInfo {
-            font-size: 12px;
-            line-height: 1.5;
+            font-size: 11px;
+            line-height: 1.4;
         }
         .codexTamed { color: #2ecc71; font-weight: bold; }
-        .codexWild { color: #95a5a6; font-weight: bold; }
-        .codexWild { color: #95a5a6; font-weight: bold; }
         .codexWild { color: #95a5a6; font-weight: bold; }
     </style>
 </head>
 <body>
+    <div id="gameContainer">
+        <div id="topBar">
+            <div>🎒 Food: <span id="lblFood">0</span> | Water: <span id="lblWater">0</span></div>
+            <div>
+                🗺️ <select id="regionSelector">
+                    <option value="1">Region 1</option>
+                    <option value="2">Region 2</option>
+                    <option value="3">Region 3</option>
+                </select>
+            </div>
+        </div>
+        
+        <div id="canvasWrapper">
+            <canvas id="gameCanvas"></canvas>
 
-<div id="gameContainer">
-    <div id="topBar">
-        <div>🎒 Food: <span id="lblFood">0</span> | Water: <span id="lblWater">0</span></div>
-        <div>
-            🗺️ <select id="regionSelector">
-                <option value="1">Region 1</option>
-                <option value="2">Region 2</option>
-                <option value="3">Region 3</option>
-            </select>
+            <button id="openCodexBtn" class="utilBtn">🎒 PETS</button>
+            <button id="settingsBtn" class="utilBtn">⚙️</button>
+            <button id="whistleBtn" class="utilBtn">WHISTLE</button>
+
+            <div id="devPanel">
+                <div style="display: flex; justify-content: space-between; font-weight: bold; border-bottom: 1px solid #444; padding-bottom: 4px;">
+                    <span>🛠️ DEV CONSOLE</span>
+                    <span id="closeDev" style="color: #e74c3c; cursor: pointer;">[X]</span>
+                </div>
+                <div class="devRow">
+                    <button id="devAddFood" class="devBtn">+50 FOOD</button>
+                    <button id="devAddWater" class="devBtn">+50 WATER</button>
+                </div>
+                <button id="devInstaTame" class="devBtn" style="background: #27ae60;">⭐ INSTA-TAME / LEVEL UP</button>
+            </div>
+
+            <div id="codexOverlay">
+                <div id="codexHeader">
+                    <h2>🐾 PETS CODEX</h2>
+                    <button id="codexClose">X</button>
+                </div>
+                <div id="codexList">
+                    <div class="codexEntry">
+                        <canvas id="viewDog" class="codexCanvasView"></canvas>
+                        <div>
+                            <div id="infoDog" class="codexInfo"></div>
+                            <div id="renameBoxDog" style="margin-top: 6px; display: none;">
+                                <input type="text" id="inputDog" placeholder="New Name" style="width: 80px; font-size: 10px;">
+                                <button id="btnRenameDog" style="font-size: 10px; padding: 2px 6px;">Set</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="codexEntry">
+                        <canvas id="viewElephant" class="codexCanvasView"></canvas>
+                        <div>
+                            <div id="infoElephant" class="codexInfo"></div>
+                            <div id="renameBoxElephant" style="margin-top: 6px; display: none;">
+                                <input type="text" id="inputElephant" placeholder="New Name" style="width: 80px; font-size: 10px;">
+                                <button id="btnRenameElephant" style="font-size: 10px; padding: 2px 6px;">Set</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="codexEntry">
+                        <canvas id="viewSquirrel" class="codexCanvasView"></canvas>
+                        <div>
+                            <div id="infoSquirrel" class="codexInfo"></div>
+                            <div id="renameBoxSquirrel" style="margin-top: 6px; display: none;">
+                                <input type="text" id="inputSquirrel" placeholder="New Name" style="width: 80px; font-size: 10px;">
+                                <button id="btnRenameSquirrel" style="font-size: 10px; padding: 2px 6px;">Set</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="dpad">
+                <div id="btnUp" class="dbtn">▲</div>
+                <div id="btnLeft" class="dbtn">◀</div>
+                <div id="btnRight" class="dbtn">▶</div>
+                <div id="btnDown" class="dbtn">▼</div>
+            </div>
+            <div id="interactBtn">GIVE</div>
         </div>
     </div>
-
-    <div id="canvasWrapper">
-        <canvas id="gameCanvas"></canvas>
-
-        <button id="openCodexBtn" class="utilBtn">🎒 PETS</button>
-        <button id="settingsBtn" class="utilBtn">⚙️</button>
-        <button id="whistleBtn" class="utilBtn">WHISTLE</button>
-
-        <div id="devPanel">
-            <div style="display: flex; justify-content: space-between; font-weight: bold; border-bottom: 1px solid #444; padding-bottom: 4px;">
-                <span>🛠️ DEV CONSOLE</span>
-                <span id="closeDev" style="color: #e74c3c; cursor: pointer;">[X]</span>
-            </div>
-            <div class="devRow">
-                <button id="devAddFood" class="devBtn">+50 FOOD</button>
-                <button id="devAddWater" class="devBtn">+50 WATER</button>
-            </div>
-            <button id="devInstaTame" class="devBtn" style="background: #27ae60;">⭐ INSTA-TAME / LEVEL UP</button>
-        </div>
-
-        <div id="codexOverlay">
-            <div id="codexHeader">
-                <h2>🐾 PETS CODEX</h2>
-                <button id="codexClose">X</button>
-            </div>
-            <div id="codexList">
-                <div class="codexEntry">
-                    <canvas id="viewDog" class="codexCanvasView"></canvas>
-                    <div>
-                        <div id="infoDog" class="codexInfo"></div>
-                        <div id="renameBoxDog" style="margin-top: 6px; display: none;">
-                            <input type="text" id="inputDog" placeholder="New Name" style="width: 80px; font-size: 10px;">
-                            <button id="btnRenameDog" style="font-size: 10px; padding: 2px 6px;">Set</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="codexEntry">
-                    <canvas id="viewElephant" class="codexCanvasView"></canvas>
-                    <div>
-                        <div id="infoElephant" class="codexInfo"></div>
-                        <div id="renameBoxElephant" style="margin-top: 6px; display: none;">
-                            <input type="text" id="inputElephant" placeholder="New Name" style="width: 80px; font-size: 10px;">
-                            <button id="btnRenameElephant" style="font-size: 10px; padding: 2px 6px;">Set</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="codexEntry">
-                    <canvas id="viewSquirrel" class="codexCanvasView"></canvas>
-                    <div>
-                        <div id="infoSquirrel" class="codexInfo"></div>
-                        <div id="renameBoxSquirrel" style="margin-top: 6px; display: none;">
-                            <input type="text" id="inputSquirrel" placeholder="New Name" style="width: 80px; font-size: 10px;">
-                            <button id="btnRenameSquirrel" style="font-size: 10px; padding: 2px 6px;">Set</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="dpad">
-            <div id="btnUp" class="dbtn">▲</div>
-            <div id="btnLeft" class="dbtn">◀</div>
-            <div id="btnRight" class="dbtn">▶</div>
-            <div id="btnDown" class="dbtn">▼</div>
-        </div>
-        <div id="interactBtn">GIVE</div>
-    </div>
-</div>
 
 <script>
-
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const lblFood = document.getElementById('lblFood');
@@ -339,122 +366,100 @@ const levelRequirements = {
 let currentRegion = 1;
 let spawnTimer = 0;
 let lastTime = 0;
-const targetFPS = 60;
-const frameInterval = 1000 / targetFPS;
+const frameInterval = 1000 / 60;
 
-const input = { up: false, down: false, left: false, right: false };
-const inventory = { food: 0, water: 0 };
+const inventory = {
+    food: 0,
+    water: 0
+};
+
+const input = {
+    up: false,
+    down: false,
+    left: false,
+    right: false
+};
 
 function updateUI() {
     lblFood.textContent = inventory.food;
     lblWater.textContent = inventory.water;
 }
+
 class Player {
     constructor(x, y) {
         this.x = x;
         this.y = y;
         this.size = 32;
-        this.speed = 180;
+        this.speed = 150;
     }
 
     update(dt) {
-        let dx = 0;
-        let dy = 0;
-        if (input.up) dy -= 1;
-        if (input.down) dy += 1;
-        if (input.left) dx -= 1;
-        if (input.right) dx += 1;
+        let moveX = 0;
+        let moveY = 0;
 
-        if (dx !== 0 && dy !== 0) {
-            dx *= 0.7071;
-            dy *= 0.7071;
+        if (input.up) moveY -= 1;
+        if (input.down) moveY += 1;
+        if (input.left) moveX -= 1;
+        if (input.right) moveX += 1;
+
+        if (moveX !== 0 && moveY !== 0) {
+            let length = Math.sqrt(moveX * moveX + moveY * moveY);
+            moveX /= length;
+            moveY /= length;
         }
 
-        let nextX = this.x + dx * this.speed * dt;
-        let nextY = this.y + dy * this.speed * dt;
+        this.x += moveX * this.speed * dt;
+        this.y += moveY * this.speed * dt;
 
-        let padding = 30; 
-        if (nextX >= padding && nextX <= canvas.width - this.size - padding) {
-            this.x = nextX;
-        }
-        if (nextY >= padding && nextY <= canvas.height - this.size - padding) {
-            this.y = nextY;
-        }
+        let padding = 20;
+        if (this.x < padding) this.x = padding;
+        if (this.y < padding) this.y = padding;
+        if (this.x + this.size > canvas.width - padding) this.x = canvas.width - padding - this.size;
+        if (this.y + this.size > canvas.height - padding) this.y = canvas.height - padding - this.size;
     }
 
     draw() {
-        ctx.fillStyle = '#664227'; 
-        ctx.beginPath();
-        ctx.arc(this.x + 16, this.y + 10, 10, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillRect(this.x + 6, this.y + 10, 20, 10);
-
-        ctx.fillStyle = '#ffcc99'; 
-        ctx.beginPath();
-        ctx.arc(this.x + 16, this.y + 13, 7, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = '#000000'; 
-        ctx.fillRect(this.x + 13, this.y + 11, 2, 3);
-        ctx.fillRect(this.x + 18, this.y + 11, 2, 3);
-
-        ctx.fillStyle = '#ffffff'; 
-        ctx.beginPath();
-        ctx.moveTo(this.x + 10, this.y + 20);
-        ctx.lineTo(this.x + 22, this.y + 20);
-        ctx.lineTo(this.x + 26, this.y + 32);
-        ctx.lineTo(this.x + 6, this.y + 32);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = '#ffcc99';
-        ctx.fillRect(this.x + 11, this.y + 32, 3, 4);
-        ctx.fillRect(this.x + 18, this.y + 32, 3, 4);
+        ctx.fillStyle = '#3e2723';
+        ctx.fillRect(this.x + 4, this.y, 24, 12);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(this.x + 2, this.y + 12, 28, 20);
+        ctx.fillStyle = '#ffcc80';
+        ctx.fillRect(this.x + 8, this.y + 4, 16, 10);
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(this.x + 12, this.y + 7, 2, 2);
+        ctx.fillRect(this.x + 18, this.y + 7, 2, 2);
     }
 }
+
 class Item {
     constructor(type) {
         this.type = type;
-        this.size = 20;
-        this.spawn();
-    }
-
-    spawn() {
-        let w = canvas.width > 100 ? canvas.width : 400;
-        let h = canvas.height > 100 ? canvas.height : 400;
-        this.x = Math.random() * (w - 80) + 40;
-        this.y = Math.random() * (h - 80) + 40;
+        let padding = 50;
+        this.x = Math.random() * (canvas.width - padding * 2) + padding;
+        this.y = Math.random() * (canvas.height - padding * 2) + padding;
     }
 
     draw() {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-        ctx.beginPath();
-        ctx.arc(this.x, this.y + 6, this.size / 2, 0, Math.PI * 2);
-        ctx.fill();
-
         if (this.type === 'food') {
-            ctx.fillStyle = '#f4d03f';
+            ctx.fillStyle = '#d35400';
             ctx.beginPath();
-            ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
+            ctx.arc(this.x, this.y, 8, 0, Math.PI * 2);
             ctx.fill();
-            ctx.fillStyle = '#873600';
-            ctx.fillRect(this.x - 3, this.y - 3, 3, 3);
-            ctx.fillRect(this.x + 2, this.y - 1, 2, 2);
-            ctx.fillRect(this.x - 1, this.y + 2, 3, 2);
+            ctx.fillStyle = '#3e2723';
+            ctx.fillRect(this.x - 4, this.y - 4, 2, 2);
+            ctx.fillRect(this.x + 2, this.y + 2, 2, 2);
         } else {
             ctx.fillStyle = '#3498db';
             ctx.beginPath();
-            ctx.moveTo(this.x, this.y - this.size / 2);
-            ctx.quadraticCurveTo(this.x + this.size / 2, this.y + this.size / 4, this.x + this.size / 2, this.y + this.size / 4);
-            ctx.arc(this.x, this.y + this.size / 4, this.size / 2, 0, Math.PI);
-            ctx.quadraticCurveTo(this.x - this.size / 2, this.y + this.size / 4, this.x, this.y - this.size / 2);
+            ctx.moveTo(this.x, this.y - 8);
+            ctx.lineTo(this.x + 6, this.y + 4);
+            ctx.lineTo(this.x - 6, this.y + 4);
             ctx.closePath();
             ctx.fill();
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(this.x - 2, this.y, 2, 4);
         }
     }
 }
+
 class Pet {
     constructor(type, label, color) {
         this.type = type;
@@ -464,10 +469,8 @@ class Pet {
         this.y = 200;
         this.size = 36;
         this.level = 1;
-
         this.foodEaten = 0;
         this.waterEaten = 0;
-        
         this.state = 'wander'; 
         this.stateTimer = 0;
         this.targetX = this.x;
@@ -477,14 +480,12 @@ class Pet {
 
     giveResources() {
         if (this.level >= 5) return;
-        
         let req = levelRequirements[this.type][this.level - 1];
 
         if (this.foodEaten < req.food && inventory.food > 0) {
             inventory.food--;
             this.foodEaten++;
-        } 
-        else if (this.waterEaten < req.water && inventory.water > 0) {
+        } else if (this.waterEaten < req.water && inventory.water > 0) {
             inventory.water--;
             this.waterEaten++;
         }
@@ -503,7 +504,8 @@ class Pet {
         this.targetX = Math.random() * (canvas.width - this.size - padding * 2) + padding;
         this.targetY = Math.random() * (canvas.height - this.size - padding * 2) + padding;
     }
-        update(dt, regionFoods, regionWaters) {
+
+    update(dt, regionFoods, regionWaters) {
         if (this.level < 2) return;
 
         if (this.state === 'whistled') {
@@ -518,7 +520,6 @@ class Pet {
         }
 
         this.stateTimer -= dt;
-
         if (this.state === 'idle') {
             if (this.stateTimer <= 0) {
                 this.state = 'wander';
@@ -589,9 +590,7 @@ class Pet {
         }
     }
 
-
     draw() {
-
         if (this.type === 'dog') {
             ctx.fillStyle = '#f1c40f'; 
             ctx.fillRect(this.x + 4, this.y + 10, 26, 16); 
@@ -612,8 +611,7 @@ class Pet {
             ctx.quadraticCurveTo(this.x - 3, this.y + 6, this.x + 6, this.y + 14);
             ctx.closePath();
             ctx.fill();
-        } 
-        else if (this.type === 'elephant') {
+        } else if (this.type === 'elephant') {
             ctx.fillStyle = '#95a5a6'; 
             ctx.fillRect(this.x + 6, this.y + 8, 24, 18);  
             ctx.fillRect(this.x + 22, this.y + 2, 10, 10);     
@@ -633,8 +631,7 @@ class Pet {
             ctx.lineTo(this.x + 29, this.y + 12);
             ctx.closePath();
             ctx.fill();
-        } 
-        else if (this.type === 'squirrel') {
+        } else if (this.type === 'squirrel') {
             ctx.fillStyle = this.color; 
             ctx.fillRect(this.x + 8, this.y + 14, 16, 12);  
             ctx.fillRect(this.x + 14, this.y + 6, 10, 10);  
@@ -690,8 +687,6 @@ class Pet {
             ctx.lineWidth = 1;
             ctx.strokeRect(barX, barY, barWidth, barHeight);
         }
-
-
     }
 }
 
@@ -723,8 +718,12 @@ const petsByRegion = {
 
 function resizeCanvas() {
     const parent = canvas.parentElement;
-    canvas.width = parent.clientWidth;
-    canvas.height = parent.clientHeight;
+    let w = parent ? parent.clientWidth : 0;
+    let h = parent ? parent.clientHeight : 0;
+    if (w < 100) w = window.innerWidth > 100 ? window.innerWidth : 400;
+    if (h < 100) h = window.innerHeight > 100 ? window.innerHeight : 600;
+    canvas.width = w;
+    canvas.height = h;
 }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
@@ -755,7 +754,6 @@ function checkCollisions() {
 
 function processSpawns(dt) {
     let now = Date.now();
-    
     for (let i = respawnQueue.length - 1; i >= 0; i--) {
         if (now >= respawnQueue[i].time) {
             for (let r = 1; r <= 3; r++) {
@@ -782,34 +780,16 @@ function processSpawns(dt) {
     }
 }
 
-regionSelector.addEventListener('change', (e) => {
-    currentRegion = parseInt(e.target.value);
-    foods = regionalItems[currentRegion].foods;
-    waters = regionalItems[currentRegion].waters;
-
-    regionSelector.addEventListener('change', (e) => {
-    currentRegion = parseInt(e.target.value);
-    foods = regionalItems[currentRegion].foods;
-    waters = regionalItems[currentRegion].waters;
-    whistleBtn.textContent = 'WHISTLE';
-});
-
-});
-
-
 function bindInput(elementId, action) {
     const el = document.getElementById(elementId);
-    
     el.addEventListener('touchstart', (e) => {
         e.preventDefault();
         input[action] = true;
     }, { passive: false });
-    
     el.addEventListener('touchend', (e) => {
         e.preventDefault();
         input[action] = false;
     }, { passive: false });
-
     el.addEventListener('mousedown', () => { input[action] = true; });
     el.addEventListener('mouseup', () => { input[action] = false; });
     el.addEventListener('mouseleave', () => { input[action] = false; });
@@ -819,26 +799,6 @@ bindInput('btnUp', 'up');
 bindInput('btnDown', 'down');
 bindInput('btnLeft', 'left');
 bindInput('btnRight', 'right');
-
-const whistleBtn = document.getElementById('whistleBtn');
-whistleBtn.addEventListener('click', () => {
-    let activePets = petsByRegion[currentRegion];
-    if (!Array.isArray(activePets)) return;
-
-    activePets.forEach(pet => {
-        if (pet.level < 2) return;
-
-        if (pet.state !== 'whistled') {
-            pet.state = 'whistled';
-            whistleBtn.textContent = 'RETURN';
-        } else {
-            pet.state = 'wander';
-            pet.pickNewWanderTarget();
-            whistleBtn.textContent = 'WHISTLE';
-        }
-    });
-});
-
 
 const handleInteract = (e) => {
     if(e) e.preventDefault();
@@ -871,6 +831,30 @@ window.addEventListener('keyup', (e) => {
     if (e.key === 'ArrowDown' || e.key === 's') input.down = false;
     if (e.key === 'ArrowLeft' || e.key === 'a') input.left = false;
     if (e.key === 'ArrowRight' || e.key === 'd') input.right = false;
+});
+
+const whistleBtn = document.getElementById('whistleBtn');
+whistleBtn.addEventListener('click', () => {
+    let activePets = petsByRegion[currentRegion];
+    if (!Array.isArray(activePets)) return;
+    activePets.forEach(pet => {
+        if (pet.level < 2) return;
+        if (pet.state !== 'whistled') {
+            pet.state = 'whistled';
+            whistleBtn.textContent = 'RETURN';
+        } else {
+            pet.state = 'wander';
+            pet.pickNewWanderTarget();
+            whistleBtn.textContent = 'WHISTLE';
+        }
+    });
+});
+
+regionSelector.addEventListener('change', (e) => {
+    currentRegion = parseInt(e.target.value);
+    foods = regionalItems[currentRegion].foods;
+    waters = regionalItems[currentRegion].waters;
+    whistleBtn.textContent = 'WHISTLE';
 });
 
 function gameLoop(timestamp) {
@@ -939,18 +923,14 @@ function gameLoop(timestamp) {
             }
         }
 
-
         player.draw();
     }
     requestAnimationFrame(gameLoop);
 }
 
-const codexOverlay = document.getElementById('codexOverlay');
-const openCodexBtn = document.getElementById('openCodexBtn');
-const codexClose = document.getElementById('codexClose');
-
 function renderMiniPet(pet, elementId) {
     const miniCanvas = document.getElementById(elementId);
+    if (!miniCanvas) return;
     const mctx = miniCanvas.getContext('2d');
     miniCanvas.width = 70;
     miniCanvas.height = 70;
@@ -959,11 +939,11 @@ function renderMiniPet(pet, elementId) {
     if (pet.level < 2) {
         mctx.fillStyle = '#111';
         mctx.fillRect(0, 0, 70, 70);
-        mctx.fillStyle = 'rgba(255,255,255,0.1)';
-        mctx.font = '24px monospace';
+        mctx.fillStyle = 'rgba(255,255,255,0.15)';
+        mctx.font = '20px monospace';
         mctx.textAlign = 'center';
         mctx.textBaseline = 'middle';
-        mctx.fillText('?', 35, 35);
+        mctx.fillText('❓', 35, 35);
     } else {
         mctx.fillStyle = 'rgba(255,255,255,0.1)';
         mctx.fillRect(0, 0, 70, 70);
@@ -991,8 +971,7 @@ function renderMiniPet(pet, elementId) {
             mctx.quadraticCurveTo(ox - 3, oy + 6, ox + 6, oy + 14);
             mctx.closePath();
             mctx.fill();
-        } 
-        else if (pet.type === 'elephant') {
+        } else if (pet.type === 'elephant') {
             mctx.fillStyle = '#95a5a6'; 
             mctx.fillRect(ox + 6, oy + 8, 24, 18);  
             mctx.fillRect(ox + 22, oy + 2, 10, 10);     
@@ -1012,8 +991,7 @@ function renderMiniPet(pet, elementId) {
             mctx.lineTo(ox + 29, oy + 12);
             mctx.closePath();
             mctx.fill();
-        } 
-        else if (pet.type === 'squirrel') {
+        } else if (pet.type === 'squirrel') {
             mctx.fillStyle = pet.color; 
             mctx.fillRect(ox + 8, oy + 14, 16, 12);  
             mctx.fillRect(ox + 14, oy + 6, 10, 10);  
@@ -1085,6 +1063,10 @@ document.getElementById('btnRenameSquirrel').addEventListener('click', () => {
     }
 });
 
+const codexOverlay = document.getElementById('codexOverlay');
+const openCodexBtn = document.getElementById('openCodexBtn');
+const codexClose = document.getElementById('codexClose');
+
 const handleOpenCodex = (e) => {
     if (e) e.preventDefault();
     updateCodexData();
@@ -1096,12 +1078,8 @@ const handleCloseCodex = (e) => {
     codexOverlay.style.display = 'none';
 };
 
-openCodexBtn.addEventListener('pointerdown', (e) => {
-    if (e) e.preventDefault();
-    updateCodexData();
-    codexOverlay.style.display = 'flex';
-});
-
+openCodexBtn.addEventListener('touchstart', handleOpenCodex, { passive: false });
+openCodexBtn.addEventListener('mousedown', handleOpenCodex);
 codexClose.addEventListener('touchstart', handleCloseCodex, { passive: false });
 codexClose.addEventListener('mousedown', handleCloseCodex);
 
@@ -1119,19 +1097,16 @@ const handleSettings = (e) => {
 
 settingsBtn.addEventListener('touchstart', handleSettings, { passive: false });
 settingsBtn.addEventListener('mousedown', handleSettings);
-
 closeDev.addEventListener('click', () => { devPanel.style.display = "none"; });
 
 document.getElementById('devAddFood').addEventListener('click', () => {
     inventory.food += 50;
     updateUI();
 });
-
 document.getElementById('devAddWater').addEventListener('click', () => {
     inventory.water += 50;
     updateUI();
 });
-
 document.getElementById('devInstaTame').addEventListener('click', () => {
     let activePets = petsByRegion[currentRegion];
     if (Array.isArray(activePets)) {
@@ -1148,6 +1123,13 @@ document.getElementById('devInstaTame').addEventListener('click', () => {
         });
     }
 });
+
+for (let r = 1; r <= 3; r++) {
+    for (let i = 0; i < 3; i++) {
+        regionalItems[r].foods.push(new Item('food'));
+        regionalItems[r].waters.push(new Item('water'));
+    }
+}
 
 updateUI();
 requestAnimationFrame(gameLoop);
