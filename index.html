@@ -279,6 +279,27 @@ const lblFood = document.getElementById('lblFood');
 const lblWater = document.getElementById('lblWater');
 const regionSelector = document.getElementById('regionSelector');
 
+const levelRequirements = {
+    dog: [
+        { food: 5, water: 5 },
+        { food: 10, water: 10 },
+        { food: 20, water: 20 },
+        { food: 50, water: 50 }
+    ],
+    elephant: [
+        { food: 50, water: 30 },
+        { food: 100, water: 60 },
+        { food: 200, water: 120 },
+        { food: 500, water: 300 }
+    ],
+    squirrel: [
+        { food: 20, water: 10 },
+        { food: 40, water: 20 },
+        { food: 80, water: 40 },
+        { food: 200, water: 100 }
+    ]
+};
+
 let currentRegion = 1;
 let spawnTimer = 0;
 let lastTime = 0;
@@ -639,26 +660,6 @@ class Pet {
 }
 const player = new Player(100, 100);
 const respawnQueue = [];
-const levelRequirements = {
-    dog: [
-        { food: 5, water: 5 },
-        { food: 10, water: 10 },
-        { food: 20, water: 20 },
-        { food: 50, water: 50 }
-    ],
-    elephant: [
-        { food: 50, water: 30 },
-        { food: 100, water: 60 },
-        { food: 200, water: 120 },
-        { food: 500, water: 300 }
-    ],
-    squirrel: [
-        { food: 20, water: 10 },
-        { food: 40, water: 20 },
-        { food: 80, water: 40 },
-        { food: 200, water: 100 }
-    ]
-};
 
 const regionalItems = {
     1: { foods: [], waters: [] },
