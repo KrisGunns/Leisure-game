@@ -200,6 +200,25 @@
         }
         .codexTamed { color: #2ecc71; font-weight: bold; }
         .codexWild { color: #95a5a6; font-weight: bold; }
+         .codexWild { color: #95a5a6; font-weight: bold; }
+        @media (orientation: portrait) {
+            #gameContainer { display: none !important; }
+            body::after {
+                content: "🔄 Please rotate your device to landscape mode to play!";
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: #111;
+                color: #fff;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                font-family: monospace;
+                font-size: 16px;
+                text-align: center;
+                padding: 20px;
+                z-index: 99999;
+            }
+        }
     </style>
 </head>
 <body>
@@ -911,10 +930,18 @@ function renderMiniPet(pet, elementId) {
         mctx.fillRect(0, 0, 70, 70);
     }
     
-    pet.x = savedX;
+        pet.x = savedX;
     pet.y = savedY;
     ctx = savedCtx;
+
+    let padding = 40;
+    if (pet.targetX === undefined || pet.x === 17) {
+        pet.pickNewWanderTarget();
+        pet.x = pet.targetX;
+        pet.y = pet.targetY;
+    }
 }
+
 
 function updateCodexData() {
     const dog = petsByRegion[1][0];
@@ -947,14 +974,22 @@ function updateCodexData() {
     `;
 }
 
-openCodexBtn.addEventListener('click', () => {
+const handleOpenCodex = (e) => {
+    if (e) e.preventDefault();
     updateCodexData();
     codexOverlay.style.display = 'flex';
-});
+};
 
-codexClose.addEventListener('click', () => {
+const handleCloseCodex = (e) => {
+    if (e) e.preventDefault();
     codexOverlay.style.display = 'none';
-});
+};
+
+openCodexBtn.addEventListener('touchstart', handleOpenCodex, { passive: false });
+openCodexBtn.addEventListener('mousedown', handleOpenCodex);
+
+codexClose.addEventListener('touchstart', handleCloseCodex, { passive: false });
+codexClose.addEventListener('mousedown', handleCloseCodex);
 
 updateUI();
 requestAnimationFrame(gameLoop);
