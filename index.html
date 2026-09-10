@@ -919,78 +919,72 @@ function renderMiniPet(pet, elementId) {
         mctx.textBaseline = 'middle';
         mctx.fillText('?', 35, 35);
     } else {
-        let tempPet = new Pet(pet.type, pet.label, pet.color);
-        tempPet.level = pet.level;
-        tempPet.x = 17;
-        tempPet.y = 17;
-        
-        let savedCtx = ctx;
-        ctx = mctx;
-        
-        if (tempPet.type === 'dog') {
-            ctx.fillStyle = '#f1c40f'; 
-            ctx.fillRect(tempPet.x + 4, tempPet.y + 10, 26, 16); 
-            ctx.fillRect(tempPet.x + 18, tempPet.y + 2, 10, 10); 
-            ctx.fillStyle = '#f39c12'; 
-            ctx.fillRect(tempPet.x + 16, tempPet.y + 4, 4, 8);  
-            ctx.fillStyle = '#000000'; 
-            ctx.fillRect(tempPet.x + 25, tempPet.y + 4, 2, 2);   
-            ctx.fillRect(tempPet.x + 27, tempPet.y + 6, 2, 2);   
-            ctx.fillStyle = '#d35400'; 
-            ctx.fillRect(tempPet.x + 6, tempPet.y + 26, 4, 6);   
-            ctx.fillRect(tempPet.x + 22, tempPet.y + 26, 4, 6);
-            ctx.fillStyle = '#f1c40f';
-            ctx.beginPath();
-            ctx.moveTo(tempPet.x + 4, tempPet.y + 12);
-            ctx.quadraticCurveTo(tempPet.x - 6, tempPet.y + 4, tempPet.x - 4, tempPet.y);
-            ctx.lineTo(tempPet.x - 1, tempPet.y + 1);
-            ctx.quadraticCurveTo(tempPet.x - 3, tempPet.y + 6, tempPet.x + 6, tempPet.y + 14);
-            ctx.closePath();
-            ctx.fill();
-        } 
-        else if (tempPet.type === 'elephant') {
-            ctx.fillStyle = '#95a5a6'; 
-            ctx.fillRect(tempPet.x + 6, tempPet.y + 8, 24, 18);  
-            ctx.fillRect(tempPet.x + 22, tempPet.y + 2, 10, 10);     
-            ctx.fillStyle = '#7f8c8d'; 
-            ctx.fillRect(tempPet.x + 18, tempPet.y + 4, 6, 10);  
-            ctx.fillStyle = '#000000'; 
-            ctx.fillRect(tempPet.x + 28, tempPet.y + 4, 2, 2);   
-            ctx.fillStyle = '#7f8c8d'; 
-            ctx.fillRect(tempPet.x + 8, tempPet.y + 26, 5, 6);   
-            ctx.fillRect(tempPet.x + 20, tempPet.y + 26, 5, 6);
-            ctx.fillRect(tempPet.x + 5, tempPet.y + 14, 2, 6);
-            ctx.fillStyle = '#95a5a6';
-            ctx.beginPath();
-            ctx.moveTo(tempPet.x + 30, tempPet.y + 10);
-            ctx.lineTo(tempPet.x + 35, tempPet.y + 18);
-            ctx.lineTo(tempPet.x + 33, tempPet.y + 19);
-            ctx.lineTo(tempPet.x + 29, tempPet.y + 12);
-            ctx.closePath();
-            ctx.fill();
-        } 
-        else if (tempPet.type === 'squirrel') {
-            ctx.fillStyle = tempPet.color; 
-            ctx.fillRect(tempPet.x + 8, tempPet.y + 14, 16, 12);  
-            ctx.fillRect(tempPet.x + 14, tempPet.y + 6, 10, 10);  
-            ctx.fillRect(tempPet.x + 20, tempPet.y + 2, 2, 4);       
-            ctx.fillStyle = '#000000'; 
-            ctx.fillRect(tempPet.x + 20, tempPet.y + 8, 2, 2);   
-            ctx.fillStyle = tempPet.color === '#d35400' ? '#7f8c8d' : '#3d1d00';
-            ctx.fillRect(tempPet.x + 10, tempPet.y + 26, 3, 4);  
-            ctx.fillRect(tempPet.x + 18, tempPet.y + 26, 3, 4);
-            ctx.fillStyle = tempPet.color;
-            ctx.beginPath();
-            ctx.moveTo(tempPet.x + 10, tempPet.y + 24);
-            ctx.quadraticCurveTo(tempPet.x + 2, tempPet.y + 16, tempPet.x + 4, tempPet.y + 6);
-            ctx.quadraticCurveTo(tempPet.x + 10, tempPet.y + 8, tempPet.x + 12, tempPet.y + 18);
-            ctx.closePath();
-            ctx.fill();
-        }
-        
-        ctx = savedCtx;
         mctx.fillStyle = 'rgba(255,255,255,0.1)';
         mctx.fillRect(0, 0, 70, 70);
+
+        let ox = 17;
+        let oy = 17;
+
+        if (pet.type === 'dog') {
+            mctx.fillStyle = '#f1c40f'; 
+            mctx.fillRect(ox + 4, oy + 10, 26, 16); 
+            mctx.fillRect(ox + 18, oy + 2, 10, 10); 
+            mctx.fillStyle = '#f39c12'; 
+            mctx.fillRect(ox + 16, oy + 4, 4, 8);  
+            mctx.fillStyle = '#000000'; 
+            mctx.fillRect(ox + 25, oy + 4, 2, 2);   
+            mctx.fillRect(ox + 27, oy + 6, 2, 2);   
+            mctx.fillStyle = '#d35400'; 
+            mctx.fillRect(ox + 6, oy + 26, 4, 6);   
+            mctx.fillRect(ox + 22, oy + 26, 4, 6);
+            mctx.fillStyle = '#f1c40f';
+            mctx.beginPath();
+            mctx.moveTo(ox + 4, oy + 12);
+            mctx.quadraticCurveTo(ox - 6, oy + 4, ox - 4, oy);
+            mctx.lineTo(ox - 1, oy + 1);
+            mctx.quadraticCurveTo(ox - 3, oy + 6, ox + 6, oy + 14);
+            mctx.closePath();
+            mctx.fill();
+        } 
+        else if (pet.type === 'elephant') {
+            mctx.fillStyle = '#95a5a6'; 
+            mctx.fillRect(ox + 6, oy + 8, 24, 18);  
+            mctx.fillRect(ox + 22, oy + 2, 10, 10);     
+            mctx.fillStyle = '#7f8c8d'; 
+            mctx.fillRect(ox + 18, oy + 4, 6, 10);  
+            mctx.fillStyle = '#000000'; 
+            mctx.fillRect(ox + 28, oy + 4, 2, 2);   
+            mctx.fillStyle = '#7f8c8d'; 
+            mctx.fillRect(ox + 8, oy + 26, 5, 6);   
+            mctx.fillRect(ox + 20, oy + 26, 5, 6);
+            mctx.fillRect(ox + 5, oy + 14, 2, 6);
+            mctx.fillStyle = '#95a5a6';
+            mctx.beginPath();
+            mctx.moveTo(ox + 30, oy + 10);
+            mctx.lineTo(ox + 35, oy + 18);
+            mctx.lineTo(ox + 33, oy + 19);
+            mctx.lineTo(ox + 29, oy + 12);
+            mctx.closePath();
+            mctx.fill();
+        } 
+        else if (pet.type === 'squirrel') {
+            mctx.fillStyle = pet.color; 
+            mctx.fillRect(ox + 8, oy + 14, 16, 12);  
+            mctx.fillRect(ox + 14, oy + 6, 10, 10);  
+            mctx.fillRect(ox + 20, oy + 2, 2, 4);       
+            mctx.fillStyle = '#000000'; 
+            mctx.fillRect(ox + 20, oy + 8, 2, 2);   
+            mctx.fillStyle = pet.color === '#d35400' ? '#7f8c8d' : '#3d1d00';
+            mctx.fillRect(ox + 10, oy + 26, 3, 4);  
+            mctx.fillRect(ox + 18, oy + 26, 3, 4);
+            mctx.fillStyle = pet.color;
+            mctx.beginPath();
+            mctx.moveTo(ox + 10, oy + 24);
+            mctx.quadraticCurveTo(ox + 2, oy + 16, ox + 4, oy + 6);
+            mctx.quadraticCurveTo(ox + 10, oy + 8, ox + 12, oy + 18);
+            mctx.closePath();
+            mctx.fill();
+        }
     }
 }
 
