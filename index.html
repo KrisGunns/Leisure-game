@@ -65,37 +65,31 @@
             width: 100%;
             height: 100%;
         }
-        #dpad {
-            position: absolute;
-            bottom: 35px;
-            left: 20px;
-            width: 160px;
-            height: 160px;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(3, 1fr);
-            gap: 5px;
-            z-index: 100;
-        }
-        .dbtn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.4);
-            border-radius: 8px;
-            color: white;
-            font-size: 20px;
-            font-weight: bold;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
-        .dbtn:active {
-            background: rgba(255, 255, 255, 0.5);
-        }
-        #btnUp { grid-column: 2; grid-row: 1; }
-        #btnLeft { grid-column: 1; grid-row: 2; }
-        #btnRight { grid-column: 3; grid-row: 2; }
-        #btnDown { grid-column: 2; grid-row: 3; }
+        
+        #joystickContainer {
+    position: absolute;
+    bottom: 35px;
+    left: 40px;
+    width: 120px;
+    height: 120px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    z-index: 100;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    touch-action: none;
+}
+#joystickHandle {
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    border-radius: 50%;
+    transition: transform 0.05s linear;
+    pointer-events: none;
+}
         
         #interactBtn {
             position: absolute;
@@ -355,12 +349,10 @@
     </div>
 </div>
 
-<div id="dpad">
-    <div id="btnUp" class="dbtn" data-dir="up">▲</div>
-    <div id="btnLeft" class="dbtn" data-dir="left">◀</div>
-    <div id="btnRight" class="dbtn" data-dir="right">▶</div>
-    <div id="btnDown" class="dbtn" data-dir="down">▼</div>
+<div id="joystickContainer">
+    <div id="joystickHandle"></div>
 </div>
+
 <div id="interactBtn">GIVE</div>
 
 
@@ -1017,51 +1009,59 @@ function processSpawns(dt) {
     }
 }
 
-const dpadContainer = document.getElementById('btnUp').parentElement;
+const joyContainer = document.getElementById('joystickContainer');
+const joyHandle = document.getElementById('joystickHandle');
 
-dpadContainer.addEventListener('touchstart', processSlidingTouch, { passive: false });
-dpadContainer.addEventListener('touchmove', processSlidingTouch, { passive: false });
-dpadContainer.addEventListener('touchend', resetSlidingInput);
-dpadContainer.addEventListener('touchcancel', resetSlidingInput);
+let joyActive = false;
+let joyOriginX = 0;
+let joyOriginY = 0;
 
-function processSlidingTouch(e) {
+joyContainer.addEventListener('touchstart', (e) => {
     e.preventDefault();
+    joyActive = true;
     const touch = e.touches[0];
-    const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
-    
-    resetSlidingInput();
-    if (!targetElement) return;
+    const rect = joyContainer.getBoundingClientRect();
+    joyOriginX = rect.left + rect.width / 2;
+    joyOriginY = rect.top + rect.height / 2;
+    handleJoystickMove(touch.clientX, touch.clientY);
+}, { passive: false });
 
-    const elementId = targetElement.id;
-    
-    if (elementId === 'btnUp') input.up = true;
-    else if (elementId === 'btnDown') input.down = true;
-    else if (elementId === 'btnLeft') input.left = true;
-    else if (elementId === 'btnRight') input.right = true;
-}
+joyContainer.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (!joyActive) return;
+    const touch = e.touches[0];
+    handleJoystickMove(touch.clientX, touch.clientY);
+}, { passive: false });
 
-function resetSlidingInput() {
+window.addEventListener('touchend', () => {
+    if (!joyActive) return;
+    joyActive = false;
     input.up = false;
     input.down = false;
     input.left = false;
     input.right = false;
+    joyHandle.style.transform = 'translate(0px, 0px)';
+});
+
+function handleJoystickMove(clientX, clientY) {
+    let dx = clientX - joyOriginX;
+    let dy = clientY - joyOriginY;
+    let distance = Math.sqrt(dx * dx + dy * dy);
+    let maxRadius = 35;
+
+    if (distance > maxRadius) {
+        dx = (dx / distance) * maxRadius;
+        dy = (dy / distance) * maxRadius;
+    }
+
+    joyHandle.style.transform = `translate(${dx}px, ${dy}px)`;
+
+    let threshold = 10;
+    input.left = dx < -threshold;
+    input.right = dx > threshold;
+    input.up = dy < -threshold;
+    input.down = dy > threshold;
 }
-
-document.getElementById('btnUp').addEventListener('mousedown', () => { input.up = true; });
-document.getElementById('btnUp').addEventListener('mouseup', () => { input.up = false; });
-document.getElementById('btnUp').addEventListener('mouseleave', () => { input.up = false; });
-
-document.getElementById('btnDown').addEventListener('mousedown', () => { input.down = true; });
-document.getElementById('btnDown').addEventListener('mouseup', () => { input.down = false; });
-document.getElementById('btnDown').addEventListener('mouseleave', () => { input.down = false; });
-
-document.getElementById('btnLeft').addEventListener('mousedown', () => { input.left = true; });
-document.getElementById('btnLeft').addEventListener('mouseup', () => { input.left = false; });
-document.getElementById('btnLeft').addEventListener('mouseleave', () => { input.left = false; });
-
-document.getElementById('btnRight').addEventListener('mousedown', () => { input.right = true; });
-document.getElementById('btnRight').addEventListener('mouseup', () => { input.right = false; });
-document.getElementById('btnRight').addEventListener('mouseleave', () => { input.right = false; });
 
 const handleInteract = (e) => {
     if(e) e.preventDefault();
@@ -1513,7 +1513,7 @@ for (let r = 1; r <= 3; r++) {
     }
 }
 
-if (document.getElementById('dpad')) document.getElementById('dpad').style.display = 'grid';
+if (document.getElementById('joystickContainer')) document.getElementById('joystickContainer').style.display = 'flex';
 if (document.getElementById('interactBtn')) document.getElementById('interactBtn').style.display = 'flex';
 
 updateUI();
