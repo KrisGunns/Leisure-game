@@ -647,7 +647,7 @@ class Pet {
         this.targetY = Math.random() * (canvas.height - this.size - padding * 2) + padding;
     }
 
-        update(dt, regionFoods, regionWaters, activeFlowers = []) {
+            update(dt, regionFoods, regionWaters, activeFlowers = []) {
         if (this.type === 'bee') {
             if (this.state === 'wander') {
                 if (!this.targetFlower && activeFlowers.length > 0) {
@@ -690,7 +690,11 @@ class Pet {
                     this.y += (dy / dist) * (this.speed * 1.5) * dt;
                 } else {
                     this.state = 'forage';
-                    this.stateTimer = 5.0;
+                    
+                    // Bee Perk Clock: Drops from 5s down to 4.5s (L3) or 4.0s (L5)
+                    if (this.level >= 5) this.stateTimer = 4.0;
+                    else if (this.level >= 3) this.stateTimer = 4.5;
+                    else this.stateTimer = 5.0;
                 }
             }
 
@@ -706,7 +710,11 @@ class Pet {
                     }
                     this.targetFlower = null;
                     this.foodEaten++; 
-                    inventory.honey++;
+                    
+                    // Bee Honey Payout Perk: Double honey (+2) at Level 5
+                    if (this.level >= 5) inventory.honey += 2;
+                    else inventory.honey += 1;
+                    
                     if (typeof updateUI === 'function') updateUI();
 
                     if (this.level < 5) {
@@ -714,7 +722,7 @@ class Pet {
                         if (this.foodEaten >= reqFlowers) {
                             this.level++;
                             this.foodEaten = 0;
-                            saveGameProgress();
+                            if (typeof saveGameProgress === 'function') saveGameProgress();
                         }
                     }
                     this.state = 'idle';
@@ -774,15 +782,48 @@ class Pet {
                         targetItem.list.splice(idx, 1);
                         respawnQueue.push({ type: targetItem.type, time: Date.now() + 10000 });
                         
-                        if (this.type === 'elephant') {
-                            if (targetItem.type === 'food') inventory.food += 2;
-                            else inventory.water += 3;
+                        // --- DYNAMIC PERK PROGRESSION SYSTEM ---
+                        if (this.type === 'dog') {
+                            if (this.level >= 5) {
+                                if (targetItem.type === 'food') inventory.food += 3;
+                                else inventory.water += 3;
+                            } else if (this.level >= 3) {
+                                if (targetItem.type === 'food') inventory.food += 2;
+                                else inventory.water += 2;
+                            } else {
+                                if (targetItem.type === 'food') inventory.food += 1;
+                                else inventory.water += 1;
+                            }
+                        } else if (this.type === 'elephant') {
+                            if (this.level >= 5) {
+                                if (targetItem.type === 'food') inventory.food += 3;
+                                else inventory.water += 4;
+                            } else if (this.level >= 3) {
+                                if (targetItem.type === 'food') inventory.food += 2;
+                                else inventory.water += 3;
+                            } else {
+                                if (targetItem.type === 'food') inventory.food += 1;
+                                else inventory.water += 2;
+                            }
                         } else if (this.type === 'squirrel') {
-                            if (targetItem.type === 'food') inventory.food += 2;
-                            if (targetItem.type === 'water') inventory.water += 1; 
+                            if (this.level >= 5) {
+                                if (targetItem.type === 'food') inventory.food += 5;
+                                else inventory.water += 1;
+                            } else if (this.level >= 3) {
+                                if (targetItem.type === 'food') inventory.food += 3;
+                                else inventory.water += 1;
+                            } else {
+                                if (targetItem.type === 'food') inventory.food += 1;
+                                else inventory.water += 0;
+                            }
                         } else if (this.type === 'chicken') {
-                            if (targetItem.type === 'food') inventory.food += 1;
-                            else inventory.water += 1;
+                            if (this.level >= 5) {
+                                if (targetItem.type === 'food') inventory.food += 3;
+                                else inventory.water += 3;
+                            } else {
+                                if (targetItem.type === 'food') inventory.food += 1;
+                                else inventory.water += 1;
+                            }
                         } else {
                             if (targetItem.type === 'food') inventory.food++;
                             else inventory.water++;
