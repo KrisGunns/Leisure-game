@@ -1354,17 +1354,11 @@ const handleOpenCodex = (e) => {
     if (e) e.preventDefault();
     updateCodexData();
     codexOverlay.style.display = 'flex';
-    
-    if (document.getElementById('dpad')) document.getElementById('dpad').style.display = 'none';
-    if (document.getElementById('interactBtn')) document.getElementById('interactBtn').style.display = 'none';
 };
 
 const handleCloseCodex = (e) => {
     if (e) e.preventDefault();
     codexOverlay.style.display = 'none';
-    
-    if (document.getElementById('dpad')) document.getElementById('dpad').style.display = 'grid';
-    if (document.getElementById('interactBtn')) document.getElementById('interactBtn').style.display = 'flex';
 };
 
 openCodexBtn.addEventListener('touchstart', handleOpenCodex, { passive: false });
@@ -1419,6 +1413,9 @@ for (let r = 1; r <= 3; r++) {
         regionalItems[r].waters.push(new Item('water'));
     }
 }
+
+if (document.getElementById('dpad')) document.getElementById('dpad').style.display = 'grid';
+if (document.getElementById('interactBtn')) document.getElementById('interactBtn').style.display = 'flex';
 
 updateUI();
 requestAnimationFrame(gameLoop);
