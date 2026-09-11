@@ -75,7 +75,7 @@
             grid-template-columns: repeat(3, 1fr);
             grid-template-rows: repeat(3, 1fr);
             gap: 5px;
-            z-index: 10;
+            z-index: 100;
         }
         .dbtn {
             background: rgba(255, 255, 255, 0.2);
@@ -112,7 +112,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 10;
+            z-index: 100;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
         #interactBtn:active {
@@ -1354,11 +1354,17 @@ const handleOpenCodex = (e) => {
     if (e) e.preventDefault();
     updateCodexData();
     codexOverlay.style.display = 'flex';
+    
+    if (document.getElementById('dpad')) document.getElementById('dpad').style.display = 'none';
+    if (document.getElementById('interactBtn')) document.getElementById('interactBtn').style.display = 'none';
 };
 
 const handleCloseCodex = (e) => {
     if (e) e.preventDefault();
     codexOverlay.style.display = 'none';
+    
+    if (document.getElementById('dpad')) document.getElementById('dpad').style.display = 'grid';
+    if (document.getElementById('interactBtn')) document.getElementById('interactBtn').style.display = 'flex';
 };
 
 openCodexBtn.addEventListener('touchstart', handleOpenCodex, { passive: false });
