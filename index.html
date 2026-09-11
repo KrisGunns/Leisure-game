@@ -288,72 +288,81 @@
             </div>
 
             <div id="codexOverlay">
-                <div id="codexHeader">
-                    <h2>🐾 PETS CODEX</h2>
-                    <button id="codexClose">X</button>
+    <div id="codexHeader">
+        <h2>🐾 PETS CODEX</h2>
+        <button id="codexClose">X</button>
+    </div>
+    <div id="codexList">
+        <!-- DOG -->
+        <div class="codexEntry">
+            <canvas id="viewDog" class="codexCanvasView"></canvas>
+            <div>
+                <div id="infoDog" class="codexInfo"></div>
+                <div id="renameBoxDog" style="margin-top: 6px; display: none;">
+                    <input type="text" id="inputDog" placeholder="New Name" style="width: 80px; font-size: 10px;">
+                    <button id="btnRenameDog" style="font-size: 10px; padding: 2px 6px;">Set</button>
                 </div>
-<div id="codexList">
-    <div class="codexEntry">
-        <canvas id="viewDog" class="codexCanvasView"></canvas>
-        <div>
-            <div id="infoDog" class="codexInfo"></div>
-            <div id="renameBoxDog" style="margin-top: 6px; display: none;">
-                <input type="text" id="inputDog" placeholder="New Name" style="width: 80px; font-size: 10px;">
-                <button id="btnRenameDog" style="font-size: 10px; padding: 2px 6px;">Set</button>
             </div>
         </div>
-    </div>
-    <div class="codexEntry">
-        <canvas id="viewElephant" class="codexCanvasView"></canvas>
-        <div>
-            <div id="infoElephant" class="codexInfo"></div>
-            <div id="renameBoxElephant" style="margin-top: 6px; display: none;">
-                <input type="text" id="inputElephant" placeholder="New Name" style="width: 80px; font-size: 10px;">
-                <button id="btnRenameElephant" style="font-size: 10px; padding: 2px 6px;">Set</button>
+        
+        <!-- ELEPHANT -->
+        <div class="codexEntry">
+            <canvas id="viewElephant" class="codexCanvasView"></canvas>
+            <div>
+                <div id="infoElephant" class="codexInfo"></div>
+                <div id="renameBoxElephant" style="margin-top: 6px; display: none;">
+                    <input type="text" id="inputElephant" placeholder="New Name" style="width: 80px; font-size: 10px;">
+                    <button id="btnRenameElephant" style="font-size: 10px; padding: 2px 6px;">Set</button>
+                </div>
             </div>
         </div>
-    </div>
-    <div class="codexEntry">
-        <canvas id="viewSquirrel" class="codexCanvasView"></canvas>
-        <div>
-            <div id="infoSquirrel" class="codexInfo"></div>
-            <div id="renameBoxSquirrel" style="margin-top: 6px; display: none;">
-                <input type="text" id="inputSquirrel" placeholder="New Name" style="width: 80px; font-size: 10px;">
-                <button id="btnRenameSquirrel" style="font-size: 10px; padding: 2px 6px;">Set</button>
+        
+        <!-- SQUIRREL -->
+        <div class="codexEntry">
+            <canvas id="viewSquirrel" class="codexCanvasView"></canvas>
+            <div>
+                <div id="infoSquirrel" class="codexInfo"></div>
+                <div id="renameBoxSquirrel" style="margin-top: 6px; display: none;">
+                    <input type="text" id="inputSquirrel" placeholder="New Name" style="width: 80px; font-size: 10px;">
+                    <button id="btnRenameSquirrel" style="font-size: 10px; padding: 2px 6px;">Set</button>
+                </div>
             </div>
         </div>
-    </div>
-    <div class="codexEntry">
-        <canvas id="viewChicken" class="codexCanvasView"></canvas>
-        <div>
-            <div id="infoChicken" class="codexInfo"></div>
-            <div id="renameBoxChicken" style="margin-top: 6px; display: none;">
-                <input type="text" id="inputChicken" placeholder="New Name" style="width: 80px; font-size: 10px;">
-                <button id="btnRenameChicken" style="font-size: 10px; padding: 2px 6px;">Set</button>
+        
+        <!-- CHICKEN -->
+        <div class="codexEntry">
+            <canvas id="viewChicken" class="codexCanvasView"></canvas>
+            <div>
+                <div id="infoChicken" class="codexInfo"></div>
+                <div id="renameBoxChicken" style="margin-top: 6px; display: none;">
+                    <input type="text" id="inputChicken" placeholder="New Name" style="width: 80px; font-size: 10px;">
+                    <button id="btnRenameChicken" style="font-size: 10px; padding: 2px 6px;">Set</button>
+                </div>
             </div>
         </div>
-    </div>
-    <div class="codexEntry">
-        <canvas id="viewBee" class="codexCanvasView"></canvas>
-        <div>
-            <div id="infoBee" class="codexInfo"></div>
-            <div id="renameBoxBee" style="margin-top: 6px; display: none;">
-                <input type="text" id="inputBee" placeholder="New Name" style="width: 80px; font-size: 10px;">
-                <button id="btnRenameBee" style="font-size: 10px; padding: 2px 6px;">Set</button>
+        
+        <!-- BEE -->
+        <div class="codexEntry">
+            <canvas id="viewBee" class="codexCanvasView"></canvas>
+            <div>
+                <div id="infoBee" class="codexInfo"></div>
+                <div id="renameBoxBee" style="margin-top: 6px; display: none;">
+                    <input type="text" id="inputBee" placeholder="New Name" style="width: 80px; font-size: 10px;">
+                    <button id="btnRenameBee" style="font-size: 10px; padding: 2px 6px;">Set</button>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-            <div id="dpad">
-                <div id="btnUp" class="dbtn" data-dir="up">▲</div>
-                <div id="btnLeft" class="dbtn" data-dir="left">◀</div>
-                <div id="btnRight" class="dbtn" data-dir="right">▶</div>
-                <div id="btnDown" class="dbtn" data-dir="down">▼</div>
-            </div>
-            <div id="interactBtn">GIVE</div>
-        </div>
-    </div>
+<div id="dpad">
+    <div id="btnUp" class="dbtn" data-dir="up">▲</div>
+    <div id="btnLeft" class="dbtn" data-dir="left">◀</div>
+    <div id="btnRight" class="dbtn" data-dir="right">▶</div>
+    <div id="btnDown" class="dbtn" data-dir="down">▼</div>
+</div>
+<div id="interactBtn">GIVE</div>
+
 
 <script>
 const canvas = document.getElementById('gameCanvas');
