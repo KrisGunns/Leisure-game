@@ -903,14 +903,21 @@ function processSpawns(dt) {
     let now = Date.now();
     for (let i = respawnQueue.length - 1; i >= 0; i--) {
         if (now >= respawnQueue[i].time) {
-            for (let r = 1; r <= 3; r++) {
-                let rItems = regionalItems[r];
-                if (respawnQueue[i].type === 'food' && rItems.foods.length < 5) {
-                    rItems.foods.push(new Item('food'));
-                    break;
-                } else if (respawnQueue[i].type === 'water' && rItems.waters.length < 5) {
-                    rItems.waters.push(new Item('water'));
-                    break;
+            let type = respawnQueue[i].type;
+            if (type === 'flower') {
+                if (regionalItems[4].flowers.length < 5) {
+                    regionalItems[4].flowers.push(new Flower());
+                }
+            } else {
+                for (let r = 1; r <= 3; r++) {
+                    let rItems = regionalItems[r];
+                    if (type === 'food' && rItems.foods.length < 5) {
+                        rItems.foods.push(new Item('food'));
+                        break;
+                    } else if (type === 'water' && rItems.waters.length < 5) {
+                        rItems.waters.push(new Item('water'));
+                        break;
+                    }
                 }
             }
             respawnQueue.splice(i, 1);
@@ -919,9 +926,13 @@ function processSpawns(dt) {
 
     spawnTimer += dt;
     if (spawnTimer >= 10) {
-        for (let r = 1; r <= 3; r++) {
-            if (regionalItems[r].foods.length < 5) regionalItems[r].foods.push(new Item('food'));
-            if (regionalItems[r].waters.length < 5) regionalItems[r].waters.push(new Item('water'));
+        for (let r = 1; r <= 4; r++) {
+            if (r === 4) {
+                if (regionalItems[r].flowers.length < 5) regionalItems[r].flowers.push(new Flower());
+            } else {
+                if (regionalItems[r].foods.length < 5) regionalItems[r].foods.push(new Item('food'));
+                if (regionalItems[r].waters.length < 5) regionalItems[r].waters.push(new Item('water'));
+            }
         }
         spawnTimer = 0;
     }
