@@ -279,6 +279,7 @@
                     <button id="devAddWater" class="devBtn">+50 WATER</button>
                 </div>
                 <button id="devInstaTame" class="devBtn" style="background: #27ae60;">⭐ INSTA-TAME / LEVEL UP</button>
+                <button id="devWipeSave" class="devBtn" style="background: #7f8c8d; margin-top: 5px;">⚠️ WIPE SAVE PROGRESS</button>
             </div>
 
             <div id="codexOverlay">
@@ -418,6 +419,76 @@ function updateUI() {
     lblWater.textContent = inventory.water;
     if (lblHoney) {
         lblHoney.textContent = inventory.honey;
+    }
+}
+
+function saveGameProgress() {
+    try {
+        const stateMatrix = {
+            inventory: {
+                food: inventory.food,
+                water: inventory.water,
+                honey: inventory.honey
+            },
+            currentRegion: currentRegion,
+            petsData: {}
+        };
+
+        for (let r in petsByRegion) {
+            petsByRegion[r].forEach(pet => {
+                stateMatrix.petsData[pet.type] = {
+                    level: pet.level,
+                    label: pet.label,
+                    foodEaten: pet.foodEaten,
+                    waterEaten: pet.waterEaten
+                };
+            });
+        }
+
+        localStorage.setItem('just_a_little_leisure_save', JSON.stringify(stateMatrix));
+    } catch (e) {
+        console.error("Auto-save failed:", e);
+    }
+}
+
+function loadGameProgress() {
+    try {
+        const savedData = localStorage.getItem('just_a_little_leisure_save');
+        if (!savedData) return;
+
+        const stateMatrix = JSON.parse(savedData);
+
+        if (stateMatrix.inventory) {
+            inventory.food = stateMatrix.inventory.food || 0;
+            inventory.water = stateMatrix.inventory.water || 0;
+            inventory.honey = stateMatrix.inventory.honey || 0;
+        }
+
+        if (stateMatrix.currentRegion) {
+            currentRegion = stateMatrix.currentRegion;
+            if (document.getElementById('regionSelector')) {
+                document.getElementById('regionSelector').value = currentRegion;
+            }
+            foods = regionalItems[currentRegion].foods;
+            waters = regionalItems[currentRegion].waters;
+            flowers = regionalItems[currentRegion].flowers;
+        }
+
+        if (stateMatrix.petsData) {
+            for (let r in petsByRegion) {
+                petsByRegion[r].forEach(pet => {
+                    const savedPet = stateMatrix.petsData[pet.type];
+                    if (savedPet) {
+                        pet.level = savedPet.level || 1;
+                        pet.label = savedPet.label || pet.label;
+                        pet.foodEaten = savedPet.foodEaten || 0;
+                        pet.waterEaten = savedPet.waterEaten || 0;
+                    }
+                });
+            }
+        }
+    } catch (e) {
+        console.error("Loading save failed:", e);
     }
 }
 
@@ -565,6 +636,7 @@ class Pet {
             if (this.state === 'idle') {
                 this.state = 'wander';
             }
+            saveGameProgress();
         }
         updateUI();
     }
@@ -642,6 +714,7 @@ class Pet {
                         if (this.foodEaten >= reqFlowers) {
                             this.level++;
                             this.foodEaten = 0;
+                            saveGameProgress();
                         }
                     }
                     this.state = 'idle';
@@ -1158,6 +1231,7 @@ regionSelector.addEventListener('change', (e) => {
     waters = regionalItems[currentRegion].waters;
     flowers = regionalItems[currentRegion].flowers;
     whistleBtn.textContent = 'WHISTLE';
+    saveGameProgress();
 });
 
 function gameLoop(timestamp) {
@@ -1489,6 +1563,22 @@ document.getElementById('devAddWater').addEventListener('click', () => {
     inventory.water += 50;
     updateUI();
 });
+document.getElementById('devWipeSave').addEventListener('click', () => {
+    if (confirm("Are you absolutely sure you want to delete all saved progress? This will reset the game layout!")) {
+        localStorage.removeItem('just_a_little_leisure_save');
+        window.location.reload();
+    }
+});
+
+// Added Engine Startup Sequence Hook
+loadGameProgress(); // Checks browser memory and reads existing states on app start
+updateUI();         // Draws variables onto top statistics nodes immediately
+
+// Incremental backup backup timer running every 10 seconds silently
+setInterval(saveGameProgress, 10000);
+
+requestAnimationFrame(gameLoop);
+
 document.getElementById('devInstaTame').addEventListener('click', () => {
     let activePets = petsByRegion[currentRegion];
     if (Array.isArray(activePets)) {
