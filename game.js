@@ -1,5 +1,6 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas ? canvas.getContext('2d') : null;
+
 const lblFood = document.getElementById('lblFood');
 const lblWater = document.getElementById('lblWater');
 const lblHoney = document.getElementById('lblHoney');
@@ -58,12 +59,6 @@ const input = {
 let feedInterval = null;
 let feedTurboTimeout = null;
 let feedHoldCounter = 0;
-
-const lblFood = document.getElementById('lblFood');
-const lblWater = document.getElementById('lblWater');
-const lblHoney = document.getElementById('lblHoney');
-const lblFish = document.getElementById('lblFish');
-const regionSelector = document.getElementById('regionSelector');
 
 function updateUI() {
     if (lblFood) lblFood.textContent = inventory.food;
