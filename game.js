@@ -15,8 +15,11 @@ function getLevelRequirement(type, currentLevel) {
     const baseMap = { dog: 20, elephant: 50, squirrel: 10, chicken: 15, bee: 15, bear: 40 };
     let base = baseMap[type] || 20;
     
+    // Safety fallback: If currentLevel is accidentally passed as an object or undefined, default to 1
+    let lvl = (typeof currentLevel === 'number') ? currentLevel : 1;
+    
     // Base XP * (Level ^ 1.2) - Continuous scaling curve calculation matrix
-    let reqValue = Math.floor(base * Math.pow(currentLevel, 1.2));
+    let reqValue = Math.floor(base * Math.pow(lvl, 1.2));
     
     if (type === 'bee' || type === 'bear') {
         return reqValue;
