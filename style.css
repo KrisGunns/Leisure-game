@@ -115,26 +115,23 @@ body, html {
     background: rgba(211, 84, 0, 1);
 }
 #whistleBtn {
-    position: absolute;
     bottom: 125px;
     right: 20px;
-    z-index: 10;
 }
 #openCodexBtn {
-    position: absolute;
     top: 15px;
     left: 15px;
-    z-index: 10000;
+}
+#openBagBtn {
+    top: 60px; /* Positioned directly beneath the PETS button with a clean 10px spacing gap layout */
+    left: 15px;
 }
 #settingsBtn {
-    position: absolute;
     top: 15px;
     right: 15px;
-    z-index: 10000;
-    font-size: 14px;
-    padding: 8px 14px;
 }
 .utilBtn {
+    position: absolute;
     background: rgba(255, 255, 255, 0.2);
     border: 2px solid rgba(255, 255, 255, 0.4);
     border-radius: 8px;
@@ -144,6 +141,7 @@ body, html {
     font-weight: bold;
     box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     cursor: pointer;
+    z-index: 100000; /* Keeps them locked on top of all canvas particle animations */
 }
 .utilBtn:active {
     background: rgba(255, 255, 255, 0.4);
