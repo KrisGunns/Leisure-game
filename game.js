@@ -3,10 +3,10 @@ const ctx = canvas ? canvas.getContext('2d') : null;
 
 const lblFood = document.getElementById('lblFood');
 const lblWater = document.getElementById('lblWater');
-const lblHoney = document.getElementById('lblHoney');
-const lblFish = document.getElementById('lblFish');
-const lblCoins = document.getElementById('lblCoins');
-const lblEggs = document.getElementById('lblEggs');
+const bagHoney = document.getElementById('bagHoney');
+const bagFish = document.getElementById('bagFish');
+const bagCoins = document.getElementById('bagCoins');
+const bagEggs = document.getElementById('bagEggs');
 const regionSelector = document.getElementById('regionSelector');
 const whistleBtn = document.getElementById('whistleBtn');
 
@@ -57,14 +57,16 @@ let feedTurboTimeout = null;
 let feedHoldCounter = 0;
 
 function updateUI() {
+    // Pinned Playfield Resources
     if (lblFood) lblFood.textContent = inventory.food;
     if (lblWater) lblWater.textContent = inventory.water;
-    if (lblHoney) lblHoney.textContent = inventory.honey;
-    if (lblFish) lblFish.textContent = inventory.fish;
-    if (lblCoins) lblCoins.textContent = inventory.coins;
-    if (lblEggs) lblEggs.textContent = inventory.eggs;
+    
+    // Hidden Tucked-Away Vault Resources
+    if (bagCoins) bagCoins.textContent = inventory.coins;
+    if (bagEggs) bagEggs.textContent = inventory.eggs;
+    if (bagHoney) bagHoney.textContent = inventory.honey;
+    if (bagFish) bagFish.textContent = inventory.fish;
 
-    // Dynamically update GIVE button label if Level 20 Elephant trigger is playing
     const interactBtn = document.getElementById('interactBtn');
     if (interactBtn) {
         let elephantPlaying = false;
