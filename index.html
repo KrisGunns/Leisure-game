@@ -8,38 +8,41 @@
 </head>
 <body>
     <div id="gameContainer">
-        <div id="topBar">
-            <div>🎒 Food: <span id="lblFood">0</span> | Water: <span id="lblWater">0</span> | 🍯 Honey: <span id="lblHoney">0</span> | 🐟 Fish: <span id="lblFish">0</span> | 🪙 Coins: <span id="lblCoins">0</span> | 🥚 Eggs: <span id="lblEggs">0</span></div>
-            <div>
-                🗺️ <select id="regionSelector">
-                    <option value="1">Region 1</option>
-                    <option value="2">Region 2</option>
-                    <option value="3">Region 3</option>
-                    <option value="4">Region 4</option>
-                    <option value="5">Region 5</option>
-                </select>
-            </div>
+        <!-- Pinned Core Actionable Resource Top Bar View -->
+<div id="topBar">
+    <div>🍪 Food: <span id="lblFood">0</span> | 💧 Water: <span id="lblWater">0</span></div>
+    <div>
+        🗺️ <select id="regionSelector">
+            <option value="1">Region 1</option>
+            <option value="2">Region 2</option>
+            <option value="3">Region 3</option>
+            <option value="4">Region 4</option>
+            <option value="5">Region 5</option>
+        </select>
+    </div>
+</div>
+
+<div id="canvasWrapper">
+    <canvas id="gameCanvas"></canvas>
+
+    <button id="openCodexBtn" class="utilBtn">🐾 PETS</button>
+    <button id="openBagBtn" class="utilBtn" style="left: 95px;">🎒 BAG</button>
+    <button id="settingsBtn" class="utilBtn">⚙️</button>
+    <button id="whistleBtn" class="utilBtn">WHISTLE</button>
+
+    <!-- Expanded Inventory Storage Overlay Sheet -->
+    <div id="bagOverlay" class="modalOverlay" style="display: none;">
+        <div class="modalHeader">
+            <h2>🎒 INVENTORY</h2>
+            <button id="bagClose" class="modalCloseBtn">X</button>
         </div>
-        
-        <div id="canvasWrapper">
-            <canvas id="gameCanvas"></canvas>
-
-            <button id="openCodexBtn" class="utilBtn">🎒 PETS</button>
-            <button id="settingsBtn" class="utilBtn">⚙️</button>
-            <button id="whistleBtn" class="utilBtn">WHISTLE</button>
-
-            <div id="devPanel">
-                <div style="display: flex; justify-content: space-between; font-weight: bold; border-bottom: 1px solid #444; padding-bottom: 4px;">
-                    <span>🛠️ DEV CONSOLE</span>
-                    <span id="closeDev" style="color: #e74c3c; cursor: pointer;">[X]</span>
-                </div>
-                <div class="devRow">
-                    <button id="devAddFood" class="devBtn">+50 FOOD</button>
-                    <button id="devAddWater" class="devBtn">+50 WATER</button>
-                </div>
-                <button id="devInstaTame" class="devBtn" style="background: #27ae60;">⭐ INSTA-TAME / LEVEL UP</button>
-                <button id="devWipeSave" class="devBtn" style="background: #7f8c8d; margin-top: 5px;">⚠️ WIPE SAVE PROGRESS</button>
-            </div>
+        <div id="bagContentList">
+            <div class="bagItemRow"><span>🪙 Gold Coins:</span><strong id="bagCoins">0</strong></div>
+            <div class="bagItemRow"><span>🥚 Spawned Eggs:</span><strong id="bagEggs">0</strong></div>
+            <div class="bagItemRow"><span>🍯 Wild Honey:</span><strong id="bagHoney">0</strong></div>
+            <div class="bagItemRow"><span>🐟 Caught Fish:</span><strong id="bagFish">0</strong></div>
+        </div>
+    </div>
 
             <div id="codexOverlay">
                 <div id="codexHeader">
