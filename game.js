@@ -1849,6 +1849,27 @@ if (btnInstaTame) {
     });
 }
 
+const handleOpenBag = (e) => {
+    if (e) e.preventDefault();
+    updateUI(); // Refreshes your item quantities right before displaying the card
+    if (bagOverlay) bagOverlay.style.display = 'flex';
+};
+
+const handleCloseBag = (e) => {
+    if (e) e.preventDefault();
+    if (bagOverlay) bagOverlay.style.display = 'none';
+};
+
+// Bind touchstart and mousedown to make it feel highly responsive on Android touch devices
+if (openBagBtn) {
+    openBagBtn.addEventListener('touchstart', handleOpenBag, { passive: false });
+    openBagBtn.addEventListener('mousedown', handleOpenBag);
+}
+if (bagClose) {
+    bagClose.addEventListener('touchstart', handleCloseBag, { passive: false });
+    bagClose.addEventListener('mousedown', handleCloseBag);
+}
+
 loadGameProgress();
 updateUI();         
 
