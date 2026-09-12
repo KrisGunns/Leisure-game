@@ -416,7 +416,7 @@ class Pet {
         if (this.type === 'bear') {
             if (this.level < 2) {
                 if (this.state === 'idle') {
-                    this.stateTimer -= dt;
+                    this.stateTimer -= 1.0;
                     if (this.stateTimer <= 0) { this.state = 'wander'; this.pickNewWanderTarget(); }
                 } else {
                     let dx = this.targetX - this.x;
