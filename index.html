@@ -181,21 +181,31 @@
         .devBtn:active {
             background: #e74c3c;
         }
-        #codexOverlay {
-            display: none;
-            position: absolute;
-            top: 50px;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
-            background: rgba(20, 20, 20, 0.95);
-            border: 3px solid #444;
-            border-radius: 12px;
-            color: #fff;
-            z-index: 99999;
-            flex-direction: column;
-            padding: 15px;
-        }
+    #codexOverlay {
+    display: none;
+    position: absolute;
+    top: 50px;
+    bottom: 50px; /* Expanded slightly to provide touch breathing room at the bottom edge */
+    left: 20px;
+    right: 20px;
+    background: rgba(20, 20, 20, 0.98); /* Made slightly more opaque for high scannability */
+    border: 3px solid #444;
+    border-radius: 12px;
+    color: #fff;
+    z-index: 99999;
+    flex-direction: column;
+    padding: 15px;
+}
+#codexList {
+    flex: 1;
+    overflow-y: scroll; /* Forces browser scrolling vectors to lock securely on this container */
+    -webkit-overflow-scrolling: touch; /* Added: Guarantees fluid acceleration on iOS frames */
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-bottom: 20px; /* Essential anchor: leaves spacing so items can be pushed up completely */
+}
+
         #codexHeader {
             display: flex;
             justify-content: space-between;
@@ -215,13 +225,6 @@
         }
         #codexClose:active {
             background: #e74c3c;
-        }
-        #codexList {
-            flex: 1;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
         }
         .codexEntry {
             background: rgba(255, 255, 255, 0.05);
@@ -1751,6 +1754,18 @@ function renderMiniPet(pet, elementId) {
             mctx.fill();
             mctx.fillStyle = '#000000';
             mctx.fillRect(ox + 26, oy + 15, 2, 2);
+        } else if (pet.type === 'bear') {
+            mctx.fillStyle = '#5a2a00'; 
+            mctx.fillRect(ox + 4, oy + 8, 28, 20); 
+            mctx.fillRect(ox + 10, oy, 16, 12); 
+            mctx.fillRect(ox + 8, oy - 4, 6, 6); 
+            mctx.fillRect(ox + 22, oy - 4, 6, 6); 
+            mctx.fillStyle = '#000000';
+            mctx.fillRect(ox + 14, oy + 4, 2, 2); 
+            mctx.fillRect(ox + 20, oy + 4, 2, 2); 
+            mctx.fillStyle = '#3a1a00';
+            mctx.fillRect(ox + 6, oy + 28, 6, 6); 
+            mctx.fillRect(ox + 24, oy + 28, 6, 6);
         }
     }
 }
@@ -1874,29 +1889,71 @@ const handleSettings = (e) => {
     if (e) e.preventDefault();
     let pass = prompt("Enter developer authorization code word:");
     if (pass === "dev") {
-        devPanel.style.display = "flex";
+        if (devPanel) devPanel.style.display = "flex";
     }
 };
 
-settingsBtn.addEventListener('touchstart', handleSettings, { passive: false });
-settingsBtn.addEventListener('mousedown', handleSettings);
-closeDev.addEventListener('click', () => { devPanel.style.display = "none"; });
+if (settingsBtn) {
+    settingsBtn.addEventListener('touchstart', handleSettings, { passive: false });
+    settingsBtn.addEventListener('mousedown', handleSettings);
+}
 
-document.getElementById('devAddFood').addEventListener('click', () => {
-    inventory.food += 50;
-    updateUI();
-});
-document.getElementById('devAddWater').addEventListener('click', () => {
-    inventory.water += 50;
-    updateUI();
-});
-document.getElementById('devWipeSave').addEventListener('click', () => {
-    if (confirm("Are you absolutely sure you want to delete all saved progress? This will reset the game layout!")) {
-        localStorage.removeItem('just_a_little_leisure_save');
-        inventory.fish = 0; // Fixed: Erases live active fish variables completely
-        window.location.reload();
-    }
-});
+if (closeDev && devPanel) {
+    closeDev.addEventListener('click', () => { 
+        devPanel.style.display = "none"; 
+    });
+}
+
+const btnAddFood = document.getElementById('devAddFood');
+const btnAddWater = document.getElementById('devAddWater');
+const btnWipeSave = document.getElementById('devWipeSave');
+const btnInstaTame = document.getElementById('devInstaTame');
+
+if (btnAddFood) {
+    btnAddFood.addEventListener('click', () => {
+        inventory.food += 50;
+        updateUI();
+    });
+}
+
+if (btnAddWater) {
+    btnAddWater.addEventListener('click', () => {
+        inventory.water += 50;
+        updateUI();
+    });
+}
+
+if (btnWipeSave) {
+    btnWipeSave.addEventListener('click', () => {
+        if (confirm("⚠️ WARNING: Are you absolutely sure you want to delete all saved progress? This will reset your game data!")) {
+            localStorage.removeItem('just_a_little_leisure_save');
+            inventory.food = 0;
+            inventory.water = 0;
+            inventory.honey = 0;
+            inventory.fish = 0;
+            window.location.reload();
+        }
+    });
+}
+
+if (btnInstaTame) {
+    btnInstaTame.addEventListener('click', () => {
+        let activePets = petsByRegion[currentRegion];
+        if (Array.isArray(activePets)) {
+            activePets.forEach(pet => {
+                pet.level = 5;
+                pet.foodEaten = 0;
+                pet.waterEaten = 0;
+                pet.pickNewWanderTarget();
+                if (pet.state === 'idle' || pet.state === 'whistled') {
+                    pet.state = 'wander';
+                }
+            });
+            updateUI();
+            if (typeof updateCodexData === 'function') updateCodexData();
+        }
+    });
+}
 
 // Added Engine Startup Sequence Hook
 loadGameProgress(); // Checks browser memory and reads existing states on app start
