@@ -412,25 +412,18 @@ class Pet {
             return;
         }
 
-        // --- BEAR AI SYSTEM MATRIX ---
-        if (this.type === 'bear') {
+            // --- BEAR AI SYSTEM MATRIX ---
+            if (this.type === 'bear') {
             if (this.level < 2) {
-                if (this.state === 'idle') {
-                    this.stateTimer -= 1.0;
-                    if (this.stateTimer <= 0) { this.state = 'wander'; this.pickNewWanderTarget(); }
-                } else {
-                    let dx = this.targetX - this.x;
-                    let dy = this.targetY - this.y;
-                    let dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist > 5) {
-                        this.x += (dx / dist) * this.speed * dt;
-                        this.y += (dy / dist) * this.speed * dt;
-                    } else {
-                        this.state = 'idle';
-                        this.stateTimer = Math.random() * 3 + 1;
-                    }
-                }
-                return;
+                this.state = 'idle';
+                this.stateTimer = 1.0;
+                return; // Blocks ALL subsequent processing to guarantee zero movement
+            }
+
+            if (this.state === 'fishing_travel') {
+                let lakeTargetX = canvas.width / 2 - this.size / 2;
+                let lakeTargetY = canvas.height - 100;
+
             }
 
             if (this.state === 'fishing_travel') {
