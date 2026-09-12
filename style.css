@@ -27,7 +27,7 @@ body, html {
 #topBar {
     background: #222;
     color: #fff;
-    height: 45px;
+    height: 60px; /* Expanded from 45px to comfortably fit stacked lines on mobile screens */
     display: flex;
     justify-content: space-around;
     align-items: center;
@@ -36,6 +36,17 @@ body, html {
     position: relative;
     z-index: 20;
 }
+
+/* Custom layout spacers for stacked resource values */
+.hudResourceBlock {
+    line-height: 1.5;
+    padding-left: 5px;
+}
+.hudRow {
+    display: inline-block;
+    font-weight: bold;
+}
+
 #regionSelector {
     font-family: monospace;
     background: #333;
