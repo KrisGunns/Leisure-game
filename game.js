@@ -1657,7 +1657,8 @@ if (btnInstaTame) {
         let activePets = petsByRegion[currentRegion];
         if (Array.isArray(activePets)) {
             activePets.forEach(pet => {
-                pet.level = 5;
+                // FIXED: Pushes your pets straight to your new maximum Level 20 cap!
+                pet.level = 20; 
                 pet.foodEaten = 0;
                 pet.waterEaten = 0;
                 pet.pickNewWanderTarget();
@@ -1667,6 +1668,7 @@ if (btnInstaTame) {
             });
             updateUI();
             if (typeof updateCodexData === 'function') updateCodexData();
+            saveGameProgress();
         }
     });
 }
