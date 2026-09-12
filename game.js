@@ -274,10 +274,11 @@ class Pet {
         this.speed = 80; 
     }
 
-    giveResources() {
-        if (this.type === 'bee' || this.level >= 5) return;
+        giveResources() {
+        if (this.type === 'bee' || this.level >= 20) return;
         
-        let req = levelRequirements[this.type][this.level - 1];
+        // FIXED: Dynamically pulls values from our math engine
+        let req = getLevelRequirement(this.type, this.level);
 
         if (this.foodEaten < req.food && inventory.food > 0) {
             inventory.food--;
@@ -292,9 +293,7 @@ class Pet {
             this.foodEaten = 0;
             this.waterEaten = 0;
             this.pickNewWanderTarget();
-            if (this.state === 'idle') {
-                this.state = 'wander';
-            }
+            if (this.state === 'idle') this.state = 'wander';
             saveGameProgress();
         }
         updateUI();
@@ -804,16 +803,14 @@ class Pet {
         
         ctx.fillText(text, this.x + (this.size / 2), this.y - 16);
 
-        if (this.level < 5) {
-            let progressRatio = 0;
-            if (this.type === 'bee') {
-                let reqFlowers = levelRequirements.bee[this.level - 1];
-                progressRatio = this.foodEaten / reqFlowers;
-            } else if (this.type === 'bear') {
-                let reqHoney = levelRequirements.bear[this.level - 1];
-                progressRatio = this.foodEaten / reqHoney;
+            if (this.level < 20) {
+                let progressRatio = 0;
+                if (this.type === 'bee' || this.type === 'bear') {
+                    let totalReq = getLevelRequirement(this.type, this.level);
+                    progressRatio = this.foodEaten / totalReq;
             } else {
-                let req = levelRequirements[this.type][this.level - 1];
+                // FIXED: Uses our new math engine function instead of looking for the deleted data array
+                let req = getLevelRequirement(this.type, this.level);
                 let totalNeeded = req.food + req.water;
                 let totalEaten = this.foodEaten + this.waterEaten;
                 progressRatio = totalNeeded > 0 ? (totalEaten / totalNeeded) : 0;
@@ -1525,14 +1522,13 @@ function updateCodexData() {
     renderMiniPet(bee, 'viewBee');
     renderMiniPet(bear, 'viewBear');
 
-    let dogReq = getLevelRequirement('dog', dog.level);
+        let dogReq = getLevelRequirement('dog', dog.level);
     document.getElementById('infoDog').innerHTML = `
         <strong>${dog.level >= 2 ? dog.label : '???'}</strong><br>
         Status: <span class="${dog.level >= 2 ? 'codexTamed' : 'codexWild'}">${dog.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
         Level: ${dog.level}/20<br>
         Next Req: ${dog.level < 20 ? '🍪' + dogReq.food + ' 💧' + dogReq.water : 'MAX'}
     `;
-    document.getElementById('renameBoxDog').style.display = dog.level >= 2 ? 'block' : 'none';
 
     let elReq = getLevelRequirement('elephant', elephant.level);
     document.getElementById('infoElephant').innerHTML = `
@@ -1541,7 +1537,6 @@ function updateCodexData() {
         Level: ${elephant.level}/20<br>
         Next Req: ${elephant.level < 20 ? '🍪' + elReq.food + ' 💧' + elReq.water : 'MAX'}
     `;
-    document.getElementById('renameBoxElephant').style.display = elephant.level >= 2 ? 'block' : 'none';
 
     let sqReq = getLevelRequirement('squirrel', squirrel.level);
     document.getElementById('infoSquirrel').innerHTML = `
@@ -1550,7 +1545,6 @@ function updateCodexData() {
         Level: ${squirrel.level}/20<br>
         Next Req: ${squirrel.level < 20 ? '🍪' + sqReq.food + ' 💧' + sqReq.water : 'MAX'}
     `;
-    document.getElementById('renameBoxSquirrel').style.display = squirrel.level >= 2 ? 'block' : 'none';
 
     let chReq = getLevelRequirement('chicken', chicken.level);
     document.getElementById('infoChicken').innerHTML = `
@@ -1559,7 +1553,6 @@ function updateCodexData() {
         Level: ${chicken.level}/20<br>
         Next Req: ${chicken.level < 20 ? '🍪' + chReq.food + ' 💧' + chReq.water : 'MAX'}
     `;
-    document.getElementById('renameBoxChicken').style.display = chicken.level >= 2 ? 'block' : 'none';
 
     let beeReq = getLevelRequirement('bee', bee.level);
     document.getElementById('infoBee').innerHTML = `
@@ -1568,7 +1561,6 @@ function updateCodexData() {
         Level: ${bee.level}/20<br>
         Next Req: ${bee.level < 20 ? '🌸 ' + beeReq + ' Flowers' : 'MAX'}
     `;
-    document.getElementById('renameBoxBee').style.display = 'block';
 
     let bearReq = getLevelRequirement('bear', bear.level);
     document.getElementById('infoBear').innerHTML = `
@@ -1577,6 +1569,7 @@ function updateCodexData() {
         Level: ${bear.level}/20<br>
         Next Req: ${bear.level < 20 ? '🍯 ' + bearReq + ' Honey' : 'MAX'}
     `;
+
     document.getElementById('renameBoxBear').style.display = bear.level >= 2 ? 'block' : 'none';
 }
 
