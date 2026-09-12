@@ -345,17 +345,12 @@ class Pet {
             }
 
             if (this.state === 'idle') {
+                this.stateTimer -= dt;
                 if (this.stateTimer <= 0) {
                     this.state = 'wander';
                     this.pickNewWanderTarget();
-                
-                    // FIXED: Shifts target state to the initial calm approach cycle step
-                    if (this.type === 'elephant' && this.level >= 20 && currentRegion === 2 && Math.random() < 0.10) {
-                        this.state = 'playing_approach';
-                        updateUI();
-                    }
                 }
-                return; 
+                return;
             }
 
             if (this.state === 'travel' && this.targetFlower) {
@@ -585,8 +580,9 @@ class Pet {
                 this.state = 'wander';
                 this.pickNewWanderTarget();
                 
+                // FIXED: Sets the exact matching sub-state string name 'playing_approach'
                 if (this.type === 'elephant' && this.level >= 20 && currentRegion === 2 && Math.random() < 0.10) {
-                    this.state = 'playing';
+                    this.state = 'playing_approach';
                     updateUI();
                 }
             }
@@ -1230,10 +1226,16 @@ function executeContinuousFeed() {
             return;
         }
         
-        // Prevent standard resource feeding interactions while the chase mini-game loops are active
+        // FIXED: Play button press now triggers Step 2 (The Retreat) instead of paying out early
+        if (pet.type === 'elephant' && pet.state === 'playing_approach') {
+            pet.state = 'playing_retreat';
+            updateUI();
+            return;
+        }
+        
+        // Prevent standard resource feeding or cheating payouts while any mini-game state is active
         if (pet.type === 'elephant' && (pet.state.startsWith('playing') || pet.state === 'playing_wait_for_move')) return;
 
-        if (pet.type === 'bee' || pet.level >= 20) return;
         
         let dx = (pet.x + pet.size / 2) - (player.x + player.size / 2);
         let dy = (pet.y + pet.size / 2) - (player.y + player.size / 2);
