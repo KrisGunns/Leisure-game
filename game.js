@@ -68,9 +68,11 @@ function updateUI() {
     const interactBtn = document.getElementById('interactBtn');
     if (interactBtn) {
         let elephantPlaying = false;
-        if (typeof petsByRegion !== 'undefined' && petsByRegion && petsByRegion[2][0]) {
-            let es = petsByRegion[2][0].state;
-            if (es.startsWith('playing') || es === 'playing_wait_for_move') elephantPlaying = true;
+        if (typeof petsByRegion !== 'undefined' && petsByRegion && petsByRegion[2] && petsByRegion[2][0]) {
+            let elState = petsByRegion[2][0].state;
+            if (elState && (elState.startsWith('playing') || elState === 'playing_wait_for_move')) {
+                elephantPlaying = true;
+            }
         }
         interactBtn.textContent = elephantPlaying ? 'PLAY' : 'GIVE';
     }
