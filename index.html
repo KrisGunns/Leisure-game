@@ -251,8 +251,8 @@
 <body>
     <div id="gameContainer">
     <div id="topBar">
-        <div>🎒 Food: <span id="lblFood">0</span> | Water: <span id="lblWater">0</span> | 🍯 Honey: <span id="lblHoney">0</span></div>
-        <div>
+    <div>🎒 Food: <span id="lblFood">0</span> | Water: <span id="lblWater">0</span> | 🍯 Honey: <span id="lblHoney">0</span> | 🐟 Fish: <span id="lblFish">0</span></div>
+    <div>
             🗺️ <select id="regionSelector">
                 <option value="1">Region 1</option>
                 <option value="2">Region 2</option>
@@ -1093,16 +1093,19 @@ class Pet {
         ctx.fillText(text, this.x + (this.size / 2), this.y - 16);
 
 
-        if (this.level < 5) {
+            if (this.level < 5) {
             let progressRatio = 0;
             if (this.type === 'bee') {
                 let reqFlowers = levelRequirements.bee[this.level - 1];
                 progressRatio = this.foodEaten / reqFlowers;
+            } else if (this.type === 'bear') {
+                let reqHoney = levelRequirements.bear[this.level - 1];
+                progressRatio = this.foodEaten / reqHoney;
             } else {
                 let req = levelRequirements[this.type][this.level - 1];
                 let totalNeeded = req.food + req.water;
                 let totalEaten = this.foodEaten + this.waterEaten;
-                progressRatio = totalEaten / totalNeeded;
+                progressRatio = totalNeeded > 0 ? (totalEaten / totalNeeded) : 0;
             }
 
             let barWidth = this.size + 8;
@@ -1117,7 +1120,7 @@ class Pet {
             grad.addColorStop(0, '#e67e22');
             grad.addColorStop(1, '#f1c40f');
             ctx.fillStyle = grad;
-            ctx.fillRect(barX, barY, barWidth * progressRatio, barHeight);
+            ctx.fillRect(barX, barY, barWidth * Math.min(1, Math.max(0, progressRatio)), barHeight);
 
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
             ctx.lineWidth = 1;
@@ -1453,7 +1456,7 @@ whistleBtn.addEventListener('click', () => {
     let activePets = petsByRegion[currentRegion];
     if (!Array.isArray(activePets)) return;
     activePets.forEach(pet => {
-        if (pet.type === 'bee') return;
+        if (pet.type === 'bee' || pet.type === 'bear') return;
         if (pet.level < 2) return;
         if (pet.state !== 'whistled') {
             pet.state = 'whistled';
@@ -1465,6 +1468,7 @@ whistleBtn.addEventListener('click', () => {
         }
     });
 });
+
 
 regionSelector.addEventListener('change', (e) => {
     let selectedRegion = parseInt(e.target.value);
@@ -1802,13 +1806,14 @@ function updateCodexData() {
     `;
     document.getElementById('renameBoxBee').style.display = 'block';
 
-    document.getElementById('infoBear').innerHTML = `
+        document.getElementById('infoBear').innerHTML = `
         <strong>${bear.level >= 2 ? bear.label : '???'}</strong><br>
         Status: <span class="${bear.level >= 2 ? 'codexTamed' : 'codexWild'}">${bear.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
         Level: ${bear.level}/5<br>
         Next Req: ${bear.level < 5 ? '🍯 ' + levelRequirements.bear[bear.level - 1] + ' Honey' : 'MAX'}
     `;
     document.getElementById('renameBoxBear').style.display = bear.level >= 2 ? 'block' : 'none';
+
 }
 
 document.getElementById('btnRenameDog').addEventListener('click', () => {
