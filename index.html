@@ -430,6 +430,7 @@ const input = {
 
 let feedInterval = null;
 let feedTurboTimeout = null;
+let feedHoldCounter = 0; // Added: Tracks how long your thumb is holding down GIVE
 
 function updateUI() {
     if (lblFood) lblFood.textContent = inventory.food;
@@ -1163,7 +1164,7 @@ const petsByRegion = {
             p.speed = 100;
             p.level = 1;
             p.state = 'wander';
-            p.honeyCarried = 0; // Added: Tracks honey storage for capacity rules
+            p.honeyCarried = 0;
             p.pickNewWanderTarget();
             return p;
         })()
@@ -1176,13 +1177,12 @@ const petsByRegion = {
             p.speed = 70;
             p.level = 1;
             p.state = 'wander';
-            p.fishingTimer = 0; // Added: Handles fishing loop cooldown triggers
-            p.fishingActionTimer = 0; // Added: Manages active 20s fishing action duration
+            p.fishingTimer = 0;
+            p.fishingActionTimer = 0;
             p.setNextFishingCooldown = function() {
-                // Milestone Perks: Decreases fishing cooldown interval at L3 & L5
-                if (this.level >= 5) this.fishingTimer = Math.random() * 30 + 50; // 50-80s
-                else if (this.level >= 3) this.fishingTimer = Math.random() * 25 + 60; // 60-85s
-                else this.fishingTimer = Math.random() * 20 + 70; // 70-90s
+                if (this.level >= 5) this.fishingTimer = Math.random() * 30 + 50;
+                else if (this.level >= 3) this.fishingTimer = Math.random() * 25 + 60;
+                else this.fishingTimer = Math.random() * 20 + 70;
             };
             p.setNextFishingCooldown();
             p.pickNewWanderTarget();
@@ -1349,14 +1349,13 @@ const interactBtnElement = document.getElementById('interactBtn');
 
 interactBtnElement.addEventListener('pointerdown', (e) => {
     e.preventDefault();
+    feedHoldCounter = 0; 
     executeContinuousFeed();
     
-    feedInterval = setInterval(executeContinuousFeed, 150);
-    
-    feedTurboTimeout = setTimeout(() => {
-        clearInterval(feedInterval);
-        feedInterval = setInterval(executeContinuousFeed, 50);
-    }, 1500);
+    feedInterval = setInterval(() => {
+        feedHoldCounter++;
+        executeContinuousFeed();
+    }, 100); 
 });
 
 interactBtnElement.addEventListener('pointerup', haltFeedTimers);
@@ -1368,6 +1367,7 @@ function haltFeedTimers() {
     if (feedTurboTimeout) clearTimeout(feedTurboTimeout);
     feedInterval = null;
     feedTurboTimeout = null;
+    feedHoldCounter = 0;
 }
 
 function executeContinuousFeed() {
@@ -1385,12 +1385,9 @@ function executeContinuousFeed() {
             let req = levelRequirements[pet.type][pet.level - 1];
             let feedAmount = 1;
 
-            if (feedTurboTimeout === null && feedInterval !== null) {
-                let totalNeeded = pet.type === 'bear' ? req : (req.food + req.water);
-                feedAmount = Math.floor(totalNeeded * 0.05);
-                if (feedAmount < 1) feedAmount = 1;
-                if (feedAmount > 25) feedAmount = 25;
-            }
+            if (feedHoldCounter > 30) feedAmount = 25;      
+            else if (feedHoldCounter > 15) feedAmount = 8;  
+            else if (feedHoldCounter > 5) feedAmount = 3;   
 
             for (let i = 0; i < feedAmount; i++) {
                 if (pet.level >= 5) break;
@@ -1595,7 +1592,20 @@ function gameLoop(timestamp) {
             waters.forEach(w => w.draw());
         }
 
-        for (let r = 1; r <= 4; r++) {
+        // Check if Region 4/5 background harvesting should be frozen
+        let regions1to3Tamed = true;
+        for (let checkR = 1; checkR <= 3; checkR++) {
+            if (Array.isArray(petsByRegion[checkR])) {
+                petsByRegion[checkR].forEach(pet => {
+                    if (pet.level < 2) regions1to3Tamed = false;
+                });
+            }
+        }
+
+        for (let r = 1; r <= 5; r++) {
+            // Skip updating background pets in locked regions
+            if (r >= 4 && !regions1to3Tamed) continue;
+
             let activePets = petsByRegion[r];
             if (Array.isArray(activePets)) {
                 activePets.forEach(pet => {
