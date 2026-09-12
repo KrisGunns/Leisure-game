@@ -276,7 +276,8 @@ class Pet {
         this.stateTimer = 0;
         this.targetX = this.x;
         this.targetY = this.y;
-        this.speed = 80; 
+        this.speed = 80;
+        this.digParticles = []; 
     }
 
         giveResources() {
@@ -492,9 +493,42 @@ class Pet {
         }
 
         // --- SPECIAL ACTION PERK MECHANICS MAPPING (DOG & ELEPHANT) ---
+                // --- UPGRADED LEVEL 20 DOG VISUAL DIGGING SYSTEM ---
         if (this.state === 'digging') {
             this.stateTimer -= dt;
-            if (this.stateTimer <= 0) {
+            
+            // Continuous Dirt Burst Generation: Injects little dirt fragments while timer ticks down
+            if (this.stateTimer > 0) {
+                // Generate 2 new dirt particles per frame for a rich visual burst cluster effect
+                for (let i = 0; i < 2; i++) {
+                    this.digParticles.push({
+                        x: this.x + this.size / 2,
+                        y: this.y + this.size - 4,
+                        // Throws dirt backward along a random horizontal/vertical arc trajectory vector
+                        vx: (Math.random() - 0.8) * 60, 
+                        vy: -(Math.random() * 50 + 20),
+                        gravity: 120,
+                        life: Math.random() * 0.4 + 0.2, // Particle lifespan in seconds
+                        size: Math.random() * 3 + 2      // Randomized dust fragment dimensions
+                    });
+                }
+            }
+
+            // Update existing dirt particles
+            for (let i = this.digParticles.length - 1; i >= 0; i--) {
+                let p = this.digParticles[i];
+                p.life -= dt;
+                p.vy += p.gravity * dt; // Apply environmental physics downward pulling weight gravity
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                
+                // Splice dead debris structures out of the tracking list to keep memory footprint flat
+                if (p.life <= 0) {
+                    this.digParticles.splice(i, 1);
+                }
+            }
+
+            if (this.stateTimer <= 0 && this.digParticles.length === 0) {
                 inventory.coins += 1;
                 updateUI();
                 saveGameProgress();
@@ -720,7 +754,7 @@ class Pet {
 
 
 
-    draw() {
+draw() {
         if (this.type === 'dog') {
             ctx.fillStyle = '#f1c40f'; 
             ctx.fillRect(this.x + 4, this.y + 10, 26, 16); 
@@ -887,6 +921,13 @@ class Pet {
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
             ctx.lineWidth = 1;
             ctx.strokeRect(barX, barY, barWidth, barHeight);
+        }
+        
+        if (this.digParticles && this.digParticles.length > 0) {
+            this.digParticles.forEach(p => {
+                ctx.fillStyle = (p.life > 0.3) ? '#5c3d12' : '#8c6239';
+                ctx.fillRect(p.x, p.y, p.size, p.size);
+            });
         }
     }
 }
