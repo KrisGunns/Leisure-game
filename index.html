@@ -500,6 +500,10 @@ function loadGameProgress() {
                         pet.label = savedPet.label || pet.label;
                         pet.foodEaten = savedPet.foodEaten || 0;
                         pet.waterEaten = savedPet.waterEaten || 0;
+                        } else if (pet.type === 'bear') {
+                        // Fallback: Ensures the Bear initializes smoothly on legacy save files
+                        pet.level = 1;
+                        pet.foodEaten = 0;
                     }
                 });
             }
