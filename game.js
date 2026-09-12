@@ -5,37 +5,28 @@ const lblFood = document.getElementById('lblFood');
 const lblWater = document.getElementById('lblWater');
 const lblHoney = document.getElementById('lblHoney');
 const lblFish = document.getElementById('lblFish');
+const lblCoins = document.getElementById('lblCoins');
+const lblEggs = document.getElementById('lblEggs');
 const regionSelector = document.getElementById('regionSelector');
 const whistleBtn = document.getElementById('whistleBtn');
 
-const levelRequirements = {
-    dog: [
-        { food: 5, water: 5 },
-        { food: 10, water: 10 },
-        { food: 20, water: 20 },
-        { food: 50, water: 50 }
-    ],
-    elephant: [
-        { food: 50, water: 30 },
-        { food: 100, water: 60 },
-        { food: 200, water: 120 },
-        { food: 500, water: 300 }
-    ],
-    squirrel: [
-        { food: 20, water: 10 },
-        { food: 40, water: 20 },
-        { food: 80, water: 40 },
-        { food: 200, water: 100 }
-    ],
-    chicken: [
-        { food: 25, water: 10 },
-        { food: 50, water: 20 },
-        { food: 100, water: 40 },
-        { food: 250, water: 100 }
-    ],
-    bee: [10, 20, 40, 80],
-    bear: [40, 80, 160, 350]
-};
+// New Core Dynamic Math Formula Engine (Max Level 20 scaling factor)
+function getLevelRequirement(type, currentLevel) {
+    const baseMap = { dog: 20, elephant: 50, squirrel: 10, chicken: 15, bee: 15, bear: 40 };
+    let base = baseMap[type] || 20;
+    
+    // Base XP * (Level ^ 1.2) - Continuous scaling curve calculation matrix
+    let reqValue = Math.floor(base * Math.pow(currentLevel, 1.2));
+    
+    if (type === 'bee' || type === 'bear') {
+        return reqValue;
+    }
+    
+    if (type === 'elephant') {
+        return { food: Math.floor(reqValue * 0.45), water: Math.floor(reqValue * 0.55) };
+    }
+    return { food: Math.floor(reqValue * 0.5), water: Math.floor(reqValue * 0.5) };
+}
 
 let currentRegion = 1;
 let spawnTimer = 0;
@@ -46,7 +37,9 @@ const inventory = {
     food: 0,
     water: 0,
     honey: 0,
-    fish: 0
+    fish: 0,
+    coins: 0,
+    eggs: 0
 };
 
 const input = {
@@ -65,6 +58,18 @@ function updateUI() {
     if (lblWater) lblWater.textContent = inventory.water;
     if (lblHoney) lblHoney.textContent = inventory.honey;
     if (lblFish) lblFish.textContent = inventory.fish;
+    if (lblCoins) lblCoins.textContent = inventory.coins;
+    if (lblEggs) lblEggs.textContent = inventory.eggs;
+
+    // Dynamically update GIVE button label if Level 20 Elephant trigger is playing
+    const interactBtn = document.getElementById('interactBtn');
+    if (interactBtn) {
+        let elephantPlaying = false;
+        if (typeof petsByRegion !== 'undefined' && petsByRegion[2] && petsByRegion[2][0]) {
+            if (petsByRegion[2][0].state === 'playing') elephantPlaying = true;
+        }
+        interactBtn.textContent = elephantPlaying ? 'PLAY' : 'GIVE';
+    }
 }
 
 function saveGameProgress() {
@@ -74,7 +79,9 @@ function saveGameProgress() {
                 food: inventory.food,
                 water: inventory.water,
                 honey: inventory.honey,
-                fish: inventory.fish
+                fish: inventory.fish,
+                coins: inventory.coins,
+                eggs: inventory.eggs
             },
             currentRegion: currentRegion,
             petsData: {}
@@ -86,7 +93,9 @@ function saveGameProgress() {
                     level: pet.level,
                     label: pet.label,
                     foodEaten: pet.foodEaten,
-                    waterEaten: pet.waterEaten
+                    waterEaten: pet.waterEaten,
+                    honeyCarried: pet.honeyCarried || 0,
+                    fishingTimer: pet.fishingTimer || 0
                 };
             });
         }
@@ -109,13 +118,13 @@ function loadGameProgress() {
             inventory.water = stateMatrix.inventory.water || 0;
             inventory.honey = stateMatrix.inventory.honey || 0;
             inventory.fish = stateMatrix.inventory.fish || 0;
+            inventory.coins = stateMatrix.inventory.coins || 0;
+            inventory.eggs = stateMatrix.inventory.eggs || 0;
         }
 
         if (stateMatrix.currentRegion) {
             currentRegion = stateMatrix.currentRegion;
-            if (regionSelector) {
-                regionSelector.value = currentRegion;
-            }
+            if (regionSelector) regionSelector.value = currentRegion;
             foods = regionalItems[currentRegion].foods;
             waters = regionalItems[currentRegion].waters;
             flowers = regionalItems[currentRegion].flowers;
@@ -130,9 +139,7 @@ function loadGameProgress() {
                         pet.label = savedPet.label || pet.label;
                         pet.foodEaten = savedPet.foodEaten || 0;
                         pet.waterEaten = savedPet.waterEaten || 0;
-                    } else if (pet.type === 'bear') {
-                        pet.level = 1;
-                        pet.foodEaten = 0;
+                        if (typeof pet.honeyCarried !== 'undefined') pet.honeyCarried = savedPet.honeyCarried || 0;
                     }
                 });
             }
@@ -295,13 +302,16 @@ class Pet {
         this.targetX = Math.random() * (canvas.width - this.size - padding * 2) + padding;
         this.targetY = Math.random() * (canvas.height - this.size - padding * 2) + padding;
     }
+
     update(dt, regionFoods, regionWaters, activeFlowers = []) {
+        // --- BEE AI SYSTEM MATRIX ---
         if (this.type === 'bee') {
             if (this.state === 'whistled') this.state = 'wander';
 
             let maxCapacity = 1;
-            if (this.level >= 5) maxCapacity = 3;
-            else if (this.level >= 3) maxCapacity = 2;
+            if (this.level >= 20) maxCapacity = 5;
+            else if (this.level >= 10) maxCapacity = 3;
+            else if (this.level >= 5) maxCapacity = 2;
 
             if (this.state === 'wander') {
                 if (this.honeyCarried >= maxCapacity) {
@@ -347,8 +357,9 @@ class Pet {
                     this.y += (dy / dist) * (this.speed * 1.5) * dt;
                 } else {
                     this.state = 'forage';
-                    if (this.level >= 5) this.stateTimer = 4.0;
-                    else if (this.level >= 3) this.stateTimer = 4.5;
+                    if (this.level >= 20) this.stateTimer = 3.0;
+                    else if (this.level >= 10) this.stateTimer = 4.0;
+                    else if (this.level >= 5) this.stateTimer = 4.5;
                     else this.stateTimer = 5.0;
                 }
             }
@@ -359,21 +370,17 @@ class Pet {
                     let idx = activeFlowers.indexOf(this.targetFlower);
                     if (idx > -1) {
                         activeFlowers.splice(idx, 1);
-                        if (typeof respawnQueue !== 'undefined') {
-                            respawnQueue.push({ type: 'flower', time: Date.now() + 10000 });
-                        }
+                        respawnQueue.push({ type: 'flower', time: Date.now() + 10000 });
                     }
                     this.targetFlower = null;
                     this.honeyCarried++;
                     this.foodEaten++; 
 
-                    if (this.level < 5) {
-                        let reqFlowers = levelRequirements.bee[this.level - 1];
-                        if (this.foodEaten >= reqFlowers) {
-                            this.level++;
-                            this.foodEaten = 0;
-                            if (typeof saveGameProgress === 'function') saveGameProgress();
-                        }
+                    let reqFlowers = getLevelRequirement('bee', this.level);
+                    if (this.level < 20 && this.foodEaten >= reqFlowers) {
+                        this.level++;
+                        this.foodEaten = 0;
+                        saveGameProgress();
                     }
                     this.state = 'wander';
                     this.pickNewWanderTarget();
@@ -385,21 +392,25 @@ class Pet {
                 let dy = (region4Hive.y - this.size / 2) - this.y;
                 let dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist > 5) {
-                    this.x += (dx / dist) * (this.speed * 1.5) * dt;
-                    this.y += (dy / dist) * (this.speed * 1.5) * dt;
+                    this.x += (dx / dist) * this.speed * 1.5 * dt;
+                    this.y += (dy / dist) * this.speed * 1.5 * dt;
                 } else {
                     let dropCount = this.honeyCarried;
-                    if (this.level >= 5) dropCount *= 2; 
+                    if (this.level >= 20 && Math.random() < 0.10) {
+                        dropCount *= 2; 
+                    }
                     inventory.honey += dropCount;
                     this.honeyCarried = 0;
-                    if (typeof updateUI === 'function') updateUI();
-                    if (typeof saveGameProgress === 'function') saveGameProgress();
+                    updateUI();
+                    saveGameProgress();
                     this.state = 'idle';
                     this.stateTimer = 2.0;
                 }
             }
             return;
         }
+
+        // --- BEAR AI SYSTEM MATRIX ---
         if (this.type === 'bear') {
             if (this.level < 2) {
                 if (this.state === 'idle') {
@@ -413,7 +424,7 @@ class Pet {
                         this.x += (dx / dist) * this.speed * dt;
                         this.y += (dy / dist) * this.speed * dt;
                     } else {
-                        this.state === 'idle';
+                        this.state = 'idle';
                         this.stateTimer = Math.random() * 3 + 1;
                     }
                 }
@@ -439,10 +450,16 @@ class Pet {
             if (this.state === 'fishing') {
                 this.fishingActionTimer -= dt;
                 if (this.fishingActionTimer <= 0) {
-                    let fishCaught = (this.level >= 5) ? 3 : 1;
+                    let fishCaught = 1;
+                    if (this.level >= 20) {
+                        fishCaught = 3;
+                        if (Math.random() < 0.10) fishCaught *= 2; 
+                    } else if (this.level >= 10) {
+                        fishCaught = 3;
+                    }
                     inventory.fish += fishCaught;
                     updateUI();
-                    if (typeof saveGameProgress === 'function') saveGameProgress();
+                    saveGameProgress();
                     this.setNextFishingCooldown();
                     this.state = 'wander';
                     this.pickNewWanderTarget();
@@ -474,6 +491,36 @@ class Pet {
             return;
         }
 
+        // --- SPECIAL ACTION PERK MECHANICS MAPPING (DOG & ELEPHANT) ---
+        if (this.state === 'digging') {
+            this.stateTimer -= dt;
+            if (this.stateTimer <= 0) {
+                inventory.coins += 1;
+                updateUI();
+                saveGameProgress();
+                this.state = 'wander';
+                this.pickNewWanderTarget();
+            }
+            return;
+        }
+
+        if (this.state === 'playing') {
+            let dx = player.x - this.x;
+            let dy = player.y - this.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist > 15) {
+                this.x += (dx / dist) * (this.speed * 1.4) * dt;
+                this.y += (dy / dist) * (this.speed * 1.4) * dt;
+            } else {
+                inventory.coins += 5;
+                updateUI();
+                saveGameProgress();
+                this.state = 'wander';
+                this.pickNewWanderTarget();
+            }
+            return;
+        }
+
         if (this.level < 2) return;
 
         if (this.state === 'whistled') {
@@ -492,6 +539,11 @@ class Pet {
             if (this.stateTimer <= 0) {
                 this.state = 'wander';
                 this.pickNewWanderTarget();
+                
+                if (this.type === 'elephant' && this.level >= 20 && currentRegion === 2 && Math.random() < 0.10) {
+                    this.state = 'playing';
+                    updateUI();
+                }
             }
             return; 
         }
@@ -525,10 +577,18 @@ class Pet {
                         respawnQueue.push({ type: targetItem.type, time: Date.now() + 10000 });
                         
                         if (this.type === 'dog') {
-                            if (this.level >= 5) {
+                            if (this.level >= 20) {
+                                if (targetItem.type === 'food') inventory.food += 5;
+                                else inventory.water += 5;
+                                if (Math.random() < 0.10) {
+                                    this.state = 'digging';
+                                    this.stateTimer = 3.0;
+                                    return;
+                                }
+                            } else if (this.level >= 10) {
                                 if (targetItem.type === 'food') inventory.food += 3;
                                 else inventory.water += 3;
-                            } else if (this.level >= 3) {
+                            } else if (this.level >= 5) {
                                 if (targetItem.type === 'food') inventory.food += 2;
                                 else inventory.water += 2;
                             } else {
@@ -536,10 +596,13 @@ class Pet {
                                 else inventory.water += 1;
                             }
                         } else if (this.type === 'elephant') {
-                            if (this.level >= 5) {
+                            if (this.level >= 20) {
+                                if (targetItem.type === 'food') inventory.food += 6;
+                                else inventory.water += 8;
+                            } else if (this.level >= 10) {
                                 if (targetItem.type === 'food') inventory.food += 3;
                                 else inventory.water += 4;
-                            } else if (this.level >= 3) {
+                            } else if (this.level >= 5) {
                                 if (targetItem.type === 'food') inventory.food += 2;
                                 else inventory.water += 3;
                             } else {
@@ -547,10 +610,13 @@ class Pet {
                                 else inventory.water += 2;
                             }
                         } else if (this.type === 'squirrel') {
-                            if (this.level >= 5) {
+                            if (this.level >= 20) {
+                                if (targetItem.type === 'food') inventory.food += 8;
+                                else inventory.water += 1;
+                            } else if (this.level >= 10) {
                                 if (targetItem.type === 'food') inventory.food += 5;
                                 else inventory.water += 1;
-                            } else if (this.level >= 3) {
+                            } else if (this.level >= 5) {
                                 if (targetItem.type === 'food') inventory.food += 3;
                                 else inventory.water += 1;
                             } else {
@@ -558,9 +624,19 @@ class Pet {
                                 else inventory.water += 0;
                             }
                         } else if (this.type === 'chicken') {
-                            if (this.level >= 5) {
+                            if (this.level >= 20) {
+                                if (targetItem.type === 'food') inventory.food += 4;
+                                else inventory.water += 2;
+                                if (Math.random() < 0.05) {
+                                    if (!regionalItems.eggs) regionalItems.eggs = [];
+                                    regionalItems.eggs.push({ x: this.x + this.size / 2, y: this.y + this.size / 2 });
+                                }
+                            } else if (this.level >= 10) {
                                 if (targetItem.type === 'food') inventory.food += 3;
-                                else inventory.water += 3;
+                                else inventory.water += 1;
+                            } else if (this.level >= 5) {
+                                if (targetItem.type === 'food') inventory.food += 2;
+                                else inventory.water += 1;
                             } else {
                                 if (targetItem.type === 'food') inventory.food += 1;
                                 else inventory.water += 1;
@@ -590,6 +666,9 @@ class Pet {
             }
         }
     }
+
+
+
     draw() {
         if (this.type === 'dog') {
             ctx.fillStyle = '#f1c40f'; 
@@ -834,6 +913,19 @@ window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
 function checkCollisions() {
+    if (currentRegion === 3 && regionalItems.eggs) {
+        for (let i = regionalItems.eggs.length - 1; i >= 0; i--) {
+            let egg = regionalItems.eggs[i];
+            if (player.x < egg.x + 12 && player.x + player.size > egg.x - 12 &&
+                player.y < egg.y + 12 && player.y + player.size > egg.y - 12) {
+                regionalItems.eggs.splice(i, 1);
+                inventory.eggs += 1;
+                updateUI();
+                saveGameProgress();
+            }
+        }
+    }
+
     if (currentRegion === 4) {
         for (let i = flowers.length - 1; i >= 0; i--) {
             let fl = flowers[i];
@@ -1060,7 +1152,10 @@ window.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowDown' || e.key === 's') input.down = true;
     if (e.key === 'ArrowLeft' || e.key === 'a') input.left = true;
     if (e.key === 'ArrowRight' || e.key === 'd') input.right = true;
-    if (e.key === ' ' || e.key === 'e') handleInteract();
+    if (e.key === ' ' || e.key === 'e') {
+        e.preventDefault();
+        executeContinuousFeed();
+    }
 });
 
 window.addEventListener('keyup', (e) => {
@@ -1069,19 +1164,29 @@ window.addEventListener('keyup', (e) => {
     if (e.key === 'ArrowLeft' || e.key === 'a') input.left = false;
     if (e.key === 'ArrowRight' || e.key === 'd') input.right = false;
 });
+
 function executeContinuousFeed() {
     let activePets = petsByRegion[currentRegion];
     if (!Array.isArray(activePets)) return;
 
     activePets.forEach(pet => {
-        if (pet.type === 'bee' || pet.level >= 5) return;
+        if (pet.type === 'elephant' && pet.state === 'playing') {
+            pet.state = 'wander';
+            pet.pickNewWanderTarget();
+            inventory.coins += 5;
+            updateUI();
+            saveGameProgress();
+            return;
+        }
+
+        if (pet.type === 'bee' || pet.level >= 20) return;
         
         let dx = (pet.x + pet.size / 2) - (player.x + player.size / 2);
         let dy = (pet.y + pet.size / 2) - (player.y + player.size / 2);
         let dist = Math.sqrt(dx * dx + dy * dy);
         
         if (dist < 80) {
-            let req = levelRequirements[pet.type][pet.level - 1];
+            let req = getLevelRequirement(pet.type, pet.level);
             let feedAmount = 1;
 
             if (feedHoldCounter > 30) feedAmount = 25;      
@@ -1089,7 +1194,7 @@ function executeContinuousFeed() {
             else if (feedHoldCounter > 5) feedAmount = 3;
 
             for (let i = 0; i < feedAmount; i++) {
-                if (pet.level >= 5) break;
+                if (pet.level >= 20) break;
                 
                 if (pet.type === 'bear') {
                     if (inventory.honey > 0) {
@@ -1100,13 +1205,13 @@ function executeContinuousFeed() {
                             pet.foodEaten = 0;
                             pet.pickNewWanderTarget();
                             if (pet.state === 'idle') pet.state = 'wander';
-                            if (typeof saveGameProgress === 'function') saveGameProgress();
+                            saveGameProgress();
                         }
                     } else {
                         break;
                     }
                 } else {
-                    let currentReq = levelRequirements[pet.type][pet.level - 1];
+                    let currentReq = getLevelRequirement(pet.type, pet.level);
                     if (pet.foodEaten < currentReq.food && inventory.food > 0) {
                         inventory.food--;
                         pet.foodEaten++;
@@ -1123,7 +1228,7 @@ function executeContinuousFeed() {
                         pet.waterEaten = 0;
                         pet.pickNewWanderTarget();
                         if (pet.state === 'idle') pet.state = 'wander';
-                        if (typeof saveGameProgress === 'function') saveGameProgress();
+                        saveGameProgress();
                     }
                 }
             }
@@ -1223,6 +1328,19 @@ function gameLoop(timestamp) {
         } else {
             foods.forEach(f => f.draw());
             waters.forEach(w => w.draw());
+
+        // Added: Renders the white elliptical eggs inside the Region 3 woods canvas layer
+            if (currentRegion === 3 && regionalItems[3].eggs) {
+                regionalItems[3].eggs.forEach(egg => {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.ellipse(egg.x, egg.y, 6, 8, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#dcdde1';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                });
+            }
         }
 
         let regions1to3Tamed = true;
@@ -1388,6 +1506,7 @@ function renderMiniPet(pet, elementId) {
         }
     }
 }
+
 function updateCodexData() {
     const dog = petsByRegion[1][0];
     const elephant = petsByRegion[2][0];
@@ -1403,79 +1522,61 @@ function updateCodexData() {
     renderMiniPet(bee, 'viewBee');
     renderMiniPet(bear, 'viewBear');
 
+    let dogReq = getLevelRequirement('dog', dog.level);
     document.getElementById('infoDog').innerHTML = `
         <strong>${dog.level >= 2 ? dog.label : '???'}</strong><br>
         Status: <span class="${dog.level >= 2 ? 'codexTamed' : 'codexWild'}">${dog.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
-        Level: ${dog.level}/5<br>
-        Next Req: ${dog.level < 5 ? '🍪' + levelRequirements.dog[dog.level - 1].food + ' 💧' + levelRequirements.dog[dog.level - 1].water : 'MAX'}
+        Level: ${dog.level}/20<br>
+        Next Req: ${dog.level < 20 ? '🍪' + dogReq.food + ' 💧' + dogReq.water : 'MAX'}
     `;
     document.getElementById('renameBoxDog').style.display = dog.level >= 2 ? 'block' : 'none';
 
+    let elReq = getLevelRequirement('elephant', elephant.level);
     document.getElementById('infoElephant').innerHTML = `
         <strong>${elephant.level >= 2 ? elephant.label : '???'}</strong><br>
         Status: <span class="${elephant.level >= 2 ? 'codexTamed' : 'codexWild'}">${elephant.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
-        Level: ${elephant.level}/5<br>
-        Next Req: ${elephant.level < 5 ? '🍪' + levelRequirements.elephant[elephant.level - 1].food + ' 💧' + levelRequirements.elephant[elephant.level - 1].water : 'MAX'}
+        Level: ${elephant.level}/20<br>
+        Next Req: ${elephant.level < 20 ? '🍪' + elReq.food + ' 💧' + elReq.water : 'MAX'}
     `;
     document.getElementById('renameBoxElephant').style.display = elephant.level >= 2 ? 'block' : 'none';
 
+    let sqReq = getLevelRequirement('squirrel', squirrel.level);
     document.getElementById('infoSquirrel').innerHTML = `
         <strong>${squirrel.level >= 2 ? squirrel.label : '???'}</strong><br>
         Status: <span class="${squirrel.level >= 2 ? 'codexTamed' : 'codexWild'}">${squirrel.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
-        Level: ${squirrel.level}/5<br>
-        Next Req: ${squirrel.level < 5 ? '🍪' + levelRequirements.squirrel[squirrel.level - 1].food + ' 💧' + levelRequirements.squirrel[squirrel.level - 1].water : 'MAX'}
+        Level: ${squirrel.level}/20<br>
+        Next Req: ${squirrel.level < 20 ? '🍪' + sqReq.food + ' 💧' + sqReq.water : 'MAX'}
     `;
     document.getElementById('renameBoxSquirrel').style.display = squirrel.level >= 2 ? 'block' : 'none';
 
+    let chReq = getLevelRequirement('chicken', chicken.level);
     document.getElementById('infoChicken').innerHTML = `
         <strong>${chicken.level >= 2 ? chicken.label : '???'}</strong><br>
         Status: <span class="${chicken.level >= 2 ? 'codexTamed' : 'codexWild'}">${chicken.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
-        Level: ${chicken.level}/5<br>
-        Next Req: ${chicken.level < 5 ? '🍪' + levelRequirements.chicken[chicken.level - 1].food + ' 💧' + levelRequirements.chicken[chicken.level - 1].water : 'MAX'}
+        Level: ${chicken.level}/20<br>
+        Next Req: ${chicken.level < 20 ? '🍪' + chReq.food + ' 💧' + chReq.water : 'MAX'}
     `;
     document.getElementById('renameBoxChicken').style.display = chicken.level >= 2 ? 'block' : 'none';
 
+    let beeReq = getLevelRequirement('bee', bee.level);
     document.getElementById('infoBee').innerHTML = `
         <strong>${bee.label}</strong><br>
         Status: <span class="codexTamed">AUTONOMOUS</span><br>
-        Level: ${bee.level}/5<br>
-        Next Req: ${bee.level < 5 ? '🌸 ' + levelRequirements.bee[bee.level - 1] + ' Flowers' : 'MAX'}
+        Level: ${bee.level}/20<br>
+        Next Req: ${bee.level < 20 ? '🌸 ' + beeReq + ' Flowers' : 'MAX'}
     `;
     document.getElementById('renameBoxBee').style.display = 'block';
 
+    let bearReq = getLevelRequirement('bear', bear.level);
     document.getElementById('infoBear').innerHTML = `
         <strong>${bear.level >= 2 ? bear.label : '???'}</strong><br>
         Status: <span class="${bear.level >= 2 ? 'codexTamed' : 'codexWild'}">${bear.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
-        Level: ${bear.level}/5<br>
-        Next Req: ${bear.level < 5 ? '🍯 ' + levelRequirements.bear[bear.level - 1] + ' Honey' : 'MAX'}
+        Level: ${bear.level}/20<br>
+        Next Req: ${bear.level < 20 ? '🍯 ' + bearReq + ' Honey' : 'MAX'}
     `;
     document.getElementById('renameBoxBear').style.display = bear.level >= 2 ? 'block' : 'none';
 }
 
-document.getElementById('btnRenameDog').addEventListener('click', () => {
-    let name = document.getElementById('inputDog').value.trim();
-    if (name) { petsByRegion[1][0].label = name; updateCodexData(); }
-});
-document.getElementById('btnRenameElephant').addEventListener('click', () => {
-    let name = document.getElementById('inputElephant').value.trim();
-    if (name) { petsByRegion[2][0].label = name; updateCodexData(); }
-});
-document.getElementById('btnRenameSquirrel').addEventListener('click', () => {
-    let name = document.getElementById('inputSquirrel').value.trim();
-    if (name) { petsByRegion[3][0].label = name; updateCodexData(); }
-});
-document.getElementById('btnRenameChicken').addEventListener('click', () => {
-    let name = document.getElementById('inputChicken').value.trim();
-    if (name) { petsByRegion[3][1].label = name; updateCodexData(); }
-});
-document.getElementById('btnRenameBee').addEventListener('click', () => {
-    let name = document.getElementById('inputBee').value.trim();
-    if (name) { petsByRegion[4][0].label = name; updateCodexData(); }
-});
-document.getElementById('btnRenameBear').addEventListener('click', () => {
-    let name = document.getElementById('inputBear').value.trim();
-    if (name) { petsByRegion[5][0].label = name; updateCodexData(); }
-});
 const codexOverlay = document.getElementById('codexOverlay');
 const openCodexBtn = document.getElementById('openCodexBtn');
 const codexClose = document.getElementById('codexClose');
