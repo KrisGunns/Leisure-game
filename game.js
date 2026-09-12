@@ -28,7 +28,7 @@ const levelRequirements = {
         { food: 100, water: 40 },
         { food: 250, water: 100 }
     ],
-    bee:,
+    bee: [10, 20, 40, 80],
     bear: [40, 80, 160, 350]
 };
 
