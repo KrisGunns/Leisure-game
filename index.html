@@ -258,6 +258,7 @@
                 <option value="2">Region 2</option>
                 <option value="3">Region 3</option>
                 <option value="4">Region 4</option>
+                <option value="5">Region 5</option>
             </select>
         </div>
     </div>
@@ -350,6 +351,19 @@
     </div>
 </div>
 
+        <!-- BEAR -->
+        <div class="codexEntry">
+            <canvas id="viewBear" class="codexCanvasView"></canvas>
+            <div>
+                <div id="infoBear" class="codexInfo"></div>
+                <div id="renameBoxBear" style="margin-top: 6px; display: none;">
+                    <input type="text" id="inputBear" placeholder="New Name" style="width: 80px; font-size: 10px;">
+                    <button id="btnRenameBear" style="font-size: 10px; padding: 2px 6px;">Set</button>
+                </div>
+            </div>
+        </div>
+
+
 <div id="joystickContainer">
     <div id="joystickHandle"></div>
 </div>
@@ -363,6 +377,7 @@ const ctx = canvas.getContext('2d');
 const lblFood = document.getElementById('lblFood');
 const lblWater = document.getElementById('lblWater');
 const lblHoney = document.getElementById('lblHoney');
+const lblFish = document.getElementById('lblFish');
 const regionSelector = document.getElementById('regionSelector');
 
 const levelRequirements = {
@@ -390,7 +405,8 @@ const levelRequirements = {
         { food: 100, water: 40 },
         { food: 250, water: 100 }
     ],
-    bee: [10, 20, 40, 80]
+    bee: [10, 20, 40, 80],
+    bear: [40, 80, 160, 350]
 };
 
 let currentRegion = 1;
@@ -401,7 +417,8 @@ const frameInterval = 1000 / 60;
 const inventory = {
     food: 0,
     water: 0,
-    honey: 0
+    honey: 0,
+    fish: 0
 };
 
 const input = {
@@ -415,11 +432,10 @@ let feedInterval = null;
 let feedTurboTimeout = null;
 
 function updateUI() {
-    lblFood.textContent = inventory.food;
-    lblWater.textContent = inventory.water;
-    if (lblHoney) {
-        lblHoney.textContent = inventory.honey;
-    }
+    if (lblFood) lblFood.textContent = inventory.food;
+    if (lblWater) lblWater.textContent = inventory.water;
+    if (lblHoney) lblHoney.textContent = inventory.honey;
+    if (lblFish) lblFish.textContent = inventory.fish;
 }
 
 function saveGameProgress() {
@@ -649,8 +665,16 @@ class Pet {
 
             update(dt, regionFoods, regionWaters, activeFlowers = []) {
         if (this.type === 'bee') {
+            if (this.state === 'whistled') this.state = 'wander';
+
+            let maxCapacity = 1;
+            if (this.level >= 5) maxCapacity = 3;
+            else if (this.level >= 3) maxCapacity = 2;
+
             if (this.state === 'wander') {
-                if (!this.targetFlower && activeFlowers.length > 0) {
+                if (this.honeyCarried >= maxCapacity) {
+                    this.state = 'return_hive';
+                } else if (!this.targetFlower && activeFlowers.length > 0) {
                     let freeFlower = activeFlowers.find(f => !f.isTargeted);
                     if (freeFlower) {
                         this.targetFlower = freeFlower;
@@ -658,6 +682,7 @@ class Pet {
                         this.state = 'travel';
                     }
                 }
+                
                 if (this.state === 'wander') {
                     let dx = this.targetX - this.x;
                     let dy = this.targetY - this.y;
@@ -690,8 +715,6 @@ class Pet {
                     this.y += (dy / dist) * (this.speed * 1.5) * dt;
                 } else {
                     this.state = 'forage';
-                    
-                    // Bee Perk Clock: Drops from 5s down to 4.5s (L3) or 4.0s (L5)
                     if (this.level >= 5) this.stateTimer = 4.0;
                     else if (this.level >= 3) this.stateTimer = 4.5;
                     else this.stateTimer = 5.0;
@@ -709,13 +732,8 @@ class Pet {
                         }
                     }
                     this.targetFlower = null;
+                    this.honeyCarried++;
                     this.foodEaten++; 
-                    
-                    // Bee Honey Payout Perk: Double honey (+2) at Level 5
-                    if (this.level >= 5) inventory.honey += 2;
-                    else inventory.honey += 1;
-                    
-                    if (typeof updateUI === 'function') updateUI();
 
                     if (this.level < 5) {
                         let reqFlowers = levelRequirements.bee[this.level - 1];
@@ -725,8 +743,100 @@ class Pet {
                             if (typeof saveGameProgress === 'function') saveGameProgress();
                         }
                     }
+                    this.state = 'wander';
+                    this.pickNewWanderTarget();
+                }
+            }
+
+            if (this.state === 'return_hive') {
+                let dx = (region4Hive.x - this.size / 2) - this.x;
+                let dy = (region4Hive.y - this.size / 2) - this.y;
+                let dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > 5) {
+                    this.x += (dx / dist) * (this.speed * 1.5) * dt;
+                    this.y += (dy / dist) * (this.speed * 1.5) * dt;
+                } else {
+                    let dropCount = this.honeyCarried;
+                    if (this.level >= 5) dropCount *= 2; 
+                    inventory.honey += dropCount;
+                    this.honeyCarried = 0;
+                    if (typeof updateUI === 'function') updateUI();
+                    if (typeof saveGameProgress === 'function') saveGameProgress();
                     this.state = 'idle';
-                    this.stateTimer = Math.random() * 2 + 1;
+                    this.stateTimer = 2.0;
+                }
+            }
+            return;
+        }
+            if (this.type === 'bear') {
+            if (this.level < 2) {
+                if (this.state === 'idle') {
+                    this.stateTimer -= dt;
+                    if (this.stateTimer <= 0) { this.state = 'wander'; this.pickNewWanderTarget(); }
+                } else {
+                    let dx = this.targetX - this.x;
+                    let dy = this.targetY - this.y;
+                    let dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist > 5) {
+                        this.x += (dx / dist) * this.speed * dt;
+                        this.y += (dy / dist) * this.speed * dt;
+                    } else {
+                        this.state = 'idle';
+                        this.stateTimer = Math.random() * 3 + 1;
+                    }
+                }
+                return;
+            }
+
+            if (this.state === 'fishing_travel') {
+                let lakeTargetX = canvas.width / 2 - this.size / 2;
+                let lakeTargetY = canvas.height - 100;
+                let dx = lakeTargetX - this.x;
+                let dy = lakeTargetY - this.y;
+                let dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > 5) {
+                    this.x += (dx / dist) * (this.speed * 1.2) * dt;
+                    this.y += (dy / dist) * (this.speed * 1.2) * dt;
+                } else {
+                    this.state = 'fishing';
+                    this.fishingActionTimer = 20.0;
+                }
+                return;
+            }
+
+            if (this.state === 'fishing') {
+                this.fishingActionTimer -= dt;
+                if (this.fishingActionTimer <= 0) {
+                    let fishCaught = (this.level >= 5) ? 3 : 1;
+                    inventory.fish += fishCaught;
+                    updateUI();
+                    if (typeof saveGameProgress === 'function') saveGameProgress();
+                    this.setNextFishingCooldown();
+                    this.state = 'wander';
+                    this.pickNewWanderTarget();
+                }
+                return;
+            }
+
+            this.fishingTimer -= dt;
+            if (this.fishingTimer <= 0) {
+                this.state = 'fishing_travel';
+                return;
+            }
+
+            if (this.state === 'idle') {
+                this.stateTimer -= dt;
+                if (this.stateTimer <= 0) { this.state = 'wander'; this.pickNewWanderTarget(); }
+            } else {
+                let dx = this.targetX - this.x;
+                let dy = this.targetY - this.y;
+                let dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > 5) {
+                    this.x += (dx / dist) * this.speed * dt;
+                    this.y += (dy / dist) * this.speed * dt;
+                } else {
+                    this.state = 'idle';
+                    this.stateTimer = Math.random() * 3 + 1;
                 }
             }
             return;
@@ -782,7 +892,6 @@ class Pet {
                         targetItem.list.splice(idx, 1);
                         respawnQueue.push({ type: targetItem.type, time: Date.now() + 10000 });
                         
-                        // --- DYNAMIC PERK PROGRESSION SYSTEM ---
                         if (this.type === 'dog') {
                             if (this.level >= 5) {
                                 if (targetItem.type === 'food') inventory.food += 3;
@@ -824,9 +933,6 @@ class Pet {
                                 if (targetItem.type === 'food') inventory.food += 1;
                                 else inventory.water += 1;
                             }
-                        } else {
-                            if (targetItem.type === 'food') inventory.food++;
-                            else inventory.water++;
                         }
                         updateUI();
                     }
@@ -952,6 +1058,20 @@ class Pet {
             ctx.fill();
             ctx.fillStyle = '#000000';
             ctx.fillRect(this.x + 26, this.y + 15, 2, 2);
+        }else if (this.type === 'bear' || pet.type === 'bear') {
+            let bx = this.type === 'bear' ? this.x : ox;
+            let by = this.type === 'bear' ? this.y : oy;
+            ctx.fillStyle = '#5a2a00'; // Brown Fur
+            ctx.fillRect(bx + 4, by + 8, 28, 20); // Body
+            ctx.fillRect(bx + 10, by, 16, 12); // Head
+            ctx.fillRect(bx + 8, by - 4, 6, 6); // Left Ear
+            ctx.fillRect(bx + 22, by - 4, 6, 6); // Right Ear
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(bx + 14, by + 4, 2, 2); // Eye
+            ctx.fillRect(bx + 20, by + 4, 2, 2); // Eye
+            ctx.fillStyle = '#3a1a00';
+            ctx.fillRect(bx + 6, by + 28, 6, 6); // Legs
+            ctx.fillRect(bx + 24, by + 28, 6, 6);
         }
 
         ctx.fillStyle = '#fff';
@@ -961,10 +1081,16 @@ class Pet {
         let text = `${this.label} Lv.${this.level}`;
         if (this.level >= 5) {
             text += ' [MAX]';
-        } else if (this.level > 1 || this.type === 'bee') {
+        }
+        
+        if (this.state === 'whistled') {
+            text += ' [WHISTLED]';
+        } else if (this.level > 1 || this.type === 'bee' || this.type === 'bear') {
             text += ` [${this.state.toUpperCase()}]`;
         }
+        
         ctx.fillText(text, this.x + (this.size / 2), this.y - 16);
+
 
         if (this.level < 5) {
             let progressRatio = 0;
@@ -1006,12 +1132,16 @@ const regionalItems = {
     1: { foods: [], waters: [], flowers: [] },
     2: { foods: [], waters: [], flowers: [] },
     3: { foods: [], waters: [], flowers: [] },
-    4: { foods: [], waters: [], flowers: [] }
+    4: { foods: [], waters: [], flowers: [] },
+    5: { foods: [], waters: [], flowers: [] }
 };
 
 let foods = regionalItems[currentRegion].foods;
 let waters = regionalItems[currentRegion].waters;
 let flowers = regionalItems[currentRegion].flowers;
+
+// Static environmental anchor coordinates for special structures
+const region4Hive = { x: 225, y: 75 };
 
 const petsByRegion = {
     1: [new Pet('dog', 'Retriever', '#f1c40f')],
@@ -1030,8 +1160,31 @@ const petsByRegion = {
             let p = new Pet('bee', 'Bee', '#f1c40f');
             p.x = 200;
             p.y = 150;
+            p.speed = 100;
             p.level = 1;
             p.state = 'wander';
+            p.honeyCarried = 0; // Added: Tracks honey storage for capacity rules
+            p.pickNewWanderTarget();
+            return p;
+        })()
+    ],
+    5: [
+        (() => {
+            let p = new Pet('bear', 'Bear', '#5a2a00');
+            p.x = 200;
+            p.y = 250;
+            p.speed = 70;
+            p.level = 1;
+            p.state = 'wander';
+            p.fishingTimer = 0; // Added: Handles fishing loop cooldown triggers
+            p.fishingActionTimer = 0; // Added: Manages active 20s fishing action duration
+            p.setNextFishingCooldown = function() {
+                // Milestone Perks: Decreases fishing cooldown interval at L3 & L5
+                if (this.level >= 5) this.fishingTimer = Math.random() * 30 + 50; // 50-80s
+                else if (this.level >= 3) this.fishingTimer = Math.random() * 25 + 60; // 60-85s
+                else this.fishingTimer = Math.random() * 20 + 70; // 70-90s
+            };
+            p.setNextFishingCooldown();
             p.pickNewWanderTarget();
             return p;
         })()
@@ -1111,10 +1264,10 @@ function processSpawns(dt) {
 
     spawnTimer += dt;
     if (spawnTimer >= 10) {
-        for (let r = 1; r <= 4; r++) {
+        for (let r = 1; r <= 5; r++) {
             if (r === 4) {
                 if (regionalItems[r].flowers.length < 5) regionalItems[r].flowers.push(new Flower());
-            } else {
+            } else if (r <= 3) {
                 if (regionalItems[r].foods.length < 5) regionalItems[r].foods.push(new Item('food'));
                 if (regionalItems[r].waters.length < 5) regionalItems[r].waters.push(new Item('water'));
             }
@@ -1222,14 +1375,63 @@ function executeContinuousFeed() {
     if (!Array.isArray(activePets)) return;
 
     activePets.forEach(pet => {
-        if (pet.type === 'bee') return;
+        if (pet.type === 'bee' || pet.level >= 5) return;
         
         let dx = (pet.x + pet.size / 2) - (player.x + player.size / 2);
         let dy = (pet.y + pet.size / 2) - (player.y + player.size / 2);
         let dist = Math.sqrt(dx * dx + dy * dy);
         
         if (dist < 80) {
-            pet.giveResources();
+            let req = levelRequirements[pet.type][pet.level - 1];
+            let feedAmount = 1;
+
+            if (feedTurboTimeout === null && feedInterval !== null) {
+                let totalNeeded = pet.type === 'bear' ? req : (req.food + req.water);
+                feedAmount = Math.floor(totalNeeded * 0.05);
+                if (feedAmount < 1) feedAmount = 1;
+                if (feedAmount > 25) feedAmount = 25;
+            }
+
+            for (let i = 0; i < feedAmount; i++) {
+                if (pet.level >= 5) break;
+                
+                if (pet.type === 'bear') {
+                    if (inventory.honey > 0) {
+                        inventory.honey--;
+                        pet.foodEaten++;
+                        if (pet.foodEaten >= req) {
+                            pet.level++;
+                            pet.foodEaten = 0;
+                            pet.pickNewWanderTarget();
+                            if (pet.state === 'idle') pet.state = 'wander';
+                            if (typeof saveGameProgress === 'function') saveGameProgress();
+                        }
+                    } else {
+                        break;
+                    }
+                } else {
+                    let currentReq = levelRequirements[pet.type][pet.level - 1];
+                    if (pet.foodEaten < currentReq.food && inventory.food > 0) {
+                        inventory.food--;
+                        pet.foodEaten++;
+                    } else if (pet.waterEaten < currentReq.water && inventory.water > 0) {
+                        inventory.water--;
+                        pet.waterEaten++;
+                    } else {
+                        break;
+                    }
+
+                    if (pet.foodEaten >= currentReq.food && pet.waterEaten >= currentReq.water) {
+                        pet.level++;
+                        pet.foodEaten = 0;
+                        pet.waterEaten = 0;
+                        pet.pickNewWanderTarget();
+                        if (pet.state === 'idle') pet.state = 'wander';
+                        if (typeof saveGameProgress === 'function') saveGameProgress();
+                    }
+                }
+            }
+            updateUI();
         }
     });
 }
@@ -1254,6 +1456,7 @@ whistleBtn.addEventListener('click', () => {
     let activePets = petsByRegion[currentRegion];
     if (!Array.isArray(activePets)) return;
     activePets.forEach(pet => {
+        if (pet.type === 'bee') return;
         if (pet.level < 2) return;
         if (pet.state !== 'whistled') {
             pet.state = 'whistled';
@@ -1267,12 +1470,33 @@ whistleBtn.addEventListener('click', () => {
 });
 
 regionSelector.addEventListener('change', (e) => {
-    currentRegion = parseInt(e.target.value);
+    let selectedRegion = parseInt(e.target.value);
+    
+    if (selectedRegion >= 4) {
+        let allTamed = true;
+        for (let r = 1; r <= 3; r++) {
+            if (Array.isArray(petsByRegion[r])) {
+                petsByRegion[r].forEach(pet => {
+                    if (pet.level < 2) {
+                        allTamed = false;
+                    }
+                });
+            }
+        }
+        
+        if (!allTamed) {
+            alert("🔒 Region locked! You must tame all pets in Regions 1-3 (reach Level 2+) to unlock this area.");
+            regionSelector.value = currentRegion;
+            return;
+        }
+    }
+    
+    currentRegion = selectedRegion;
     foods = regionalItems[currentRegion].foods;
     waters = regionalItems[currentRegion].waters;
     flowers = regionalItems[currentRegion].flowers;
-    whistleBtn.textContent = 'WHISTLE';
-    saveGameProgress();
+    if (typeof whistleBtn !== 'undefined') whistleBtn.textContent = 'WHISTLE';
+    if (typeof saveGameProgress === 'function') saveGameProgress();
 });
 
 function gameLoop(timestamp) {
@@ -1326,6 +1550,34 @@ function gameLoop(timestamp) {
                     ctx.fillRect(x + 10, y + 6, 6, 2);
                 }
             }
+            // Draw Bee Hive Structure
+            ctx.fillStyle = '#f39c12';
+            ctx.beginPath();
+            ctx.arc(region4Hive.x, region4Hive.y, 20, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#d35400';
+            ctx.fillRect(region4Hive.x - 12, region4Hive.y + 4, 24, 6);
+            ctx.fillStyle = '#2c3e50';
+            ctx.beginPath();
+            ctx.arc(region4Hive.x, region4Hive.y + 6, 4, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (currentRegion === 5) {
+            ctx.fillStyle = '#013220'; // Dark Woods
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Draw Forest Trees
+            ctx.fillStyle = '#8b5a2b';
+            for (let x = 50; x < canvas.width; x += 110) {
+                ctx.fillRect(x, 40, 10, 25);
+                ctx.fillStyle = '#228b22';
+                ctx.beginPath(); ctx.arc(x + 5, 35, 22, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#8b5a2b';
+            }
+            // Draw the distinct Blue Fishing Lake
+            ctx.fillStyle = '#2980b9';
+            ctx.fillRect(30, canvas.height - 130, canvas.width - 60, 90);
+            ctx.strokeStyle = '#3498db';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(30, canvas.height - 130, canvas.width - 60, 90);
         }
 
         ctx.strokeStyle = '#ffffff';
@@ -1491,12 +1743,14 @@ function updateCodexData() {
     const squirrel = petsByRegion[3][0];
     const chicken = petsByRegion[3][1];
     const bee = petsByRegion[4][0];
+    const bear = petsByRegion[5][0];
 
     renderMiniPet(dog, 'viewDog');
     renderMiniPet(elephant, 'viewElephant');
     renderMiniPet(squirrel, 'viewSquirrel');
     renderMiniPet(chicken, 'viewChicken');
     renderMiniPet(bee, 'viewBee');
+    renderMiniPet(bear, 'viewBear');
 
     document.getElementById('infoDog').innerHTML = `
         <strong>${dog.level >= 2 ? dog.label : '???'}</strong><br>
@@ -1537,6 +1791,14 @@ function updateCodexData() {
         Next Req: ${bee.level < 5 ? '🌸 ' + levelRequirements.bee[bee.level - 1] + ' Flowers' : 'MAX'}
     `;
     document.getElementById('renameBoxBee').style.display = 'block';
+
+    document.getElementById('infoBear').innerHTML = `
+        <strong>${bear.level >= 2 ? bear.label : '???'}</strong><br>
+        Status: <span class="${bear.level >= 2 ? 'codexTamed' : 'codexWild'}">${bear.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
+        Level: ${bear.level}/5<br>
+        Next Req: ${bear.level < 5 ? '🍯 ' + levelRequirements.bear[bear.level - 1] + ' Honey' : 'MAX'}
+    `;
+    document.getElementById('renameBoxBear').style.display = bear.level >= 2 ? 'block' : 'none';
 }
 
 document.getElementById('btnRenameDog').addEventListener('click', () => {
@@ -1559,6 +1821,11 @@ document.getElementById('btnRenameBee').addEventListener('click', () => {
     let name = document.getElementById('inputBee').value.trim();
     if (name) { petsByRegion[4][0].label = name; updateCodexData(); }
 });
+document.getElementById('btnRenameBear').addEventListener('click', () => {
+    let name = document.getElementById('inputBear').value.trim();
+    if (name) { petsByRegion[5][0].label = name; updateCodexData(); }
+});
+
 
 const codexOverlay = document.getElementById('codexOverlay');
 const openCodexBtn = document.getElementById('openCodexBtn');
@@ -1607,6 +1874,7 @@ document.getElementById('devAddWater').addEventListener('click', () => {
 document.getElementById('devWipeSave').addEventListener('click', () => {
     if (confirm("Are you absolutely sure you want to delete all saved progress? This will reset the game layout!")) {
         localStorage.removeItem('just_a_little_leisure_save');
+        inventory.fish = 0; // Fixed: Erases live active fish variables completely
         window.location.reload();
     }
 });
