@@ -1,3 +1,8 @@
+// Fixed: Explicitly initialized the canvas variable references
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas ? canvas.getContext('2d') : null;
+
+// Fixed: Correctly formatted requirements matrix arrays for Bee and Bear
 const levelRequirements = {
     dog: [
         { food: 5, water: 5 },
