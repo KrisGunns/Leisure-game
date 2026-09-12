@@ -838,14 +838,19 @@ class Pet {
         ctx.textAlign = 'center';
         
         let text = `${this.label} Lv.${this.level}`;
-        if (this.level >= 5) {
+        if (this.level >= 20) {
             text += ' [MAX]';
         }
         
         if (this.state === 'whistled') {
             text += ' [WHISTLED]';
         } else if (this.level > 1 || this.type === 'bee' || this.type === 'bear') {
-            text += ` [${this.state.toUpperCase()}]`;
+            // FIXED: Checks if Elephant is in any of its custom chase sub-states, keeping tag as [PLAYING]
+            if (this.state.startsWith('playing') || this.state === 'playing_wait_for_move') {
+                text += ' [PLAYING]';
+            } else {
+                text += ` [${this.state.toUpperCase()}]`;
+            }
         }
         
         ctx.fillText(text, this.x + (this.size / 2), this.y - 16);
