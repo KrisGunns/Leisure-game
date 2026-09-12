@@ -623,8 +623,7 @@ class Pet {
                                 if (targetItem.type === 'food') inventory.food += 4;
                                 else inventory.water += 2;
                                 
-                                // TEMPORARY TESTING RATIO: Shifted from 5% to 50% probability check
-                                if (Math.random() < 0.50) {
+                                if (Math.random() < 0.05) {
                                     let currentRItems = regionalItems[currentRegion];
                                     if (!currentRItems.eggs) currentRItems.eggs = [];
                                     
