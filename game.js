@@ -618,13 +618,21 @@ class Pet {
                                 if (targetItem.type === 'food') inventory.food += 1;
                                 else inventory.water += 0;
                             }
-                        } else if (this.type === 'chicken') {
+                            } else if (this.type === 'chicken') {
                             if (this.level >= 20) {
                                 if (targetItem.type === 'food') inventory.food += 4;
                                 else inventory.water += 2;
-                                if (Math.random() < 0.05) {
-                                    if (!regionalItems.eggs) regionalItems.eggs = [];
-                                    regionalItems.eggs.push({ x: this.x + this.size / 2, y: this.y + this.size / 2 });
+                                
+                                // TEMPORARY TESTING RATIO: Shifted from 5% to 50% probability check
+                                if (Math.random() < 0.50) {
+                                    let currentRItems = regionalItems[currentRegion];
+                                    if (!currentRItems.eggs) currentRItems.eggs = [];
+                                    
+                                    // Spawns the egg coordinates cleanly right at the chicken's current location
+                                    currentRItems.eggs.push({ 
+                                        x: this.x + this.size / 2, 
+                                        y: this.y + this.size / 2 
+                                    });
                                 }
                             } else if (this.level >= 10) {
                                 if (targetItem.type === 'food') inventory.food += 3;
@@ -637,6 +645,7 @@ class Pet {
                                 else inventory.water += 1;
                             }
                         }
+
                         updateUI();
                     }
                     this.state = 'idle';
@@ -905,19 +914,21 @@ function resizeCanvas() {
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
-function checkCollisions() {
-    if (currentRegion === 3 && regionalItems.eggs) {
-        for (let i = regionalItems.eggs.length - 1; i >= 0; i--) {
-            let egg = regionalItems.eggs[i];
-            if (player.x < egg.x + 12 && player.x + player.size > egg.x - 12 &&
-                player.y < egg.y + 12 && player.y + player.size > egg.y - 12) {
-                regionalItems.eggs.splice(i, 1);
-                inventory.eggs += 1;
-                updateUI();
-                saveGameProgress();
+    function checkCollisions() {
+        // FIXED: Correctly targets the active region's egg structure
+        let currentRItems = regionalItems[currentRegion];
+        if (currentRegion === 3 && currentRItems && currentRItems.eggs) {
+            for (let i = currentRItems.eggs.length - 1; i >= 0; i--) {
+                let egg = currentRItems.eggs[i];
+                if (player.x < egg.x + 12 && player.x + player.size > egg.x - 12 &&
+                    player.y < egg.y + 12 && player.y + player.size > egg.y - 12) {
+                    currentRItems.eggs.splice(i, 1);
+                    inventory.eggs += 1;
+                    updateUI();
+                    saveGameProgress();
+                }
             }
         }
-    }
 
     if (currentRegion === 4) {
         for (let i = flowers.length - 1; i >= 0; i--) {
@@ -1321,10 +1332,11 @@ function gameLoop(timestamp) {
         } else {
             foods.forEach(f => f.draw());
             waters.forEach(w => w.draw());
-
-        // Added: Renders the white elliptical eggs inside the Region 3 woods canvas layer
-            if (currentRegion === 3 && regionalItems[3].eggs) {
-                regionalItems[3].eggs.forEach(egg => {
+            
+            // FIXED: Renders the white elliptical eggs inside Region 3 pulling from correct pathing references
+            let currentRItems = regionalItems[currentRegion];
+            if (currentRegion === 3 && currentRItems && currentRItems.eggs) {
+                currentRItems.eggs.forEach(egg => {
                     ctx.fillStyle = '#ffffff';
                     ctx.beginPath();
                     ctx.ellipse(egg.x, egg.y, 6, 8, 0, 0, Math.PI * 2);
