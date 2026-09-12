@@ -1,8 +1,12 @@
-// Fixed: Explicitly initialized the canvas variable references
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas ? canvas.getContext('2d') : null;
+const lblFood = document.getElementById('lblFood');
+const lblWater = document.getElementById('lblWater');
+const lblHoney = document.getElementById('lblHoney');
+const lblFish = document.getElementById('lblFish');
+const regionSelector = document.getElementById('regionSelector');
+const whistleBtn = document.getElementById('whistleBtn');
 
-// Fixed: Correctly formatted requirements matrix arrays for Bee and Bear
 const levelRequirements = {
     dog: [
         { food: 5, water: 5 },
@@ -918,7 +922,7 @@ if (joyContainer) {
     joyContainer.addEventListener('touchstart', (e) => {
         e.preventDefault();
         joyActive = true;
-        const touch = e.touches[0];
+        const touch = e.touches[0]; // Restored single touch indexing
         const rect = joyContainer.getBoundingClientRect();
         joyOriginX = rect.left + rect.width / 2;
         joyOriginY = rect.top + rect.height / 2;
@@ -928,7 +932,7 @@ if (joyContainer) {
     joyContainer.addEventListener('touchmove', (e) => {
         e.preventDefault();
         if (!joyActive) return;
-        const touch = e.touches[0];
+        const touch = e.touches[0]; // Restored single touch indexing
         handleJoystickMove(touch.clientX, touch.clientY);
     }, { passive: false });
 }
@@ -1002,6 +1006,58 @@ function haltFeedTimers() {
     feedInterval = null;
     feedTurboTimeout = null;
     feedHoldCounter = 0;
+}
+// INPUT HANDLER REGION
+if (whistleBtn) {
+    whistleBtn.addEventListener('click', () => {
+        let activePets = petsByRegion[currentRegion];
+        if (!Array.isArray(activePets)) return;
+        activePets.forEach(pet => {
+            if (pet.type === 'bee' || pet.type === 'bear') return;
+            if (pet.level < 2) return;
+            if (pet.state !== 'whistled') {
+                pet.state = 'whistled';
+                whistleBtn.textContent = 'RETURN';
+            } else {
+                pet.state = 'wander';
+                pet.pickNewWanderTarget();
+                whistleBtn.textContent = 'WHISTLE';
+            }
+        });
+    });
+}
+
+// Paste this directly below your if (whistleBtn) { ... } listener block
+if (regionSelector) {
+    regionSelector.addEventListener('change', (e) => {
+        let selectedRegion = parseInt(e.target.value);
+        
+        if (selectedRegion >= 4) {
+            let allTamed = true;
+            for (let r = 1; r <= 3; r++) {
+                if (Array.isArray(petsByRegion[r])) {
+                    petsByRegion[r].forEach(pet => {
+                        if (pet.level < 2) {
+                            allTamed = false;
+                        }
+                    });
+                }
+            }
+            
+            if (!allTamed) {
+                alert("🔒 Region locked! You must tame all pets in Regions 1-3 (reach Level 2+) to unlock this area.");
+                regionSelector.value = currentRegion;
+                return;
+            }
+        }
+        
+        currentRegion = selectedRegion;
+        foods = regionalItems[currentRegion].foods;
+        waters = regionalItems[currentRegion].waters;
+        flowers = regionalItems[currentRegion].flowers;
+        if (whistleBtn) whistleBtn.textContent = 'WHISTLE';
+        saveGameProgress();
+    });
 }
 
 window.addEventListener('keydown', (e) => {
