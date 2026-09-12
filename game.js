@@ -68,8 +68,9 @@ function updateUI() {
     const interactBtn = document.getElementById('interactBtn');
     if (interactBtn) {
         let elephantPlaying = false;
-        if (typeof petsByRegion !== 'undefined' && petsByRegion[2] && petsByRegion[2][0]) {
-            if (petsByRegion[2][0].state === 'playing') elephantPlaying = true;
+        if (typeof petsByRegion !== 'undefined' && petsByRegion && petsByRegion[2][0]) {
+            let es = petsByRegion[2][0].state;
+            if (es.startsWith('playing') || es === 'playing_wait_for_move') elephantPlaying = true;
         }
         interactBtn.textContent = elephantPlaying ? 'PLAY' : 'GIVE';
     }
@@ -342,12 +343,17 @@ class Pet {
             }
 
             if (this.state === 'idle') {
-                this.stateTimer -= dt;
                 if (this.stateTimer <= 0) {
                     this.state = 'wander';
                     this.pickNewWanderTarget();
+                
+                    // FIXED: Shifts target state to the initial calm approach cycle step
+                    if (this.type === 'elephant' && this.level >= 20 && currentRegion === 2 && Math.random() < 0.10) {
+                        this.state = 'playing_approach';
+                        updateUI();
+                    }
                 }
-                return;
+                return; 
             }
 
             if (this.state === 'travel' && this.targetFlower) {
@@ -499,19 +505,61 @@ class Pet {
             return;
         }
 
-        if (this.state === 'playing') {
+                // --- MULTI-STEP ELEPHANT PLAY MECHANIC ENGINE ---
+        if (this.type === 'elephant' && (this.state === 'playing_approach' || this.state === 'playing_retreat' || this.state === 'playing_chase')) {
             let dx = player.x - this.x;
             let dy = player.y - this.y;
             let dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist > 15) {
-                this.x += (dx / dist) * (this.speed * 1.4) * dt;
-                this.y += (dy / dist) * (this.speed * 1.4) * dt;
-            } else {
-                inventory.coins += 5;
-                updateUI();
-                saveGameProgress();
-                this.state = 'wander';
-                this.pickNewWanderTarget();
+
+            // Step 1: Calm approach to wait for the user to initiate the game
+            if (this.state === 'playing_approach') {
+                if (dist > 60) {
+                    this.x += (dx / dist) * this.speed * dt;
+                    this.y += (dy / dist) * this.speed * dt;
+                }
+                return;
+            }
+
+            // Step 2: Retreat a few spaces backwards away from the user
+            if (this.state === 'playing_retreat') {
+                let retreatTargetX = player.x - (dx / dist) * 120;
+                let retreatTargetY = player.y - (dy / dist) * 120;
+                
+                let rdx = retreatTargetX - this.x;
+                let rdy = retreatTargetY - this.y;
+                let rdist = Math.sqrt(rdx * rdx + rdy * rdy);
+
+                if (rdist > 10) {
+                    this.x += (rdx / rdist) * (this.speed * 1.5) * dt;
+                    this.y += (rdy / rdist) * (this.speed * 1.5) * dt;
+                } else {
+                    // Backed up enough! Wait for user input movement to launch
+                    this.state = 'playing_wait_for_move';
+                }
+                return;
+            }
+
+            // Step 3: Full high-speed tag sprint!
+            if (this.state === 'playing_chase') {
+                if (dist > 15) {
+                    this.x += (dx / dist) * (this.speed * 1.6) * dt;
+                    this.y += (dy / dist) * (this.speed * 1.6) * dt;
+                } else {
+                    // Caught you! Award coins and reset
+                    inventory.coins += 5;
+                    updateUI();
+                    saveGameProgress();
+                    this.state = 'wander';
+                    this.pickNewWanderTarget();
+                }
+                return;
+            }
+        }
+
+        // Added: Wait state that listens for user player input vectors
+        if (this.state === 'playing_wait_for_move') {
+            if (input.up || input.down || input.left || input.right || joyActive) {
+                this.state = 'playing_chase';
             }
             return;
         }
@@ -1172,15 +1220,16 @@ function executeContinuousFeed() {
     let activePets = petsByRegion[currentRegion];
     if (!Array.isArray(activePets)) return;
 
-    activePets.forEach(pet => {
-        if (pet.type === 'elephant' && pet.state === 'playing') {
-            pet.state = 'wander';
-            pet.pickNewWanderTarget();
-            inventory.coins += 5;
+        activePets.forEach(pet => {
+        // FIXED: Play button press now triggers Step 2 (The Retreat) instead of paying out early
+        if (pet.type === 'elephant' && pet.state === 'playing_approach') {
+            pet.state = 'playing_retreat';
             updateUI();
-            saveGameProgress();
             return;
         }
+        
+        // Prevent standard resource feeding interactions while the chase mini-game loops are active
+        if (pet.type === 'elephant' && (pet.state.startsWith('playing') || pet.state === 'playing_wait_for_move')) return;
 
         if (pet.type === 'bee' || pet.level >= 20) return;
         
