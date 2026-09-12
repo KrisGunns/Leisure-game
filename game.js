@@ -277,7 +277,8 @@ class Pet {
         this.targetX = this.x;
         this.targetY = this.y;
         this.speed = 80;
-        this.digParticles = []; 
+        this.digParticles = [];
+        this.splashParticles = []; 
     }
 
         giveResources() {
@@ -450,7 +451,61 @@ class Pet {
 
             if (this.state === 'fishing') {
                 this.fishingActionTimer -= dt;
-                if (this.fishingActionTimer <= 0) {
+                
+                // Continuous Splash Generation Loop: Fires while the bear is actively fishing
+                if (this.fishingActionTimer > 0) {
+                    // 10% chance per frame to generate a wide water ripple ring
+                    if (Math.random() < 0.10) {
+                        this.splashParticles.push({
+                            type: 'ripple',
+                            x: this.x + this.size / 2,
+                            y: this.y + this.size - 4,
+                            radius: 2,
+                            maxRadius: Math.random() * 25 + 15,
+                            growthRate: Math.random() * 20 + 15,
+                            opacity: 1.0
+                        });
+                    }
+
+                    // 15% chance per frame to generate vertical popping water droplets
+                    if (Math.random() < 0.15) {
+                        this.splashParticles.push({
+                            type: 'droplet',
+                            x: this.x + this.size / 2 + (Math.random() * 16 - 8),
+                            y: this.y + this.size - 4,
+                            vx: (Math.random() - 0.5) * 30,
+                            vy: -(Math.random() * 40 + 30),
+                            gravity: 100,
+                            life: Math.random() * 0.4 + 0.3,
+                            size: Math.random() * 3 + 2
+                        });
+                    }
+                }
+
+                // Update and animate active water splash particles
+                if (this.splashParticles) {
+                    for (let i = this.splashParticles.length - 1; i >= 0; i--) {
+                        let p = this.splashParticles[i];
+                        
+                        if (p.type === 'ripple') {
+                            p.radius += p.growthRate * dt;
+                            p.opacity = 1.0 - (p.radius / p.maxRadius);
+                            if (p.radius >= p.maxRadius || p.opacity <= 0) {
+                                this.splashParticles.splice(i, 1);
+                            }
+                        } else if (p.type === 'droplet') {
+                            p.life -= dt;
+                            p.vy += p.gravity * dt;
+                            p.x += p.vx * dt;
+                            p.y += p.vy * dt;
+                            if (p.life <= 0) {
+                                this.splashParticles.splice(i, 1);
+                            }
+                        }
+                    }
+                }
+
+                if (this.fishingActionTimer <= 0 && (!this.splashParticles || this.splashParticles.length === 0)) {
                     let fishCaught = 1;
                     if (this.level >= 20) {
                         fishCaught = 3;
@@ -492,7 +547,6 @@ class Pet {
             return;
         }
 
-        // --- SPECIAL ACTION PERK MECHANICS MAPPING (DOG & ELEPHANT) ---
                 // --- UPGRADED LEVEL 20 DOG VISUAL DIGGING SYSTEM ---
         if (this.state === 'digging') {
             this.stateTimer -= dt;
@@ -674,8 +728,8 @@ class Pet {
                             }
                         } else if (this.type === 'elephant') {
                             if (this.level >= 20) {
-                                if (targetItem.type === 'food') inventory.food += 6;
-                                else inventory.water += 8;
+                                if (targetItem.type === 'food') inventory.food += 5;
+                                else inventory.water += 6;
                             } else if (this.level >= 10) {
                                 if (targetItem.type === 'food') inventory.food += 3;
                                 else inventory.water += 4;
@@ -922,11 +976,28 @@ draw() {
             ctx.lineWidth = 1;
             ctx.strokeRect(barX, barY, barWidth, barHeight);
         }
-        
+
         if (this.digParticles && this.digParticles.length > 0) {
             this.digParticles.forEach(p => {
                 ctx.fillStyle = (p.life > 0.3) ? '#5c3d12' : '#8c6239';
                 ctx.fillRect(p.x, p.y, p.size, p.size);
+            });
+        }
+
+        // NEW: Visual Lakeside Water Splash Renderer Sweep Layer
+        if (this.splashParticles && this.splashParticles.length > 0) {
+            this.splashParticles.forEach(p => {
+                if (p.type === 'ripple') {
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${p.opacity})`;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.stroke();
+                } else if (p.type === 'droplet') {
+                    // Light frothy cyan water droplet clods
+                    ctx.fillStyle = '#7ed6df';
+                    ctx.fillRect(p.x, p.y, p.size, p.size);
+                }
             });
         }
     }
