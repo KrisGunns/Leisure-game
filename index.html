@@ -9,8 +9,13 @@
 <body>
     <div id="gameContainer">
         <!-- Pinned Core Actionable Resource Top Bar View -->
+<!-- Stacked Core Actionable Resource Top Bar View -->
 <div id="topBar">
-    <div>🍪 Food: <span id="lblFood">0</span> | 💧 Water: <span id="lblWater">0</span></div>
+    <div class="hudResourceBlock">
+        <span class="hudRow">🍪 Food: <span id="lblFood">0</span></span>
+        <br>
+        <span class="hudRow">💧 Water: <span id="lblWater">0</span></span>
+    </div>
     <div>
         🗺️ <select id="regionSelector">
             <option value="1">Region 1</option>
@@ -21,6 +26,7 @@
         </select>
     </div>
 </div>
+
 
 <div id="canvasWrapper">
     <canvas id="gameCanvas"></canvas>
