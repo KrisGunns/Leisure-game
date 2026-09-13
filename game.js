@@ -1740,16 +1740,7 @@ function updateCodexData() {
 
     document.getElementById('renameBoxChicken').style.display = chicken.level >= 2 ? 'block' : 'none';
 
-    let beeReq = getLevelRequirement('bee', bee.level);
-    document.getElementById('infoBee').innerHTML = `
-        <strong>${bee.label}</strong><br>
-        Status: <span class="codexTamed">AUTONOMOUS</span><br>
-        Level: ${bee.level}/20<br>
-        Next Req: ${bee.level < 20 ? '🌸 ' + beeReq + ' Flowers' : 'MAX'}
-    `;
-
     let region4Unlocked = true; 
-    
     // Run the loop to calculate if regions 1-3 are fully tamed
     for (let r = 1; r <= 3; r++) {
         if (Array.isArray(petsByRegion[r])) {
@@ -1759,6 +1750,32 @@ function updateCodexData() {
                 }
             });
         }
+    }
+    // 2. FIXED: Re-render the mini pet canvas *only* if unlocked, otherwise pass a dummy locked object
+    if (!region4Unlocked) {
+        // Overrides and forces the drawing tool to render a black box with a question mark ❓
+        renderMiniPet({ type: 'bee', level: 1 }, 'viewBee'); 
+    } else {
+        renderMiniPet(bee, 'viewBee');
+    }
+    // 3. FIXED: Wrap your description text box inside a conditional check statement
+    let beeReq = getLevelRequirement('bee', bee.level);
+    if (!region4Unlocked) {
+        // Displays completely hidden mystery data if Region 4 fields are locked
+        document.getElementById('infoBee').innerHTML = `
+            <strong>???</strong><br>
+            Status: <span class="codexWild">LOCKED</span><br>
+            Level: ?/20<br>
+            Next Req: ???
+        `;
+    } else {
+        // Displays full active autonomous statistics if Region 4 is unlocked
+        document.getElementById('infoBee').innerHTML = `
+            <strong>${bee.label}</strong><br>
+            Status: <span class="codexTamed">AUTONOMOUS</span><br>
+            Level: ${bee.level}/20<br>
+            Next Req: ${bee.level < 20 ? '🌸 ' + beeReq + ' Flowers' : 'MAX'}
+        `;
     }
 
     document.getElementById('renameBoxBee').style.display = region4Unlocked ? 'block' : 'none';
