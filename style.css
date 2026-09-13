@@ -117,6 +117,17 @@ body, html {
 #whistleBtn {
     bottom: 125px;
     right: 20px;
+
+#spawnBeeBtn {
+    position: absolute;
+    bottom: 170px; /* Shifted upward to sit perfectly stacked directly above your whistle button (bottom: 125px) */
+    right: 20px;   /* Anchored cleanly to the right margin wall boundary instead of the left */
+    left: auto;    /* Resets any legacy left rules so it locks tightly onto the right wall line */
+    background: #fbbf24;
+    border-color: #f59e0b;
+    color: #000;
+}
+
 }
 #openCodexBtn {
     top: 15px;
