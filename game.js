@@ -108,7 +108,7 @@ function saveGameProgress() {
             });
         }
 
-        localStorage.setItem('just_a_little_leisure_save', JSON.stringify(stateMatrix));
+        localStorage.setItem('just_a_little_leisure_save_v2', JSON.stringify(stateMatrix));
     } catch (e) {
         console.error("Auto-save failed:", e);
     }
@@ -116,7 +116,7 @@ function saveGameProgress() {
 
 function loadGameProgress() {
     try {
-        const savedData = localStorage.getItem('just_a_little_leisure_save');
+        const savedData = localStorage.getItem('just_a_little_leisure_save_v2');
         if (!savedData) return;
 
         const stateMatrix = JSON.parse(savedData);
@@ -1896,7 +1896,7 @@ if (btnWipeSave) {
     btnWipeSave.addEventListener('click', () => {
         if (confirm("⚠️ WARNING: Delete all save data? This resets everything!")) {
             // 1. Wipe the local storage cache completely clean
-            localStorage.removeItem('just_a_little_leisure_save');
+            localStorage.removeItem('just_a_little_leisure_save_v2');
             
             // 2. Zero out your active resource trackers securely
             inventory.food = 0; 
