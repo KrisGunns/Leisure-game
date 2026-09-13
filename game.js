@@ -45,6 +45,35 @@ const inventory = {
     eggs: 0
 };
 
+// NEW: Core Character Database Profile Properties
+let character = {
+    level: 1,
+    xp: 0
+};
+
+// Calculate exponential player XP progression thresholds (No level cap ceiling)
+function getCharacterNextXP(currentLevel) {
+    return Math.floor(100 * Math.pow(currentLevel, 1.3)); // Scaled curve scaling boundaries
+}
+
+// Global Core XP Injection Engine Function
+function gainPlayerXP(amount) {
+    character.xp += amount;
+    let nextNeeded = getCharacterNextXP(character.level);
+    
+    // Evaluate Level Up sequences recursively to safely process bulk XP bursts
+    while (character.xp >= nextNeeded) {
+        character.xp -= nextNeeded;
+        character.level++;
+        nextNeeded = getCharacterNextXP(character.level);
+        
+        // Visual Level Up Flash Alert Prompt Tracker
+        alert(`🎉 LEVEL UP! You have reached Character Level ${character.level}!`);
+    }
+    updateUI();
+    saveGameProgress();
+}
+
 const input = {
     up: false,
     down: false,
@@ -77,6 +106,15 @@ function updateUI() {
             }
         }
         interactBtn.textContent = elephantPlaying ? 'PLAY' : 'GIVE';
+
+    const charLevel = document.getElementById('charLevel');
+    const charXP = document.getElementById('charXP');
+    const charNextXP = document.getElementById('charNextXP');
+    
+    if (charLevel) charLevel.textContent = character.level;
+    if (charXP) charXP.textContent = character.xp;
+    if (charNextXP) charNextXP.textContent = getCharacterNextXP(character.level);
+
     }
 }
 
@@ -106,7 +144,10 @@ function saveGameProgress() {
                     fishingTimer: pet.fishingTimer || 0
                 };
             });
+
         }
+
+        stateMatrix.characterData = character;
 
         localStorage.setItem('just_a_little_leisure_save_v2', JSON.stringify(stateMatrix));
     } catch (e) {
@@ -154,6 +195,10 @@ function loadGameProgress() {
         }
     } catch (e) {
         console.error("Loading save failed:", e);
+
+        if (parsed.characterData) {
+            character = parsed.characterData;
+        }
     }
 }
 
@@ -314,6 +359,15 @@ class Pet {
     }
 
     update(dt, regionFoods, regionWaters, activeFlowers = []) {
+
+        let petFoodWaterBonus = 1.0;
+        if (character.level >= 15) petFoodWaterBonus = 1.10; // +5% (Lv 5) + +5% (Lv 15) = 10%
+        else if (character.level >= 5) petFoodWaterBonus = 1.05;
+
+        let petHoneyBonus = (character.level >= 10) ? 1.03 : 1.0;
+        let petFishBonus = (character.level >= 20) ? 1.03 : 1.0;
+        let coinBonus = (character.level >= 25) ? 1.01 : 1.0;
+
         // --- BEE AI SYSTEM MATRIX ---
         if (this.type === 'bee') {
             if (this.state === 'whistled') this.state = 'wander';
@@ -549,8 +603,8 @@ class Pet {
         }
 
                 // --- UPGRADED LEVEL 20 DOG VISUAL DIGGING SYSTEM ---
-        if (this.state === 'digging') {
-            this.stateTimer -= dt;
+        if (this.state === 'digging' && this.stateTimer <= 0) {
+            inventory.coins += Math.round(1 * coinBonus);
             
             // Continuous Dirt Burst Generation: Injects little dirt fragments while timer ticks down
             if (this.stateTimer > 0) {
@@ -584,7 +638,8 @@ class Pet {
             }
 
             if (this.stateTimer <= 0 && this.digParticles.length === 0) {
-                inventory.coins += 1;
+                // FIXED: Multiplies by your Level 25 coin bonus marker!
+                inventory.coins += Math.round(1 * coinBonus); 
                 updateUI();
                 saveGameProgress();
                 this.state = 'wander';
@@ -710,55 +765,55 @@ class Pet {
                         
                         if (this.type === 'dog') {
                             if (this.level >= 20) {
-                                if (targetItem.type === 'food') inventory.food += 5;
-                                else inventory.water += 5;
+                                if (targetItem.type === 'food') inventory.food += Math.round(5 * petFoodWaterBonus);
+                                else inventory.water += Math.round(5 * petFoodWaterBonus);
                                 if (Math.random() < 0.10) {
                                     this.state = 'digging';
                                     this.stateTimer = 3.0;
                                     return;
                                 }
                             } else if (this.level >= 10) {
-                                if (targetItem.type === 'food') inventory.food += 3;
-                                else inventory.water += 3;
+                                if (targetItem.type === 'food') inventory.food += Math.round(3 * petFoodWaterBonus);
+                                else inventory.water += Math.round(3 * petFoodWaterBonus);
                             } else if (this.level >= 5) {
-                                if (targetItem.type === 'food') inventory.food += 2;
-                                else inventory.water += 2;
+                                if (targetItem.type === 'food') inventory.food += Math.round(2 * petFoodWaterBonus);
+                                else inventory.water += Math.round(2 * petFoodWaterBonus);
                             } else {
-                                if (targetItem.type === 'food') inventory.food += 1;
-                                else inventory.water += 1;
+                                if (targetItem.type === 'food') inventory.food += Math.round(1 * petFoodWaterBonus);
+                                else inventory.water += Math.round(1 * petFoodWaterBonus);
                             }
                         } else if (this.type === 'elephant') {
                             if (this.level >= 20) {
-                                if (targetItem.type === 'food') inventory.food += 5;
-                                else inventory.water += 6;
+                                if (targetItem.type === 'food') inventory.food += Math.round(5 * petFoodWaterBonus);
+                                else inventory.water += Math.round(7 * petFoodWaterBonus);
                             } else if (this.level >= 10) {
-                                if (targetItem.type === 'food') inventory.food += 3;
-                                else inventory.water += 4;
+                                if (targetItem.type === 'food') inventory.food += Math.round(3 * petFoodWaterBonus);
+                                else inventory.water += Math.round(4 * petFoodWaterBonus);
                             } else if (this.level >= 5) {
-                                if (targetItem.type === 'food') inventory.food += 2;
-                                else inventory.water += 3;
+                                if (targetItem.type === 'food') inventory.food += Math.round(2 * petFoodWaterBonus);
+                                else inventory.water += Math.round(3 * petFoodWaterBonus);
                             } else {
-                                if (targetItem.type === 'food') inventory.food += 1;
-                                else inventory.water += 2;
+                                if (targetItem.type === 'food') inventory.food += Math.round(1 * petFoodWaterBonus);
+                                else inventory.water += Math.round(2 * petFoodWaterBonus);
                             }
                         } else if (this.type === 'squirrel') {
                             if (this.level >= 20) {
-                                if (targetItem.type === 'food') inventory.food += 8;
-                                else inventory.water += 1;
+                                if (targetItem.type === 'food') inventory.food += Math.round(8 * petFoodWaterBonus);
+                                else inventory.water += Math.round(1 * petFoodWaterBonus);
                             } else if (this.level >= 10) {
-                                if (targetItem.type === 'food') inventory.food += 5;
-                                else inventory.water += 1;
+                                if (targetItem.type === 'food') inventory.food += Math.round(5 * petFoodWaterBonus);
+                                else inventory.water += Math.round(1 * petFoodWaterBonus);
                             } else if (this.level >= 5) {
-                                if (targetItem.type === 'food') inventory.food += 3;
-                                else inventory.water += 1;
+                                if (targetItem.type === 'food') inventory.food += Math.round(3 * petFoodWaterBonus);
+                                else inventory.water += Math.round(1 * petFoodWaterBonus);
                             } else {
-                                if (targetItem.type === 'food') inventory.food += 1;
-                                else inventory.water += 0;
+                                if (targetItem.type === 'food') inventory.food += Math.round(1 * petFoodWaterBonus);
+                                else inventory.water += Math.round(0 * petFoodWaterBonus);
                             }
                             } else if (this.type === 'chicken') {
                             if (this.level >= 20) {
-                                if (targetItem.type === 'food') inventory.food += 4;
-                                else inventory.water += 2;
+                                if (targetItem.type === 'food') inventory.food += Math.round(4 * petFoodWaterBonus);
+                                else inventory.water += Math.round(2 * petFoodWaterBonus);
                                 
                                 if (Math.random() < 0.05) {
                                     let currentRItems = regionalItems[currentRegion];
@@ -771,14 +826,14 @@ class Pet {
                                     });
                                 }
                             } else if (this.level >= 10) {
-                                if (targetItem.type === 'food') inventory.food += 3;
-                                else inventory.water += 1;
+                                if (targetItem.type === 'food') inventory.food += Math.round(3 * petFoodWaterBonus);
+                                else inventory.water += Math.round(1 * petFoodWaterBonus);
                             } else if (this.level >= 5) {
-                                if (targetItem.type === 'food') inventory.food += 2;
-                                else inventory.water += 1;
+                                if (targetItem.type === 'food') inventory.food += Math.round(2 * petFoodWaterBonus);
+                                else inventory.water += Math.round(1 * petFoodWaterBonus);
                             } else {
-                                if (targetItem.type === 'food') inventory.food += 1;
-                                else inventory.water += 1;
+                                if (targetItem.type === 'food') inventory.food += Math.round(1 * petFoodWaterBonus);
+                                else inventory.water += Math.round(1 * petFoodWaterBonus);
                             }
                         }
 
@@ -1089,13 +1144,15 @@ resizeCanvas();
                     player.y < egg.y + 12 && player.y + player.size > egg.y - 12) {
                     currentRItems.eggs.splice(i, 1);
                     inventory.eggs += 1;
+                    currentRItems.eggs.splice(i, 1);
+                    inventory.eggs += 1;
+                    gainPlayerXP(1); // +1 XP per egg picked up from the field!
                     updateUI();
                     saveGameProgress();
                 }
             }
         }
 
-    // --- PASTE THE NEW PROXIMITY HIVE CODE RIGHT HERE ---
     const spawnBeeBtn = document.getElementById('spawnBeeBtn');
     if (currentRegion === 4 && typeof region4Hive !== 'undefined' && region4Hive && spawnBeeBtn) {
         let hx = region4Hive.x;
@@ -1135,6 +1192,12 @@ resizeCanvas();
             inventory.food++;
             updateUI();
             respawnQueue.push({ type: 'food', time: Date.now() + 10000 });
+        
+        let foodBaseGain = 1;
+        // Apply manual 1% multiplier bump per character level
+        let manualFoodMultiplier = 1 + (character.level * 0.01);
+        inventory.food += Math.round(foodBaseGain * manualFoodMultiplier);
+        gainPlayerXP(1); // +1 XP per manual field resource gathered!
         }
     }
 
@@ -1146,6 +1209,12 @@ resizeCanvas();
             inventory.water++;
             updateUI();
             respawnQueue.push({ type: 'water', time: Date.now() + 10000 });
+
+        // Inside your water item pickup evaluation block inside checkCollisions():
+        let waterBaseGain = 1;
+        let manualWaterMultiplier = 1 + (character.level * 0.01);
+        inventory.water += Math.round(waterBaseGain * manualWaterMultiplier);
+        gainPlayerXP(1); // +1 XP per manual field resource gathered!
         }
     }
 }
@@ -1401,6 +1470,7 @@ function executeContinuousFeed() {
                         if (pet.foodEaten >= req) {
                             pet.level++;
                             pet.foodEaten = 0;
+                            gainPlayerXP(1);
                             pet.pickNewWanderTarget();
                             if (pet.state === 'idle') pet.state = 'wander';
                             saveGameProgress();
@@ -1413,9 +1483,11 @@ function executeContinuousFeed() {
                     if (pet.foodEaten < currentReq.food && inventory.food > 0) {
                         inventory.food--;
                         pet.foodEaten++;
+                        gainPlayerXP(1);
                     } else if (pet.waterEaten < currentReq.water && inventory.water > 0) {
                         inventory.water--;
                         pet.waterEaten++;
+                        gainPlayerXP(1);
                     } else {
                         break;
                     }
