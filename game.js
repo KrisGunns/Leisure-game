@@ -1751,10 +1751,10 @@ function updateCodexData() {
     }
     // 2. FIXED: Re-render the mini pet canvas *only* if unlocked, otherwise pass a dummy locked object
     if (!region4Unlocked) {
+        renderMiniPet(bee, 'viewBee'); 
+    } else {
         // Overrides and forces the drawing tool to render a black box with a question mark ❓
         renderMiniPet({ type: 'bee', level: 1 }, 'viewBee'); 
-    } else {
-        renderMiniPet(bee, 'viewBee');
     }
     // 3. FIXED: Wrap your description text box inside a conditional check statement
     let beeReq = getLevelRequirement('bee', bee.level);
