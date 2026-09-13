@@ -214,6 +214,8 @@ body, html {
     margin-bottom: 15px;
 }
 #bagClose, #codexClose {
+    position: absolute;
+    top: 15px;
     background: #c0392b;
     border: none;
     color: white;
@@ -224,6 +226,14 @@ body, html {
 }
 #bagClose:active, #codexClose:active {
     background: #e74c3c;
+}
+
+#codexClose {
+    right: 15px;
+}
+#bagClose {
+    right: 15px;
+
 }
 .codexEntry {
     background: rgba(255, 255, 255, 0.05);
