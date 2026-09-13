@@ -1741,17 +1741,29 @@ function updateCodexData() {
 
     document.getElementById('renameBoxChicken').style.display = chicken.level >= 2 ? 'block' : 'none';
 
+        // FIXED: Ensure the loop strictly checks if data arrays are valid and populated before unlocking
     let region4Unlocked = true; 
-    // Run the loop to calculate if regions 1-3 are fully tamed
+    let checkCount = 0; // Tracks how many pets were successfully validated
+
     for (let r = 1; r <= 3; r++) {
-        if (Array.isArray(petsByRegion[r])) {
+        if (Array.isArray(petsByRegion[r]) && petsByRegion[r].length > 0) {
             petsByRegion[r].forEach(pet => {
+                checkCount++;
                 if (pet.level < 2) {
-                    region4Unlocked = false; // Found an untamed pet, lock it back down
+                    region4Unlocked = false; // Found an untamed pet!
                 }
             });
+        } else {
+            // Safety Check: If any early region array is missing or empty, force lock it down!
+            region4Unlocked = false; 
         }
     }
+
+    // Secondary safety: If the script didn't evaluate all 4 core pets, keep it locked
+    if (checkCount < 4) {
+        region4Unlocked = false;
+    }
+
     // 2. FIXED: Re-render the mini pet canvas *only* if unlocked, otherwise pass a dummy locked object
     if (!region4Unlocked) {
         // 1. Forces the mini-canvas renderer to draw a hidden black card profile with a question mark
