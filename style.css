@@ -117,6 +117,7 @@ body, html {
 #whistleBtn {
     bottom: 125px;
     right: 20px;
+}
 
 #spawnBeeBtn {
     position: absolute;
@@ -128,7 +129,6 @@ body, html {
     color: #000;
 }
 
-}
 #openCodexBtn {
     top: 15px;
     left: 15px;
