@@ -1751,15 +1751,10 @@ function updateCodexData() {
     }
     // 2. FIXED: Re-render the mini pet canvas *only* if unlocked, otherwise pass a dummy locked object
     if (!region4Unlocked) {
-        renderMiniPet(bee, 'viewBee'); 
-    } else {
-        // Overrides and forces the drawing tool to render a black box with a question mark ❓
+        // 1. Forces the mini-canvas renderer to draw a hidden black card profile with a question mark
         renderMiniPet({ type: 'bee', level: 1 }, 'viewBee'); 
-    }
-    // 3. FIXED: Wrap your description text box inside a conditional check statement
-    let beeReq = getLevelRequirement('bee', bee.level);
-    if (!region4Unlocked) {
-        // Displays completely hidden mystery data if Region 4 fields are locked
+        
+        // 2. Overrides the text box with mystery information at the start of the game
         document.getElementById('infoBee').innerHTML = `
             <strong>???</strong><br>
             Status: <span class="codexWild">LOCKED</span><br>
@@ -1767,16 +1762,18 @@ function updateCodexData() {
             Next Req: ???
         `;
     } else {
-        // Displays full active autonomous statistics if Region 4 is unlocked
+        // Displays full active taming metrics once the user breaks through the early zones!
+        let beeReq = getLevelRequirement('bee', bee.level);
+        renderMiniPet(bee, 'viewBee');
+        
         document.getElementById('infoBee').innerHTML = `
-            <strong>${bee.label}</strong><br>
-            Status: <span class="codexTamed">AUTONOMOUS</span><br>
+            <strong>${bee.level >= 1 ? bee.label : '???'}</strong><br>
+            Status: <span class="${bee.level >= 1 ? 'codexTamed' : 'codexWild'}">${bee.level >= 1 ? 'TAMED' : 'WILD'}</span><br>
             Level: ${bee.level}/20<br>
             Next Req: ${bee.level < 20 ? '🌸 ' + beeReq + ' Flowers' : 'MAX'}
         `;
     }
-
-    document.getElementById('renameBoxBee').style.display = region4Unlocked ? 'block' : 'none';
+    document.getElementById('renameBoxBee').style.display = (region4Unlocked && bee.level >= 1) ? 'block' : 'none';
 
     // FIXED: Uses the region4Unlocked variable flag to determine if Region 5 is locked as well
     if (!region4Unlocked) {
