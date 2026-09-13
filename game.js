@@ -1977,6 +1977,39 @@ if (btnInstaTame) {
     });
 }
 
+// --- FIXED & UNIFIED PET RENAMING HANDLERS ENGINE ---
+function bindPetRename(btnId, inputId, regionIdx, petIdx) {
+    const btn = document.getElementById(btnId);
+    const input = document.getElementById(inputId);
+    
+    if (btn && input) {
+        const handleRename = () => {
+            let nameVal = input.value.trim();
+            if (nameVal && petsByRegion && petsByRegion[regionIdx] && petsByRegion[regionIdx][petIdx]) {
+                // Pushes the string straight into the live simulation memory array slot!
+                petsByRegion[regionIdx][petIdx].label = nameVal;
+                
+                input.value = ''; // Flush input bar field
+                
+                saveGameProgress();
+                updateUI();
+                if (typeof updateCodexData === 'function') updateCodexData();
+                
+                alert(`✨ Name successfully updated to: ${nameVal}!`);
+            }
+        };
+        btn.addEventListener('click', handleRename);
+    }
+}
+
+// Bind all 6 pets securely to their exact 2D array coordinates mapping slots:
+bindPetRename('btnRenameDog', 'inputDog', 1, 0);       // Region 1, Dog
+bindPetRename('btnRenameElephant', 'inputElephant', 2, 0); // Region 2, Elephant
+bindPetRename('btnRenameSquirrel', 'inputSquirrel', 3, 0); // Region 3, Squirrel
+bindPetRename('btnRenameChicken', 'inputChicken', 3, 1);   // Region 3, Chicken
+bindPetRename('btnRenameBee', 'inputBee', 4, 0);       // Region 4, Bee (Base)
+bindPetRename('btnRenameBear', 'inputBear', 5, 0);     // Region 5, Bear
+
 const handleOpenBag = (e) => {
     if (e) e.preventDefault();
     updateUI(); // Refreshes your item quantities right before displaying the card
