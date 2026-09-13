@@ -1552,13 +1552,25 @@ function renderMiniPet(pet, elementId) {
     if (!miniCanvas) return;
     const mctx = miniCanvas.getContext('2d');
     
-    // Forcing a hard canvas width reset completely flushes old pixel data
+    // Hard canvas geometry reset completely flushes past painted layers clean
     miniCanvas.width = 70;
     miniCanvas.height = 70;
     mctx.clearRect(0, 0, 70, 70);
     
-    // FIXED: Drop the messy array loop! Rely 100% on the explicit forced lock flag passed by the Codex
+    // Safety Fallback: Extract level safely, defaulting to 1 if undefined or missing
+    let petLvl = (pet && typeof pet.level === 'number') ? pet.level : 1;
+    
+    // FIXED: Explicitly handle explicit lock flags or uninitialized level boundaries
+    let isLocked = false;
     if (pet && pet.isLocked) {
+        isLocked = true;
+    } else if (pet && pet.type === 'bee') {
+        isLocked = (petLvl < 1); // Autonomous Bee unlocks immediately at Level 1+
+    } else {
+        isLocked = (petLvl < 2); // Standard pets stay masked until Wild Level 1 turns to Tamed Level 2
+    }
+
+    if (isLocked) {
         mctx.fillStyle = '#111';
         mctx.fillRect(0, 0, 70, 70);
         mctx.fillStyle = 'rgba(255,255,255,0.15)';
@@ -1566,11 +1578,10 @@ function renderMiniPet(pet, elementId) {
         mctx.textAlign = 'center';
         mctx.textBaseline = 'middle';
         mctx.fillText('❓', 35, 35);
-        return; // ABSOLUTE CUTOFF: Physically blocks the bee drawing code below from ever running
+        return; // ABSOLUTE CUTOFF: Guarantees zero downstream asset paint leakage
     }
 
     // --- REVELATION LAYER ---
-    // If it's not explicitly locked, draw the colorful assets safely
     mctx.fillStyle = 'rgba(255,255,255,0.1)';
     mctx.fillRect(0, 0, 70, 70);
 
@@ -1965,8 +1976,10 @@ if (bagClose) {
     bagClose.addEventListener('mousedown', handleCloseBag);
 }
 
+// Ensure your game startup chain initializes your Codex masks tightly at launch:
 loadGameProgress();
-updateUI();         
+updateUI();
+if (typeof updateCodexData === 'function') updateCodexData(); // FIXED: Synchronizes canvas masks on load
 
 setInterval(saveGameProgress, 10000);
 
