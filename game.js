@@ -1781,7 +1781,7 @@ function updateCodexData() {
     // 2. FIXED: Re-render the mini pet canvas *only* if unlocked, otherwise pass a dummy locked object
     if (!region4Unlocked) {
         // 1. Forces the mini-canvas renderer to draw a hidden black card profile with a question mark
-        renderMiniPet({ type: 'bee', level: 1 }, 'viewBee'); 
+        renderMiniPet({ type: 'bee', level: 1, isLocked: true }, 'viewBee'); 
         
         // 2. Overrides the text box with mystery information at the start of the game
         document.getElementById('infoBee').innerHTML = `
@@ -1807,7 +1807,7 @@ function updateCodexData() {
     // FIXED: Uses the region4Unlocked variable flag to determine if Region 5 is locked as well
     if (!region4Unlocked) {
         // 1. Forces the mini-canvas renderer to draw a hidden black card profile with a question mark
-        renderMiniPet({ type: 'bear', level: 1 }, 'viewBear'); 
+        renderMiniPet({ type: 'bear', level: 1, isLocked: true }, 'viewBear'); 
         
         // 2. Overrides the text box with mystery information at the start of the game
         document.getElementById('infoBear').innerHTML = `
