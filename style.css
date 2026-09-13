@@ -121,7 +121,7 @@ body, html {
 
 #spawnBeeBtn {
     position: absolute;
-    bottom: 225px;        /* Shifted to hover neatly directly above your whistle trigger */
+    bottom: 175px;        /* Shifted to hover neatly directly above your whistle trigger */
     right: 20px;          /* Locked tightly to the right margin wall baseline line */
     left: auto !important; /* Forces the browser to override any left alignments completely */
     width: 110px;         /* Squeezes the button width down into a tidy, compact mobile block */
