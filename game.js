@@ -12,7 +12,7 @@ const whistleBtn = document.getElementById('whistleBtn');
 
 // New Core Dynamic Math Formula Engine (Max Level 20 scaling factor)
 function getLevelRequirement(type, currentLevel) {
-    const baseMap = { dog: 20, elephant: 35, squirrel: 10, chicken: 15, bee: 8, bear: 25 };
+    const baseMap = { dog: 20, elephant: 35, squirrel: 10, chicken: 15, bee: 8, bear: 15 };
     let base = baseMap[type] || 20;
     
     // Safety fallback: If currentLevel is accidentally passed as an object or undefined, default to 1
