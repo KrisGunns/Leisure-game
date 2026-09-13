@@ -1135,23 +1135,69 @@ window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
     function checkCollisions() {
-        // FIXED: Correctly targets the active region's egg structure
-        let currentRItems = regionalItems[currentRegion];
-        if (currentRegion === 3 && currentRItems && currentRItems.eggs) {
-            for (let i = currentRItems.eggs.length - 1; i >= 0; i--) {
-                let egg = currentRItems.eggs[i];
-                if (player.x < egg.x + 12 && player.x + player.size > egg.x - 12 &&
-                    player.y < egg.y + 12 && player.y + player.size > egg.y - 12) {
-                    currentRItems.eggs.splice(i, 1);
-                    inventory.eggs += 1;
-                    currentRItems.eggs.splice(i, 1);
-                    inventory.eggs += 1;
-                    gainPlayerXP(1); // +1 XP per egg picked up from the field!
-                    updateUI();
-                    saveGameProgress();
-                }
+    // FIXED: Correctly targets the active region's egg structure
+    let currentRItems = regionalItems[currentRegion];
+    if (currentRegion === 3 && currentRItems && currentRItems.eggs) {
+        for (let i = currentRItems.eggs.length - 1; i >= 0; i--) {
+            let egg = currentRItems.eggs[i];
+            if (player.x < egg.x + 12 && player.x + player.size > egg.x - 12 &&
+                player.y < egg.y + 12 && player.y + player.size > egg.y - 12) {
+                currentRItems.eggs.splice(i, 1); // FIXED: Cleared duplicate duplication lines safely
+                inventory.eggs += 1;
+                gainPlayerXP(1); // +1 XP per egg picked up from the field!
+                updateUI();
+                saveGameProgress();
             }
         }
+    } // End of egg system check
+
+    // 🍉 Food Item Collision Loop Check
+    if (currentRItems && currentRItems.foods) {
+        for (let i = currentRItems.foods.length - 1; i >= 0; i--) {
+            let item = currentRItems.foods[i];
+            let dx = (player.x + player.size / 2) - item.x;
+            let dy = (player.y + player.size / 2) - item.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < player.size / 2 + 8) {
+                currentRItems.foods.splice(i, 1);
+                respawnQueue.push({ type: 'food', time: Date.now() + 10000 });
+
+                // FIXED: 1% bonus per level + 1 XP injection for manual food pickups
+                let foodBaseGain = 1;
+                let manualFoodMultiplier = 1 + (character.level * 0.01);
+                inventory.food += Math.round(foodBaseGain * manualFoodMultiplier);
+                gainPlayerXP(1); 
+
+                updateUI();
+                saveGameProgress();
+            }
+        }
+    }
+
+    // 💧 Water Droplet Collision Loop Check
+    if (currentRItems && currentRItems.waters) {
+        for (let i = currentRItems.waters.length - 1; i >= 0; i--) {
+            let item = currentRItems.waters[i];
+            let dx = (player.x + player.size / 2) - item.x;
+            let dy = (player.y + player.size / 2) - item.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < player.size / 2 + 8) {
+                currentRItems.waters.splice(i, 1);
+                respawnQueue.push({ type: 'water', time: Date.now() + 10000 });
+
+                // FIXED: 1% bonus per level + 1 XP injection for manual water pickups
+                let waterBaseGain = 1;
+                let manualWaterMultiplier = 1 + (character.level * 0.01);
+                inventory.water += Math.round(waterBaseGain * manualWaterMultiplier);
+                gainPlayerXP(1); 
+
+                updateUI();
+                saveGameProgress();
+            }
+        }
+    }
 
     const spawnBeeBtn = document.getElementById('spawnBeeBtn');
     if (currentRegion === 4 && typeof region4Hive !== 'undefined' && region4Hive && spawnBeeBtn) {
