@@ -1555,7 +1555,7 @@ function renderMiniPet(pet, elementId) {
     miniCanvas.height = 70;
     mctx.clearRect(0, 0, 70, 70);
     
-    if (pet.type !== 'bee' && pet.level < 2) {
+    if (pet.level < 2) {
         mctx.fillStyle = '#111';
         mctx.fillRect(0, 0, 70, 70);
         mctx.fillStyle = 'rgba(255,255,255,0.15)';
