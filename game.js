@@ -1095,6 +1095,28 @@ resizeCanvas();
             }
         }
 
+    // --- PASTE THE NEW PROXIMITY HIVE CODE RIGHT HERE ---
+    const spawnBeeBtn = document.getElementById('spawnBeeBtn');
+    if (currentRegion === 4 && typeof region4Hive !== 'undefined' && region4Hive && spawnBeeBtn) {
+        let hx = region4Hive.x;
+        let hy = region4Hive.y;
+        let dx = (player.x + player.size / 2) - hx;
+        let dy = (player.y + player.size / 2) - hy;
+        let dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < 65) {
+            if (petsByRegion[4] && petsByRegion[4].length < 3) {
+                spawnBeeBtn.style.display = 'block';
+            } else {
+                spawnBeeBtn.style.display = 'none';
+            }
+        } else {
+            spawnBeeBtn.style.display = 'none';
+        }
+    } else if (spawnBeeBtn) {
+        spawnBeeBtn.style.display = 'none';
+    }
+
     if (currentRegion === 4) {
         for (let i = flowers.length - 1; i >= 0; i--) {
             let fl = flowers[i];
@@ -1974,6 +1996,63 @@ if (openBagBtn) {
 if (bagClose) {
     bagClose.addEventListener('touchstart', handleCloseBag, { passive: false });
     bagClose.addEventListener('mousedown', handleCloseBag);
+}
+
+const spawnBeeBtn = document.getElementById('spawnBeeBtn');
+
+if (spawnBeeBtn) {
+    const handlePurchaseBee = (e) => {
+        if (e) e.preventDefault();
+        
+        // 1. Array Safeguard
+        if (!petsByRegion[4]) petsByRegion[4] = [];
+        
+        // 2. Strict Capacity Threshold Lock
+        if (petsByRegion[4].length >= 3) {
+            alert("🍯 The Hive structure has reached its maximum capacity of 3 total bees!");
+            spawnBeeBtn.style.display = 'none';
+            return;
+        }
+
+        // 3. Financial Ledger Transaction Check
+        if (inventory.coins < 10) {
+            alert(`🪙 Insufficient Coins! Spawning a new bee costs 10 Coins. (You have: ${inventory.coins})`);
+            return;
+        }
+
+        // 4. Process Checkout Deductions
+        inventory.coins -= 10;
+        updateUI();
+
+        // 5. Extract Base Name Continuity Parameters
+        let baseBee = petsByRegion[4][0];
+        let originalName = baseBee ? baseBee.label : "Bee";
+
+        // 6. Generate Duplicate Autonomous Bee Instance
+        let newBeeCopy = new Pet('bee', `${originalName} #${petsByRegion[4].length + 1}`, '#f1c40f');
+        newBeeCopy.level = 1;
+        newBeeCopy.foodEaten = 0;
+        newBeeCopy.waterEaten = 0;
+        newBeeCopy.state = 'wander';
+        
+        // Spawn them physically emerging straight out from the center of the Hive structure geometry
+        newBeeCopy.x = region4Hive.x - newBeeCopy.size / 2;
+        newBeeCopy.y = region4Hive.y - newBeeCopy.size / 2;
+        newBeeCopy.pickNewWanderTarget();
+
+        // Push directly into the engine's active physics cycle loops
+        petsByRegion[4].push(newBeeCopy);
+        
+        saveGameProgress();
+        
+        // Auto-hide the button immediately if this purchase hits the maximum capacity ceiling limit
+        if (petsByRegion[4].length >= 3) {
+            spawnBeeBtn.style.display = 'none';
+        }
+    };
+
+    spawnBeeBtn.addEventListener('touchstart', handlePurchaseBee, { passive: false });
+    spawnBeeBtn.addEventListener('mousedown', handlePurchaseBee);
 }
 
 // Ensure your game startup chain initializes your Codex masks tightly at launch:
