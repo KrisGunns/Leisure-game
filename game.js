@@ -1696,8 +1696,6 @@ function updateCodexData() {
     renderMiniPet(elephant, 'viewElephant');
     renderMiniPet(squirrel, 'viewSquirrel');
     renderMiniPet(chicken, 'viewChicken');
-    renderMiniPet(bee, 'viewBee');
-    renderMiniPet(bear, 'viewBear');
 
     let dogReq = getLevelRequirement('dog', dog.level);
     document.getElementById('infoDog').innerHTML = `
@@ -1780,15 +1778,31 @@ function updateCodexData() {
 
     document.getElementById('renameBoxBee').style.display = region4Unlocked ? 'block' : 'none';
 
-    let bearReq = getLevelRequirement('bear', bear.level);
-    document.getElementById('infoBear').innerHTML = `
-        <strong>${bear.level >= 2 ? bear.label : '???'}</strong><br>
-        Status: <span class="${bear.level >= 2 ? 'codexTamed' : 'codexWild'}">${bear.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
-        Level: ${bear.level}/20<br>
-        Next Req: ${bear.level < 20 ? '🍯 ' + bearReq + ' Honey' : 'MAX'}
-    `;
-
-    document.getElementById('renameBoxBear').style.display = bear.level >= 2 ? 'block' : 'none';
+    // FIXED: Uses the region4Unlocked variable flag to determine if Region 5 is locked as well
+    if (!region4Unlocked) {
+        // 1. Forces the mini-canvas renderer to draw a hidden black card profile with a question mark
+        renderMiniPet({ type: 'bear', level: 1 }, 'viewBear'); 
+        
+        // 2. Overrides the text box with mystery information at the start of the game
+        document.getElementById('infoBear').innerHTML = `
+            <strong>???</strong><br>
+            Status: <span class="codexWild">LOCKED</span><br>
+            Level: ?/20<br>
+            Next Req: ???
+        `;
+    } else {
+        // Displays full active taming metrics once the user breaks through the early zones!
+        let bearReq = getLevelRequirement('bear', bear.level);
+        renderMiniPet(bear, 'viewBear');
+        
+        document.getElementById('infoBear').innerHTML = `
+            <strong>${bear.level >= 2 ? bear.label : '???'}</strong><br>
+            Status: <span class="${bear.level >= 2 ? 'codexTamed' : 'codexWild'}">${bear.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
+            Level: ${bear.level}/20<br>
+            Next Req: ${bear.level < 20 ? '🍯 ' + bearReq + ' Honey' : 'MAX'}
+        `;
+    }
+    document.getElementById('renameBoxBear').style.display = (region4Unlocked && bear.level >= 2) ? 'block' : 'none';
 }
 
 const codexOverlay = document.getElementById('codexOverlay');
