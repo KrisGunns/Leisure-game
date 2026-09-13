@@ -1748,7 +1748,7 @@ function updateCodexData() {
         Next Req: ${bee.level < 20 ? '🌸 ' + beeReq + ' Flowers' : 'MAX'}
     `;
 
-    document.getElementById('renameBoxBee').style.display = region4Unlocked ? 'block' : 'none';
+    document.getElementById('renameBoxBee').style.display = bee.level >= 2 ? 'block' : 'none';
 
     let bearReq = getLevelRequirement('bear', bear.level);
     document.getElementById('infoBear').innerHTML = `
