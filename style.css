@@ -213,7 +213,7 @@ body, html {
     padding-bottom: 10px;
     margin-bottom: 15px;
 }
-#codexClose {
+#bagClose, #codexClose {
     background: #c0392b;
     border: none;
     color: white;
@@ -222,7 +222,7 @@ body, html {
     border-radius: 4px;
     cursor: pointer;
 }
-#codexClose:active {
+#bagClose:active, #codexClose:active {
     background: #e74c3c;
 }
 .codexEntry {
