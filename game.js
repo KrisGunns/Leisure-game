@@ -1552,16 +1552,13 @@ function renderMiniPet(pet, elementId) {
     if (!miniCanvas) return;
     const mctx = miniCanvas.getContext('2d');
     
-    // Forcing a hard canvas width reset completely clears out old pixel data
+    // Forcing a hard canvas width reset completely flushes old pixel data
     miniCanvas.width = 70;
     miniCanvas.height = 70;
     mctx.clearRect(0, 0, 70, 70);
     
-    // Check if the pet is forced locked by the Codex, or standard pets < Level 2, or Bees < Level 1
-    let isLocked = pet.isLocked || (pet.type === 'bee' ? pet.level < 1 : pet.level < 2);
-
-    if (isLocked) {
-        // Draw the locked black card background frame
+    // FIXED: Drop the messy array loop! Rely 100% on the explicit forced lock flag passed by the Codex
+    if (pet && pet.isLocked) {
         mctx.fillStyle = '#111';
         mctx.fillRect(0, 0, 70, 70);
         mctx.fillStyle = 'rgba(255,255,255,0.15)';
@@ -1569,14 +1566,11 @@ function renderMiniPet(pet, elementId) {
         mctx.textAlign = 'center';
         mctx.textBaseline = 'middle';
         mctx.fillText('❓', 35, 35);
-        
-        // FIXED: Instantly cuts off the function execution right here! 
-        // This stops the browser from ever reading or rendering the colorful animal drawing lines below.
-        return; 
+        return; // ABSOLUTE CUTOFF: Physically blocks the bee drawing code below from ever running
     }
 
     // --- REVELATION LAYER ---
-    // If the pet is NOT locked, it safely passes the cutoff and draws your beautiful colorful animal assets
+    // If it's not explicitly locked, draw the colorful assets safely
     mctx.fillStyle = 'rgba(255,255,255,0.1)';
     mctx.fillRect(0, 0, 70, 70);
 
