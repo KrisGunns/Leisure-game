@@ -1748,7 +1748,20 @@ function updateCodexData() {
         Next Req: ${bee.level < 20 ? '🌸 ' + beeReq + ' Flowers' : 'MAX'}
     `;
 
-    document.getElementById('renameBoxBee').style.display = bee.level >= 2 ? 'block' : 'none';
+    let region4Unlocked = true; 
+    
+    // Run the loop to calculate if regions 1-3 are fully tamed
+    for (let r = 1; r <= 3; r++) {
+        if (Array.isArray(petsByRegion[r])) {
+            petsByRegion[r].forEach(pet => {
+                if (pet.level < 2) {
+                    region4Unlocked = false; // Found an untamed pet, lock it back down
+                }
+            });
+        }
+    }
+
+    document.getElementById('renameBoxBee').style.display = region4Unlocked ? 'block' : 'none';
 
     let bearReq = getLevelRequirement('bear', bear.level);
     document.getElementById('infoBear').innerHTML = `
