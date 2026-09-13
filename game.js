@@ -1894,12 +1894,36 @@ if (btnAddWater) {
 
 if (btnWipeSave) {
     btnWipeSave.addEventListener('click', () => {
-        if (confirm("⚠️ WARNING: Are you absolutely sure you want to delete all saved progress? This will reset your game data!")) {
+        if (confirm("⚠️ WARNING: Delete all save data? This resets everything!")) {
+            // 1. Wipe the local storage cache completely clean
             localStorage.removeItem('just_a_little_leisure_save');
-            inventory.food = 0;
-            inventory.water = 0;
+            
+            // 2. Zero out your active resource trackers securely
+            inventory.food = 0; 
+            inventory.water = 0; 
             inventory.honey = 0;
-            inventory.fish = 0;
+            inventory.fish = 0; 
+            inventory.coins = 0; 
+            inventory.eggs = 0;
+            
+            // 3. FIXED: Hard-reset all pet variables back to Level 1 wild status instantly
+            for (let r in petsByRegion) {
+                if (Array.isArray(petsByRegion[r])) {
+                    petsByRegion[r].forEach(pet => {
+                        pet.level = (pet.type === 'bee') ? 1 : 1; // Resets all levels to baseline
+                        pet.foodEaten = 0;
+                        pet.waterEaten = 0;
+                        pet.state = 'wander';
+                        pet.pickNewWanderTarget();
+                    });
+                }
+            }
+
+            // 4. Force a fresh interface drawing update to securely lock panels before reloading
+            if (typeof updateCodexData === 'function') updateCodexData();
+            updateUI();
+            
+            // 5. Hard reload the page layout to compile fresh files
             window.location.reload();
         }
     });
