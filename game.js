@@ -1555,7 +1555,10 @@ function renderMiniPet(pet, elementId) {
     miniCanvas.height = 70;
     mctx.clearRect(0, 0, 70, 70);
     
-    if (pet.level < 2) {
+    // FIXED: Standard pets need Level 2+ to show, but autonomous Bees show immediately at Level 1+
+    let isLocked = (pet.type === 'bee') ? (pet.level < 1) : (pet.level < 2);
+
+    if (isLocked) {
         mctx.fillStyle = '#111';
         mctx.fillRect(0, 0, 70, 70);
         mctx.fillStyle = 'rgba(255,255,255,0.15)';
