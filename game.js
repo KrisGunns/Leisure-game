@@ -2025,11 +2025,11 @@ if (spawnBeeBtn) {
         updateUI();
 
         // 5. Extract Base Name Continuity Parameters
-        let baseBee = petsByRegion[4][0];
-        let originalName = baseBee ? baseBee.label : "Bee";
+        let workerNumber = petsByRegion[4].length; 
+        let cleanLabelName = `Worker Bee ${workerNumber}`;
 
-        // 6. Generate Duplicate Autonomous Bee Instance
-        let newBeeCopy = new Pet('bee', `${originalName} #${petsByRegion[4].length + 1}`, '#f1c40f');
+        // 6. Generate Duplicate Autonomous Worker Bee Instance
+        let newBeeCopy = new Pet('bee', cleanLabelName, '#f1c40f');
         newBeeCopy.level = 1;
         newBeeCopy.foodEaten = 0;
         newBeeCopy.waterEaten = 0;
