@@ -1134,7 +1134,7 @@ function resizeCanvas() {
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
-    function checkCollisions() {
+function checkCollisions() {
     // FIXED: Correctly targets the active region's egg structure
     let currentRItems = regionalItems[currentRegion];
     if (currentRegion === 3 && currentRItems && currentRItems.eggs) {
@@ -1142,9 +1142,9 @@ resizeCanvas();
             let egg = currentRItems.eggs[i];
             if (player.x < egg.x + 12 && player.x + player.size > egg.x - 12 &&
                 player.y < egg.y + 12 && player.y + player.size > egg.y - 12) {
-                currentRItems.eggs.splice(i, 1); // FIXED: Cleared duplicate duplication lines safely
+                currentRItems.eggs.splice(i, 1); 
                 inventory.eggs += 1;
-                gainPlayerXP(1); // +1 XP per egg picked up from the field!
+                gainPlayerXP(1); // +1 XP per egg picked up manually from the field!
                 updateUI();
                 saveGameProgress();
             }
@@ -1155,18 +1155,23 @@ resizeCanvas();
     if (currentRItems && currentRItems.foods) {
         for (let i = currentRItems.foods.length - 1; i >= 0; i--) {
             let item = currentRItems.foods[i];
+            
+            // STRICT GATE: Explicitly measure distance between PLAYER CENTER and the item
             let dx = (player.x + player.size / 2) - item.x;
             let dy = (player.y + player.size / 2) - item.y;
             let dist = Math.sqrt(dx * dx + dy * dy);
 
+            // Only triggers if the PLAYER physically walks directly over it
             if (dist < player.size / 2 + 8) {
                 currentRItems.foods.splice(i, 1);
                 respawnQueue.push({ type: 'food', time: Date.now() + 10000 });
 
-                // FIXED: 1% bonus per level + 1 XP injection for manual food pickups
+                // Multipliers now apply safely ONLY to manually gathered nodes
                 let foodBaseGain = 1;
                 let manualFoodMultiplier = 1 + (character.level * 0.01);
                 inventory.food += Math.round(foodBaseGain * manualFoodMultiplier);
+                
+                // CRITICAL FIX: Only awards character experience when your player avatar steps on it
                 gainPlayerXP(1); 
 
                 updateUI();
@@ -1179,18 +1184,23 @@ resizeCanvas();
     if (currentRItems && currentRItems.waters) {
         for (let i = currentRItems.waters.length - 1; i >= 0; i--) {
             let item = currentRItems.waters[i];
+            
+            // STRICT GATE: Explicitly measure distance between PLAYER CENTER and the item
             let dx = (player.x + player.size / 2) - item.x;
             let dy = (player.y + player.size / 2) - item.y;
             let dist = Math.sqrt(dx * dx + dy * dy);
 
+            // Only triggers if the PLAYER physically walks directly over it
             if (dist < player.size / 2 + 8) {
                 currentRItems.waters.splice(i, 1);
                 respawnQueue.push({ type: 'water', time: Date.now() + 10000 });
 
-                // FIXED: 1% bonus per level + 1 XP injection for manual water pickups
+                // Multipliers now apply safely ONLY to manually gathered nodes
                 let waterBaseGain = 1;
                 let manualWaterMultiplier = 1 + (character.level * 0.01);
                 inventory.water += Math.round(waterBaseGain * manualWaterMultiplier);
+                
+                // CRITICAL FIX: Only awards character experience when your player avatar steps on it
                 gainPlayerXP(1); 
 
                 updateUI();
