@@ -190,6 +190,19 @@ function loadGameProgress() {
             inventory.eggs = stateMatrix.inventory.eggs || 0;
         }
 
+        // FIXED: Fully restore and link Character Level and XP to the HUD on page load
+        if (stateMatrix.characterData) {
+            character = stateMatrix.characterData;
+            
+            const charLevel = document.getElementById('charLevel');
+            const charXP = document.getElementById('charXP');
+            const charNextXP = document.getElementById('charNextXP');
+            
+            if (charLevel) charLevel.textContent = character.level;
+            if (charXP) charXP.textContent = character.xp;
+            if (charNextXP) charNextXP.textContent = getCharacterNextXP(character.level);
+        }
+
         if (stateMatrix.currentRegion) {
             currentRegion = stateMatrix.currentRegion;
             if (regionSelector) regionSelector.value = currentRegion;
@@ -212,12 +225,13 @@ function loadGameProgress() {
                 });
             }
         }
+        
+        // Refresh display layers immediately after unpacking variables
+        updateUI();
+        if (typeof updateCodexData === 'function') updateCodexData();
+
     } catch (e) {
         console.error("Loading save failed:", e);
-
-        if (parsed.characterData) {
-            character = parsed.characterData;
-        }
     }
 }
 
@@ -1154,79 +1168,72 @@ window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
 function checkCollisions() {
-    // FIXED: Correctly targets the active region's egg structure
     let currentRItems = regionalItems[currentRegion];
-    if (currentRegion === 3 && currentRItems && currentRItems.eggs) {
+    if (!currentRItems) return;
+
+    // 🥚 Egg Item Collision Loop Check
+    if (currentRegion === 3 && currentRItems.eggs) {
         for (let i = currentRItems.eggs.length - 1; i >= 0; i--) {
             let egg = currentRItems.eggs[i];
             if (player.x < egg.x + 12 && player.x + player.size > egg.x - 12 &&
                 player.y < egg.y + 12 && player.y + player.size > egg.y - 12) {
+                
                 currentRItems.eggs.splice(i, 1); 
                 inventory.eggs += 1;
                 gainPlayerXP(1); // +1 XP per egg picked up manually from the field!
                 updateUI();
                 saveGameProgress();
-                break;
+                return; // ABSOLUTE CUTOFF: Exit immediately to isolate this pickup
             }
         }
-    } // End of egg system check
+    }
 
     // 🍉 Food Item Collision Loop Check
-    if (currentRItems && currentRItems.foods) {
+    if (currentRItems.foods) {
         for (let i = currentRItems.foods.length - 1; i >= 0; i--) {
             let item = currentRItems.foods[i];
             
-            // STRICT GATE: Explicitly measure distance between PLAYER CENTER and the item
             let dx = (player.x + player.size / 2) - item.x;
             let dy = (player.y + player.size / 2) - item.y;
             let dist = Math.sqrt(dx * dx + dy * dy);
 
-            // Only triggers if the PLAYER physically walks directly over it
             if (dist < player.size / 2 + 8) {
                 currentRItems.foods.splice(i, 1);
                 respawnQueue.push({ type: 'food', time: Date.now() + 10000 });
 
-                // Multipliers now apply safely ONLY to manually gathered nodes
                 let foodBaseGain = 1;
                 let manualFoodMultiplier = 1 + (character.level * 0.01);
                 inventory.food += Math.round(foodBaseGain * manualFoodMultiplier);
                 
-                // CRITICAL FIX: Only awards character experience when your player avatar steps on it
                 gainPlayerXP(1); 
-
                 updateUI();
                 saveGameProgress();
-                break;
+                return; // FIXED ABSOLUTE CUTOFF: Instantly ends collision checks this frame, freezing water checks completely!
             }
         }
     }
 
     // 💧 Water Droplet Collision Loop Check
-    if (currentRItems && currentRItems.waters) {
+    if (currentRItems.waters) {
         for (let i = currentRItems.waters.length - 1; i >= 0; i--) {
             let item = currentRItems.waters[i];
             
-            // STRICT GATE: Explicitly measure distance between PLAYER CENTER and the item
             let dx = (player.x + player.size / 2) - item.x;
             let dy = (player.y + player.size / 2) - item.y;
             let dist = Math.sqrt(dx * dx + dy * dy);
 
-            // Only triggers if the PLAYER physically walks directly over it
             if (dist < player.size / 2 + 8) {
                 currentRItems.waters.splice(i, 1);
                 respawnQueue.push({ type: 'water', time: Date.now() + 10000 });
 
-                // Multipliers now apply safely ONLY to manually gathered nodes
                 let waterBaseGain = 1;
                 let manualWaterMultiplier = 1 + (character.level * 0.01);
                 inventory.water += Math.round(waterBaseGain * manualWaterMultiplier);
                 
-                // CRITICAL FIX: Only awards character experience when your player avatar steps on it
                 gainPlayerXP(1); 
-
                 updateUI();
                 saveGameProgress();
-                break;
+                return; // ABSOLUTE CUTOFF: Complete structural isolation sweep
             }
         }
     }
