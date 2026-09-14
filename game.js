@@ -56,8 +56,11 @@ function getCharacterNextXP(currentLevel) {
     return Math.floor(100 * Math.pow(currentLevel, 1.3)); // Scaled curve scaling boundaries
 }
 
+let isLevelingUp = false;
+
 // Global Core XP Injection Engine Function
 function gainPlayerXP(amount) {
+    if (isLevelingUp) return;
     if (typeof amount !== 'number' || isNaN(amount)) return;
 
     character.xp += amount;
@@ -74,12 +77,14 @@ function gainPlayerXP(amount) {
     
     // Fire user displays and disk writes ONLY after the math iterations conclude completely
     if (leveledUp) {
+        isLevelingUp = true;
         updateUI();
         saveGameProgress();
         
         // Defer your alert pop-up to the very end of the execution thread thread
         setTimeout(() => {
             alert(`🎉 LEVEL UP! You have reached Character Level ${character.level}!`);
+            isLevelingUp = false;
         }, 50);
     } else {
         // Silent update for regular experience increments
@@ -1190,6 +1195,7 @@ function checkCollisions() {
 
                 updateUI();
                 saveGameProgress();
+                return;
             }
         }
     }
@@ -1219,6 +1225,7 @@ function checkCollisions() {
 
                 updateUI();
                 saveGameProgress();
+                return;
             }
         }
     }
