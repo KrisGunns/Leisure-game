@@ -58,20 +58,34 @@ function getCharacterNextXP(currentLevel) {
 
 // Global Core XP Injection Engine Function
 function gainPlayerXP(amount) {
+    if (typeof amount !== 'number' || isNaN(amount)) return;
+
     character.xp += amount;
     let nextNeeded = getCharacterNextXP(character.level);
+    let leveledUp = false;
     
-    // Evaluate Level Up sequences recursively to safely process bulk XP bursts
+    // Evaluate level ups silently inside memory first to prevent layout locks
     while (character.xp >= nextNeeded) {
         character.xp -= nextNeeded;
         character.level++;
         nextNeeded = getCharacterNextXP(character.level);
-        
-        // Visual Level Up Flash Alert Prompt Tracker
-        alert(`🎉 LEVEL UP! You have reached Character Level ${character.level}!`);
+        leveledUp = true;
     }
-    updateUI();
-    saveGameProgress();
+    
+    // Fire user displays and disk writes ONLY after the math iterations conclude completely
+    if (leveledUp) {
+        updateUI();
+        saveGameProgress();
+        
+        // Defer your alert pop-up to the very end of the execution thread thread
+        setTimeout(() => {
+            alert(`🎉 LEVEL UP! You have reached Character Level ${character.level}!`);
+        }, 50);
+    } else {
+        // Silent update for regular experience increments
+        const charXP = document.getElementById('charXP');
+        if (charXP) charXP.textContent = character.xp;
+    }
 }
 
 const input = {
@@ -1568,12 +1582,18 @@ function gameLoop(timestamp) {
     let elapsed = timestamp - lastTime;
 
     if (elapsed >= frameInterval) {
-        let dt = elapsed / 1000;
-        if (dt > 0.1) dt = 0.1; 
+        let dt = (timestamp - lastTime) / 1000;
+        
+        // FIXED: Re-calculated clean animation interval steps
         lastTime = timestamp - (elapsed % frameInterval);
+        
+        // FIXED: Strict time step delta ceiling cap boundary! 
+        // This physically prevents browser alert freezes or lag spikes from accelerating your pet action loops.
+        if (dt > 0.1) dt = 0.1;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+        // --- REGION GRID BACKGROUNDS RENDERING LAYER ---
         if (currentRegion === 1) {
             ctx.fillStyle = '#27ae60';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1645,18 +1665,25 @@ function gameLoop(timestamp) {
         ctx.lineWidth = 4;
         ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
 
+        // --- CORE LOGIC STEP PHYSICS HANDLERS ---
         processSpawns(dt);
         player.update(dt);
         checkCollisions();
 
+        // --- MAP LOOT ELEMENT DISPLAY DRAWS ---
         if (currentRegion === 4) {
-            flowers.forEach(fl => fl.draw());
-        } else {
-            foods.forEach(f => f.draw());
-            waters.forEach(w => w.draw());
-            
-            // FIXED: Renders the white elliptical eggs inside Region 3 pulling from correct pathing references
+            // Check to protect the flower array reference from crashing if empty
             let currentRItems = regionalItems[currentRegion];
+            if (currentRItems && currentRItems.flowers) {
+                currentRItems.flowers.forEach(fl => fl.draw());
+            }
+        } else {
+            let currentRItems = regionalItems[currentRegion];
+            if (currentRItems) {
+                if (currentRItems.foods) currentRItems.foods.forEach(f => f.draw());
+                if (currentRItems.waters) currentRItems.waters.forEach(w => w.draw());
+            }
+            
             if (currentRegion === 3 && currentRItems && currentRItems.eggs) {
                 currentRItems.eggs.forEach(egg => {
                     ctx.fillStyle = '#ffffff';
@@ -1670,6 +1697,7 @@ function gameLoop(timestamp) {
             }
         }
 
+        // --- AUTOMATED PET STATE PHYSICS & DRAWS ---
         let regions1to3Tamed = true;
         for (let checkR = 1; checkR <= 3; checkR++) {
             if (Array.isArray(petsByRegion[checkR])) {
@@ -1685,7 +1713,13 @@ function gameLoop(timestamp) {
             let activePets = petsByRegion[r];
             if (Array.isArray(activePets)) {
                 activePets.forEach(pet => {
-                    pet.update(dt, regionalItems[r].foods, regionalItems[r].waters, regionalItems[r].flowers);
+                    // Pull mapping structures safely from the unified regionalItems matrix dictionary data slots
+                    let rFood = regionalItems[r] ? regionalItems[r].foods : [];
+                    let rWater = regionalItems[r] ? regionalItems[r].waters : [];
+                    let rFlower = regionalItems[r] ? regionalItems[r].flowers : [];
+                    
+                    pet.update(dt, rFood, rWater, rFlower);
+                    
                     if (r === currentRegion) {
                         pet.draw();
                     }
@@ -1694,9 +1728,12 @@ function gameLoop(timestamp) {
         }
 
         player.draw();
-    }
+    } // This bracket cleanly closes the frameInterval condition block scope layer
+
+    // FIXED: Only requestAnimationFrame sits down here at the safe root level!
     requestAnimationFrame(gameLoop);
 }
+
 function renderMiniPet(pet, elementId) {
     const miniCanvas = document.getElementById(elementId);
     if (!miniCanvas) return;
