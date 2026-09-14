@@ -1166,6 +1166,7 @@ function checkCollisions() {
                 gainPlayerXP(1); // +1 XP per egg picked up manually from the field!
                 updateUI();
                 saveGameProgress();
+                break;
             }
         }
     } // End of egg system check
@@ -1195,7 +1196,7 @@ function checkCollisions() {
 
                 updateUI();
                 saveGameProgress();
-                return;
+                break;
             }
         }
     }
@@ -1225,7 +1226,7 @@ function checkCollisions() {
 
                 updateUI();
                 saveGameProgress();
-                return;
+                break;
             }
         }
     }
