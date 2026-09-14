@@ -53,7 +53,7 @@ let character = {
 
 // Calculate exponential player XP progression thresholds (No level cap ceiling)
 function getCharacterNextXP(currentLevel) {
-    return Math.floor(100 * Math.pow(currentLevel, 1.3)); // Scaled curve scaling boundaries
+    return Math.floor(100 * Math.pow(currentLevel, 0.6)); // Scaled curve scaling boundaries
 }
 
 let isLevelingUp = false;
