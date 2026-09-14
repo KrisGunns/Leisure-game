@@ -1171,7 +1171,10 @@ function checkCollisions() {
     let currentRItems = regionalItems[currentRegion];
     if (!currentRItems) return;
 
-    // 🥚 Egg Item Collision Loop Check
+    // MASTER SECURITY GATE: Ensure only ONE single item collision check can register per frame pass
+    let hasCollectedThisFrame = false;
+
+    // 1. 🥚 Egg Item Collision Loop Check
     if (currentRegion === 3 && currentRItems.eggs) {
         for (let i = currentRItems.eggs.length - 1; i >= 0; i--) {
             let egg = currentRItems.eggs[i];
@@ -1180,19 +1183,23 @@ function checkCollisions() {
                 
                 currentRItems.eggs.splice(i, 1); 
                 inventory.eggs += 1;
-                gainPlayerXP(1); // +1 XP per egg picked up manually from the field!
+                gainPlayerXP(1); 
                 updateUI();
                 saveGameProgress();
-                return; // ABSOLUTE CUTOFF: Exit immediately to isolate this pickup
+                
+                hasCollectedThisFrame = true; // Lock the frame!
+                break;
             }
         }
     }
 
-    // 🍉 Food Item Collision Loop Check
+    // Instantly break out if an egg was handled to prevent any background resource bleedthrough
+    if (hasCollectedThisFrame) return;
+
+    // 2. 🍉 Food Item Collision Loop Check
     if (currentRItems.foods) {
         for (let i = currentRItems.foods.length - 1; i >= 0; i--) {
             let item = currentRItems.foods[i];
-            
             let dx = (player.x + player.size / 2) - item.x;
             let dy = (player.y + player.size / 2) - item.y;
             let dist = Math.sqrt(dx * dx + dy * dy);
@@ -1208,16 +1215,20 @@ function checkCollisions() {
                 gainPlayerXP(1); 
                 updateUI();
                 saveGameProgress();
-                return; // FIXED ABSOLUTE CUTOFF: Instantly ends collision checks this frame, freezing water checks completely!
+                
+                hasCollectedThisFrame = true; // Lock the frame!
+                break;
             }
         }
     }
 
-    // 💧 Water Droplet Collision Loop Check
+    // FIXED BRAKE PATH: If food was collected, stop completely and block water logic from executing!
+    if (hasCollectedThisFrame) return;
+
+    // 3. 💧 Water Droplet Collision Loop Check
     if (currentRItems.waters) {
         for (let i = currentRItems.waters.length - 1; i >= 0; i--) {
             let item = currentRItems.waters[i];
-            
             let dx = (player.x + player.size / 2) - item.x;
             let dy = (player.y + player.size / 2) - item.y;
             let dist = Math.sqrt(dx * dx + dy * dy);
@@ -1233,11 +1244,15 @@ function checkCollisions() {
                 gainPlayerXP(1); 
                 updateUI();
                 saveGameProgress();
-                return; // ABSOLUTE CUTOFF: Complete structural isolation sweep
+                hasCollectedThisFrame = true;
+                break;
             }
         }
     }
 
+    if (hasCollectedThisFrame) return;
+
+    // 4. 🐝 Dynamic Proximity Distance Hive Button Trigger
     const spawnBeeBtn = document.getElementById('spawnBeeBtn');
     if (currentRegion === 4 && typeof region4Hive !== 'undefined' && region4Hive && spawnBeeBtn) {
         let hx = region4Hive.x;
@@ -1259,47 +1274,14 @@ function checkCollisions() {
         spawnBeeBtn.style.display = 'none';
     }
 
-    if (currentRegion === 4) {
+    // 5. 🌸 Region 4 Flower Collection Placeholder Check
+    if (currentRegion === 4 && typeof flowers !== 'undefined' && flowers) {
         for (let i = flowers.length - 1; i >= 0; i--) {
             let fl = flowers[i];
             if (player.x < fl.x + 15 && player.x + player.size > fl.x - 15 &&
                 player.y < fl.y + 15 && player.y + player.size > fl.y - 15) {
+                // Flower intersection placeholder
             }
-        }
-        return;
-    }
-
-    for (let i = foods.length - 1; i >= 0; i--) {
-        let f = foods[i];
-        if (player.x < f.x + 10 && player.x + player.size > f.x - 10 &&
-            player.y < f.y + 10 && player.y + player.size > f.y - 10) {
-            foods.splice(i, 1);
-            inventory.food++;
-            updateUI();
-            respawnQueue.push({ type: 'food', time: Date.now() + 10000 });
-        
-        let foodBaseGain = 1;
-        // Apply manual 1% multiplier bump per character level
-        let manualFoodMultiplier = 1 + (character.level * 0.01);
-        inventory.food += Math.round(foodBaseGain * manualFoodMultiplier);
-        gainPlayerXP(1); // +1 XP per manual field resource gathered!
-        }
-    }
-
-    for (let i = waters.length - 1; i >= 0; i--) {
-        let w = waters[i];
-        if (player.x < w.x + 10 && player.x + player.size > w.x - 10 &&
-            player.y < w.y + 10 && player.y + player.size > w.y - 10) {
-            waters.splice(i, 1);
-            inventory.water++;
-            updateUI();
-            respawnQueue.push({ type: 'water', time: Date.now() + 10000 });
-
-        // Inside your water item pickup evaluation block inside checkCollisions():
-        let waterBaseGain = 1;
-        let manualWaterMultiplier = 1 + (character.level * 0.01);
-        inventory.water += Math.round(waterBaseGain * manualWaterMultiplier);
-        gainPlayerXP(1); // +1 XP per manual field resource gathered!
         }
     }
 }
@@ -2211,7 +2193,7 @@ if (bagClose) {
     bagClose.addEventListener('mousedown', handleCloseBag);
 }
 
-const spawnBeeBtn = document.getElementById('spawnBeeBtn');
+spawnBeeBtn = document.getElementById('spawnBeeBtn');
 
 if (spawnBeeBtn) {
     const handlePurchaseBee = (e) => {
