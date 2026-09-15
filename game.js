@@ -56,17 +56,14 @@ function getCharacterNextXP(currentLevel) {
     return Math.floor(100 * Math.pow(currentLevel, 0.6)); // Scaled curve scaling boundaries
 }
 
-let isLevelingUp = false;
-
 // Global Core XP Injection Engine Function
 function gainPlayerXP(amount) {
-    if (isLevelingUp) return;
     if (typeof amount !== 'number' || isNaN(amount)) return;
 
     character.xp += amount;
     let nextNeeded = getCharacterNextXP(character.level);
     let leveledUp = false;
-    
+
     // Evaluate level ups silently inside memory first to prevent layout locks
     while (character.xp >= nextNeeded) {
         character.xp -= nextNeeded;
@@ -74,23 +71,45 @@ function gainPlayerXP(amount) {
         nextNeeded = getCharacterNextXP(character.level);
         leveledUp = true;
     }
-    
-    // Fire user displays and disk writes ONLY after the math iterations conclude completely
+
+    // Always update the UI/XP bar immediately — never skip or delay this.
+    updateUI();
+
     if (leveledUp) {
-        isLevelingUp = true;
-        updateUI();
         saveGameProgress();
-        
-        // Defer your alert pop-up to the very end of the execution thread thread
-        setTimeout(() => {
-            alert(`🎉 LEVEL UP! You have reached Character Level ${character.level}!`);
-            isLevelingUp = false;
-        }, 50);
+        // Non-blocking toast instead of alert(): alert() freezes the JS thread and
+        // steals touch focus, which was causing held-down feed/collect actions to
+        // keep firing (draining resources) without granting XP while the dialog was up.
+        showLevelUpToast(character.level);
     } else {
-        // Silent update for regular experience increments
         const charXP = document.getElementById('charXP');
         if (charXP) charXP.textContent = character.xp;
     }
+}
+
+// Non-blocking level-up notification. Does not pause the game loop or steal input focus,
+// so held buttons (e.g. GIVE) keep receiving their pointerup/touchend events normally.
+function showLevelUpToast(level) {
+    let toast = document.getElementById('levelUpToast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'levelUpToast';
+        toast.style.cssText = `
+            position: fixed; top: 18%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.85); color: #f1c40f; font-family: monospace;
+            font-weight: bold; font-size: 14px; padding: 10px 18px;
+            border: 2px solid #f1c40f; border-radius: 8px; z-index: 9999;
+            pointer-events: none; text-align: center;
+            transition: opacity 0.35s ease; opacity: 0;
+        `;
+        document.body.appendChild(toast);
+    }
+    toast.textContent = `⭐ LEVEL UP! Character Level ${level}!`;
+    toast.style.opacity = '1';
+    clearTimeout(toast._hideTimer);
+    toast._hideTimer = setTimeout(() => {
+        toast.style.opacity = '0';
+    }, 1600);
 }
 
 const input = {
@@ -1413,6 +1432,16 @@ if (interactBtnElement) {
     interactBtnElement.addEventListener('pointerleave', haltFeedTimers);
     interactBtnElement.addEventListener('pointercancel', haltFeedTimers);
 }
+
+// SAFETY NET: guarantees the feed-hold interval always stops, even if the button
+// itself never receives its pointerup/pointercancel (e.g. a dialog steals the touch,
+// the app is backgrounded, or the WebView used by the APK wrapper drops the event).
+document.addEventListener('pointerup', haltFeedTimers);
+document.addEventListener('pointercancel', haltFeedTimers);
+window.addEventListener('blur', haltFeedTimers);
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) haltFeedTimers();
+});
 
 function haltFeedTimers() {
     if (feedInterval) clearInterval(feedInterval);
