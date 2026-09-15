@@ -315,34 +315,3 @@ body, html {
     color: #f1c40f;
     font-size: 16px;
 }
-
-/* NEW: Non-Blocking Real-Time Level Up Toast Notification Container */
-.levelUpToast {
-    position: absolute;
-    top: 25px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: linear-gradient(135deg, #f1c40f, #f39c12);
-    border: 2px solid #fff;
-    border-radius: 8px;
-    color: #000;
-    padding: 10px 20px;
-    font-family: monospace;
-    font-size: 13px;
-    font-weight: bold;
-    text-align: center;
-    box-shadow: 0 6px 12px rgba(0,0,0,0.5);
-    z-index: 200000; /* Floats smoothly over all elements and open Codex cards */
-    animation: slideToastIn 0.3s ease-out, fadeToastOut 0.4s ease-in 2.5s forwards;
-    pointer-events: none; /* Prevents the toast block from interfering with touch movements */
-}
-
-/* Fluid UI animation entries and exits */
-@keyframes slideToastIn {
-    from { top: -60px; opacity: 0; }
-    to { top: 25px; opacity: 1; }
-}
-@keyframes fadeToastOut {
-    from { opacity: 1; }
-    to { opacity: 0; transform: translate(-50%, -20px); }
-}
