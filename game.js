@@ -144,16 +144,15 @@ function updateUI() {
             }
         }
         interactBtn.textContent = elephantPlaying ? 'PLAY' : 'GIVE';
+    }
 
     const charLevel = document.getElementById('charLevel');
     const charXP = document.getElementById('charXP');
     const charNextXP = document.getElementById('charNextXP');
-    
+
     if (charLevel) charLevel.textContent = character.level;
     if (charXP) charXP.textContent = character.xp;
     if (charNextXP) charNextXP.textContent = getCharacterNextXP(character.level);
-
-    }
 }
 
 function saveGameProgress() {
@@ -379,31 +378,6 @@ class Pet {
         this.splashParticles = []; 
     }
 
-        giveResources() {
-        if (this.type === 'bee' || this.level >= 20) return;
-        
-        // FIXED: Dynamically pulls values from our math engine
-        let req = getLevelRequirement(this.type, this.level);
-
-        if (this.foodEaten < req.food && inventory.food > 0) {
-            inventory.food--;
-            this.foodEaten++;
-        } else if (this.waterEaten < req.water && inventory.water > 0) {
-            inventory.water--;
-            this.waterEaten++;
-        }
-
-        if (this.foodEaten >= req.food && this.waterEaten >= req.water) {
-            this.level++;
-            this.foodEaten = 0;
-            this.waterEaten = 0;
-            this.pickNewWanderTarget();
-            if (this.state === 'idle') this.state = 'wander';
-            saveGameProgress();
-        }
-        updateUI();
-    }
-
     pickNewWanderTarget() {
         let padding = 40;
         this.targetX = Math.random() * (canvas.width - this.size - padding * 2) + padding;
@@ -537,12 +511,6 @@ class Pet {
             if (this.state === 'fishing_travel') {
                 let lakeTargetX = canvas.width / 2 - this.size / 2;
                 let lakeTargetY = canvas.height - 100;
-
-            }
-
-            if (this.state === 'fishing_travel') {
-                let lakeTargetX = canvas.width / 2 - this.size / 2;
-                let lakeTargetY = canvas.height - 100;
                 let dx = lakeTargetX - this.x;
                 let dy = lakeTargetY - this.y;
                 let dist = Math.sqrt(dx * dx + dy * dy);
@@ -655,9 +623,9 @@ class Pet {
         }
 
                 // --- UPGRADED LEVEL 20 DOG VISUAL DIGGING SYSTEM ---
-        if (this.state === 'digging' && this.stateTimer <= 0) {
-            inventory.coins += Math.round(1 * coinBonus);
-            
+        if (this.state === 'digging') {
+            this.stateTimer -= dt;
+
             // Continuous Dirt Burst Generation: Injects little dirt fragments while timer ticks down
             if (this.stateTimer > 0) {
                 // Generate 2 new dirt particles per frame for a rich visual burst cluster effect
@@ -690,7 +658,7 @@ class Pet {
             }
 
             if (this.stateTimer <= 0 && this.digParticles.length === 0) {
-                // FIXED: Multiplies by your Level 25 coin bonus marker!
+                // Award the coin exactly once, after the timer AND the particle animation both finish
                 inventory.coins += Math.round(1 * coinBonus); 
                 updateUI();
                 saveGameProgress();
@@ -1293,16 +1261,6 @@ function checkCollisions() {
         spawnBeeBtn.style.display = 'none';
     }
 
-    // 5. 🌸 Region 4 Flower Collection Placeholder Check
-    if (currentRegion === 4 && typeof flowers !== 'undefined' && flowers) {
-        for (let i = flowers.length - 1; i >= 0; i--) {
-            let fl = flowers[i];
-            if (player.x < fl.x + 15 && player.x + player.size > fl.x - 15 &&
-                player.y < fl.y + 15 && player.y + player.size > fl.y - 15) {
-                // Flower intersection placeholder
-            }
-        }
-    }
 }
 
 function processSpawns(dt) {
@@ -1399,21 +1357,6 @@ function handleJoystickMove(clientX, clientY) {
     input.up = dy < -threshold;
     input.down = dy > threshold;
 }
-const handleInteract = (e) => {
-    if(e) e.preventDefault();
-    let activePets = petsByRegion[currentRegion];
-    if (Array.isArray(activePets)) {
-        activePets.forEach(pet => {
-            let dx = (pet.x + pet.size/2) - (player.x + player.size/2);
-            let dy = (pet.y + pet.size/2) - (player.y + player.size/2);
-            let dist = Math.sqrt(dx*dx + dy*dy);
-            if (dist < 80) {
-                pet.giveResources();
-            }
-        });
-    }
-};
-
 const interactBtnElement = document.getElementById('interactBtn');
 
 if (interactBtnElement) {
@@ -1526,14 +1469,7 @@ function executeContinuousFeed() {
     if (!Array.isArray(activePets)) return;
 
         activePets.forEach(pet => {
-        // FIXED: Play button press now triggers Step 2 (The Retreat) instead of paying out early
-        if (pet.type === 'elephant' && pet.state === 'playing_approach') {
-            pet.state = 'playing_retreat';
-            updateUI();
-            return;
-        }
-        
-        // FIXED: Play button press now triggers Step 2 (The Retreat) instead of paying out early
+        // Play button press triggers Step 2 (The Retreat) instead of paying out early
         if (pet.type === 'elephant' && pet.state === 'playing_approach') {
             pet.state = 'playing_retreat';
             updateUI();
