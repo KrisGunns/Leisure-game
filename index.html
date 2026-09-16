@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Just a little leisure</title>
+    <link rel="stylesheet" href="style.css?v=1.1">
+</head>
+<body>
+    <div id="gameContainer">
+        <!-- Pinned Core Actionable Resource Top Bar View -->
+<!-- Stacked Core Actionable Resource Top Bar View -->
+<!-- Stacked Core Actionable Resource Top Bar View -->
+<div id="topBar">
+    <div class="hudResourceBlock">
+        <span class="hudRow">🍪 Food: <span id="lblFood">0</span></span>
+        <br>
+        <span class="hudRow">💧 Water: <span id="lblWater">0</span></span>
+    </div>
+    
+    <!-- NEW: Player Level Progress Badge Center Anchor -->
+    <div id="playerLevelBadge" style="text-align: center; font-family: monospace; font-size: 11px; background: rgba(255,255,255,0.05); padding: 4px 8px; border: 1px solid #444; border-radius: 6px;">
+        ⭐ <strong style="color: #f1c40f;">LV.<span id="charLevel">1</span></strong>
+        <br>
+        <span style="color: #aaa; font-size: 9px;"><span id="charXP">0</span>/<span id="charNextXP">100</span> XP</span>
+    </div>
+
+    <div>
+        🗺️ <select id="regionSelector">
+            <option value="1">Region 1</option>
+            <option value="2">Region 2</option>
+            <option value="3">Region 3</option>
+            <option value="4">Region 4</option>
+            <option value="5">Region 5</option>
+        </select>
+    </div>
+</div>
+
+<div id="canvasWrapper">
+    <canvas id="gameCanvas"></canvas>
+
+    <button id="openCodexBtn" class="utilBtn">🐾 PETS</button>
+    <button id="openBagBtn" class="utilBtn">🎒 BAG</button>
+    <button id="settingsBtn" class="utilBtn">⚙️</button>
+    
+    <!-- FIXED: Removed inline positioning coordinates so it maps cleanly to your right-side style.css parameters! -->
+    <button id="spawnBeeBtn" class="utilBtn" style="display: none; background: #fbbf24; border-color: #f59e0b; color: #000;">🐝 Buy Bee (10🪙)</button>
+    
+    <button id="whistleBtn" class="utilBtn">WHISTLE</button>
+
+        <!-- Repositioned & Cleaned Inventory Storage Overlay Sheet -->
+    <div id="bagOverlay" class="modalOverlay" style="display: none;">
+        <div class="modalHeader">
+            <h2>🎒 INVENTORY</h2>
+            <button id="bagClose" class="modalCloseBtn">X</button>
+        </div>
+        <div id="bagContentList">
+            <div class="bagItemRow"><span>🪙 Gold Coins:</span><strong id="bagCoins">0</strong></div>
+            <div class="bagItemRow"><span>🥚 Eggs:</span><strong id="bagEggs">0</strong></div>
+            <div class="bagItemRow"><span>🍯 Wild Honey:</span><strong id="bagHoney">0</strong></div>
+            <div class="bagItemRow"><span>🐟 Fish:</span><strong id="bagFish">0</strong></div>
+        </div>
+    </div>
+
+    <div id="devPanel">
+        <div style="display: flex; justify-content: space-between; font-weight: bold; border-bottom: 1px solid #444; padding-bottom: 4px;">
+            <span>🛠️ DEV CONSOLE</span>
+            <span id="closeDev" style="color: #e74c3c; cursor: pointer;">[X]</span>
+        </div>
+        <div class="devRow">
+            <button id="devAddFood" class="devBtn">+50 FOOD</button>
+            <button id="devAddWater" class="devBtn">+50 WATER</button>
+        </div>
+        <button id="devInstaTame" class="devBtn" style="background: #27ae60;">⭐ INSTA-TAME / LEVEL UP</button>
+        <button id="devWipeSave" class="devBtn" style="background: #7f8c8d; margin-top: 5px;">⚠️ WIPE SAVE PROGRESS</button>
+    </div>
+
+            <div id="codexOverlay">
+                <div id="codexHeader">
+                    <h2>🐾 PETS CODEX</h2>
+                    <button id="codexClose">X</button>
+                </div>
+                <div id="codexList">
+                    <!-- DOG -->
+                    <div class="codexEntry">
+                        <canvas id="viewDog" class="codexCanvasView"></canvas>
+                        <div>
+                            <div id="infoDog" class="codexInfo"></div>
+                            <div id="renameBoxDog" style="margin-top: 6px; display: none;">
+                                <input type="text" id="inputDog" placeholder="New Name" style="width: 80px; font-size: 10px;">
+                                <button id="btnRenameDog" style="font-size: 10px; padding: 2px 6px;">Set</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- ELEPHANT -->
+                    <div class="codexEntry">
+                        <canvas id="viewElephant" class="codexCanvasView"></canvas>
+                        <div>
+                            <div id="infoElephant" class="codexInfo"></div>
+                            <div id="renameBoxElephant" style="margin-top: 6px; display: none;">
+                                <input type="text" id="inputElephant" placeholder="New Name" style="width: 80px; font-size: 10px;">
+                                <button id="btnRenameElephant" style="font-size: 10px; padding: 2px 6px;">Set</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- SQUIRREL -->
+                    <div class="codexEntry">
+                        <canvas id="viewSquirrel" class="codexCanvasView"></canvas>
+                        <div>
+                            <div id="infoSquirrel" class="codexInfo"></div>
+                            <div id="renameBoxSquirrel" style="margin-top: 6px; display: none;">
+                                <input type="text" id="inputSquirrel" placeholder="New Name" style="width: 80px; font-size: 10px;">
+                                <button id="btnRenameSquirrel" style="font-size: 10px; padding: 2px 6px;">Set</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- CHICKEN -->
+                    <div class="codexEntry">
+                        <canvas id="viewChicken" class="codexCanvasView"></canvas>
+                        <div>
+                            <div id="infoChicken" class="codexInfo"></div>
+                            <div id="renameBoxChicken" style="margin-top: 6px; display: none;">
+                                <input type="text" id="inputChicken" placeholder="New Name" style="width: 80px; font-size: 10px;">
+                                <button id="btnRenameChicken" style="font-size: 10px; padding: 2px 6px;">Set</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- BEE -->
+                    <div class="codexEntry">
+                        <canvas id="viewBee" class="codexCanvasView"></canvas>
+                        <div>
+                            <div id="infoBee" class="codexInfo"></div>
+                            <div id="renameBoxBee" style="margin-top: 6px; display: none;">
+                                <input type="text" id="inputBee" placeholder="New Name" style="width: 80px; font-size: 10px;">
+                                <button id="btnRenameBee" style="font-size: 10px; padding: 2px 6px;">Set</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BEAR (Surgically restored inside codexList container) -->
+                    <div class="codexEntry">
+                        <canvas id="viewBear" class="codexCanvasView"></canvas>
+                        <div>
+                            <div id="infoBear" class="codexInfo"></div>
+                            <div id="renameBoxBear" style="margin-top: 6px; display: none;">
+                                <input type="text" id="inputBear" placeholder="New Name" style="width: 80px; font-size: 10px;">
+                                <button id="btnRenameBear" style="font-size: 10px; padding: 2px 6px;">Set</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="joystickContainer">
+                <div id="joystickHandle"></div>
+            </div>
+
+            <div id="interactBtn">GIVE</div>
+        </div>
+    </div>
+    <script src="state.js"></script>
+    <script src="entities.js"></script>
+    <script src="world.js"></script>
+    <script src="input.js"></script>
+    <script src="ui.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
