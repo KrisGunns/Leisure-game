@@ -159,12 +159,23 @@ class Pet {
     update(dt, regionFoods, regionWaters, activeFlowers = []) {
 
         let petFoodWaterBonus = 1.0;
-        if (character.level >= 15) petFoodWaterBonus = 1.30; // +30% (Lv 5) + +30% (Lv 15) = 60%
+        if (character.level >= 45) petFoodWaterBonus = 1.30; // +30% (Lv 5) + +30% (Lv 15) = 60%
+        else if (character.level >= 35) petFoodWaterBonus = 1.30;
+        else if (character.level >= 15) petFoodWaterBonus = 1.30;
         else if (character.level >= 5) petFoodWaterBonus = 1.30;
 
-        let petHoneyBonus = (character.level >= 10) ? 1.25 : 1.0;
-        let petFishBonus = (character.level >= 20) ? 1.25 : 1.0;
-        let coinBonus = (character.level >= 25) ? 1.25 : 1.0;
+        let petHoneyBonus = 1.0;
+        if (character.level >= 30) petHoneyBonus = 1.25;
+        else if (character.level >= 10) petHoneyBonus = 1.25;
+
+        let petFishBonus = 1.0;
+        if (character.level >= 40) petFishBonus = 1.25;
+        else if (character.level >= 20) petFishBonus = 1.25;
+
+
+        let coinBonus = 1.0;
+        if (character.level >= 50) coinBonus = 1.25;
+        else if (character.level >= 25) coinBonus = 1.25;
 
         // --- BEE AI SYSTEM MATRIX ---
         if (this.type === 'bee') {
@@ -220,6 +231,7 @@ class Pet {
                 } else {
                     this.state = 'forage';
                     if (this.level >= 20) this.stateTimer = 3.0;
+                    else if (this.level >= 15) this.stateTimer = 3.5;
                     else if (this.level >= 10) this.stateTimer = 4.0;
                     else if (this.level >= 5) this.stateTimer = 4.5;
                     else this.stateTimer = 5.0;
