@@ -26,8 +26,8 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 | `state.js` | `inventory`, `character` (level/xp), `gainPlayerXP()`, `showLevelUpToast()`, `getLevelRequirement()`, `getCharacterNextXP()`, `FORAGE_TIERS` + `getForageYield()` (pet forage yield table), `saveGameProgress()`, `loadGameProgress()`, core DOM label refs | none (loads first) |
 | `entities.js` | `Player`, `Item`, `Flower`, `Pet` classes (all pet AI/state-machine logic lives in `Pet.update()`) | `state.js` |
 | `world.js` | The `player` instance, `regionalItems` (food/water/flower/egg pools per region), `petsByRegion` (pet roster per region), `region4Hive`, `createBee()`/`createBear()` factories, `resizeCanvas()`, `checkCollisions()`, `processSpawns()` | `state.js`, `entities.js` |
-| `input.js` | Virtual joystick, GIVE/PLAY interact button (hold-to-feed with ramping `feedHoldCounter`), whistle button, region selector (+ region-lock check), keyboard controls, `executeContinuousFeed()` | `state.js`, `entities.js`, `world.js` |
-| `ui.js` | `updateUI()`, `renderMiniPet()`, pet Codex overlay, settings/dev panel, pet renaming, bag overlay, bee-purchase button | `state.js`, `entities.js`, `world.js` |
+| `input.js` | Virtual joystick, GIVE/PLAY interact button (hold-to-feed with ramping `feedHoldCounter`), whistle button (single-tap toggle or multi-pet picker), region selector (+ region-lock check), keyboard controls, `executeContinuousFeed()` | `state.js`, `entities.js`, `world.js` |
+| `ui.js` | `updateUI()`, `renderMiniPet()`, pet Codex overlay, settings/dev panel, pet renaming, bag overlay, bee-purchase button, whistle-picker overlay (`showWhistlePicker()`/`hideWhistlePicker()`) | `state.js`, `entities.js`, `world.js` |
 | `main.js` | `gameLoop()` (render + update loop), startup sequence (`loadGameProgress()`, initial item spawns, `requestAnimationFrame` kickoff) | all of the above (loads last) |
 
 **Why this order works:** each file's *immediately-executing* top-level code (variable declarations, `new Pet(...)`, event listener registration) only references things defined in earlier-loaded files. Anything referenced "out of order" — like `state.js`'s `gainPlayerXP()` calling `ui.js`'s `updateUI()` — is inside a function body, which isn't actually run until later gameplay, by which point every file has finished loading.
@@ -63,7 +63,7 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 **Other systems:**
 - Joystick (touch) + WASD/arrow keys (desktop) movement, spacebar/E to feed.
-- Whistle button: calls all eligible pets to the player.
+- Whistle button: calls eligible pets (non-bee, level 2+) to the player. In a region with one eligible pet, one tap toggles Call/Return directly. In a region with more than one (currently Region 3: Squirrel + Chicken), tapping whistle opens a picker so you can call specific pets independently rather than all at once.
 - Pet Codex overlay: mini-canvas renders of each pet with their current stats.
 - Settings/dev panel: add 50 food/water, wipe save, insta-max a region's pets to level 20 (dev/testing tools).
 - Pet renaming via text inputs bound per pet slot.
@@ -73,6 +73,19 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 ---
 
 ## Changelog
+
+### 2026-09-15 (3) — Per-pet whistle picker
+
+**Added:**
+- **Whistle button now lets you choose which pet to call when a region has more than one eligible pet.** Previously `whistleBtn` toggled every non-bee, level-2+ pet in the current region at once. Region 3 (Squirrel + Chicken) is the only region with this today, but the fix is written generically so it applies automatically to any future region with 2+ pets. Behavior:
+    - **1 eligible pet in the region:** unchanged — one tap toggles Call/Return directly, button text flips between `WHISTLE`/`RETURN` as before.
+    - **2+ eligible pets:** tapping `WHISTLE` opens a small picker overlay listing each eligible pet by name with its own Call/Return button, so you can call just the squirrel, just the chicken, or both independently. A Close button dismisses it; switching regions also auto-hides it.
+- New functions: `showWhistlePicker(pets)` / `hideWhistlePicker()` in `ui.js`. Built dynamically in JS (same technique as `showLevelUpToast()` in `state.js`) rather than declared in `index.html` — **no HTML changes needed** for this feature.
+- `input.js`'s whistle click handler now filters to `eligiblePets` (non-bee, level ≥ 2) first, then branches on `eligiblePets.length` to decide direct-toggle vs. picker.
+
+**Verified:** vm-harness test confirms clicking whistle in Region 3 does *not* call both pets at once, that tapping one pet's picker button doesn't affect the other, that both can be independently called, that the picker is hidden on region switch, and that single-pet regions (dog, bear) are unaffected — no regressions on the existing behavior.
+
+---
 
 ### 2026-09-15 (2) — Bee capacity/hive bug, bear whistle, save-format redesign, forage tier table
 
