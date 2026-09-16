@@ -218,7 +218,7 @@ FOOD_WATER_REGIONS.forEach(r => {
 if (regionSelector && !regionSelector.querySelector('option[value="6"]')) {
     let pigOption = document.createElement('option');
     pigOption.value = '6';
-    pigOption.textContent = '🐷 Pig Sty';
+    pigOption.textContent = 'Region 6';
     regionSelector.appendChild(pigOption);
 }
 
