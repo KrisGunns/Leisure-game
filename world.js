@@ -122,7 +122,7 @@ function checkCollisions() {
                 respawnQueue.push({ type: 'food', time: Date.now() + 10000 });
 
                 let foodBaseGain = 1;
-                let manualFoodMultiplier = 1 + (character.level * 0.01);
+                let manualFoodMultiplier = 1 + (character.level * 0.10);
                 inventory.food += Math.round(foodBaseGain * manualFoodMultiplier);
                 
                 gainPlayerXP(1); 
@@ -151,7 +151,7 @@ function checkCollisions() {
                 respawnQueue.push({ type: 'water', time: Date.now() + 10000 });
 
                 let waterBaseGain = 1;
-                let manualWaterMultiplier = 1 + (character.level * 0.01);
+                let manualWaterMultiplier = 1 + (character.level * 0.10);
                 inventory.water += Math.round(waterBaseGain * manualWaterMultiplier);
                 
                 gainPlayerXP(1); 
@@ -227,4 +227,3 @@ function processSpawns(dt) {
         spawnTimer = 0;
     }
 }
-
