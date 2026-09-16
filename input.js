@@ -101,9 +101,16 @@ if (whistleBtn) {
     whistleBtn.addEventListener('click', () => {
         let activePets = petsByRegion[currentRegion];
         if (!Array.isArray(activePets)) return;
-        activePets.forEach(pet => {
-            if (pet.type === 'bee') return; // bee has its own hive-return autonomy, not whistle-recalled
-            if (pet.level < 2) return;
+
+        // bee is excluded — it has its own hive-return autonomy, not whistle-recalled.
+        // level < 2 pets aren't tamed enough to respond yet.
+        let eligiblePets = activePets.filter(pet => pet.type !== 'bee' && pet.level >= 2);
+
+        if (eligiblePets.length === 0) return;
+
+        if (eligiblePets.length === 1) {
+            // Only one eligible pet in this region — keep the original one-tap toggle.
+            let pet = eligiblePets[0];
             if (pet.state !== 'whistled') {
                 pet.state = 'whistled';
                 whistleBtn.textContent = 'RETURN';
@@ -112,7 +119,12 @@ if (whistleBtn) {
                 pet.pickNewWanderTarget();
                 whistleBtn.textContent = 'WHISTLE';
             }
-        });
+            if (typeof hideWhistlePicker === 'function') hideWhistlePicker();
+        } else {
+            // Multiple eligible pets (e.g. Region 3: Squirrel + Chicken) — let the
+            // player pick which one(s) to call instead of whistling all of them at once.
+            if (typeof showWhistlePicker === 'function') showWhistlePicker(eligiblePets);
+        }
     });
 }
 
@@ -145,6 +157,7 @@ if (regionSelector) {
         waters = regionalItems[currentRegion].waters;
         flowers = regionalItems[currentRegion].flowers;
         if (whistleBtn) whistleBtn.textContent = 'WHISTLE';
+        if (typeof hideWhistlePicker === 'function') hideWhistlePicker();
         saveGameProgress();
     });
 }
@@ -241,4 +254,3 @@ function executeContinuousFeed() {
         }
     });
 }
-
