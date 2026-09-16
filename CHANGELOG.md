@@ -43,6 +43,7 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 - Region 3 also spawns collectible eggs (from chickens reaching level 20).
 - Region 4: bee hive — locked until every pet in Regions 1–3 is level 2+. Bees forage flowers, carry honey back to the hive, and cost 10 coins to spawn (max 3 bees).
 - Region 5: bear — locked behind the same Regions 1–3 requirement. Bear fishes periodically for fish.
+- Region 6: **Pig Sty** — locked behind the same Regions 1–3 requirement (flagged as an assumption, not explicitly specified). 2 pigs (pink `Pig`, grey `Mud Pig`), spawns food/water like Regions 1-3. See "Pig specifics" below.
 
 **Pets:** dog, elephant, squirrel, chicken, bee, bear. Each has its own AI state machine in `Pet.update()` (wander/idle/forage/whistled/etc., plus type-specific states like `digging`, `fishing`, `playing_*`).
 
@@ -60,11 +61,12 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 - **Chicken** (level 20): 5% chance per forage to lay an egg on the map (Region 3 only).
 - **Bee**: forages flowers, carries honey (capacity scales with level: 1/2/3/5 at levels 1/5/10/20), returns to hive to deposit, then goes idle. Up to 3 bees total per save (the starter bee + 2 purchasable "Worker Bee" hires at 10 coins each via the hive's spawn button); all bees — starter or purchased — are built through the same `createBee()` factory so they behave identically.
 - **Bear** (level 2+): travels to a lake, fishes for ~20s per cycle, yields more fish at higher levels (10% chance of double catch at level 20).
+- **Pig** (either color): forages food/water like dog/squirrel/chicken (see `FORAGE_TIERS.pig` in `state.js`), no level-gated tier for its special perk — 5% chance per successful forage to enter a 5-second mud-play state, awarding 2 coins (5% chance to double to 4). Level-1 XP requirement is 50 food / 30 water (not a 50/50 split — see `getLevelRequirement()`'s pig-specific branch).
 
 **Other systems:**
 - Joystick (touch) + WASD/arrow keys (desktop) movement, spacebar/E to feed.
 - Whistle button: calls eligible pets (non-bee, level 2+) to the player. In a region with one eligible pet, one tap toggles Call/Return directly. In a region with more than one (currently Region 3: Squirrel + Chicken), tapping whistle opens a picker so you can call specific pets independently rather than all at once.
-- Pet Codex overlay: mini-canvas renders of each pet with their current stats.
+- Pet Codex overlay: mini-canvas renders of each pet with their current stats. Clicking/tapping any revealed portrait opens a detail screen (name, level, current forage yield, full level-perk checklist with reached perks checked off).
 - Settings/dev panel: add 50 food/water, wipe save, insta-max a region's pets to level 20 (dev/testing tools).
 - Pet renaming via text inputs bound per pet slot.
 - Bag overlay: shows "vault" resources (coins, eggs, honey, fish) separately from the pinned food/water HUD.
@@ -73,6 +75,47 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 ---
 
 ## Changelog
+
+### 2026-09-16 (2) — Bear honey feeding granted no XP
+
+**Fixed:**
+- **Feeding the bear honey manually didn't grant character XP.** In `executeContinuousFeed()` (`input.js`), every other pet's manual-feed branch calls `gainPlayerXP(1)` once per resource unit actually given (matching pickup's 1:1 ratio). The bear branch was different: `gainPlayerXP(1)` was nested inside the "did this feed cause a level-up" check, so XP was only granted on the rare tick where a honey unit happened to be the one that crossed the level threshold — not per honey unit fed. Since a bear needs 30+ honey to level up at low levels, this made bear-feeding XP feel completely broken in normal play. Moved `gainPlayerXP(1)` out of the level-up conditional so it fires every time a honey unit is actually consumed, exactly matching the food/water branch's structure.
+
+**Audited (per request) — confirmed sound, no changes needed:**
+- All 6 XP-granting call sites (egg/food/water pickup in `world.js`; bear/food/water manual feed in `input.js`) now grant exactly `gainPlayerXP(1)` per resource unit, unconditionally, with zero coupling to any multiplier.
+- `manualFoodMultiplier`/`manualWaterMultiplier` (`1 + character.level * 0.01`, in `checkCollisions()`) only scale the *inventory amount* gained per pickup — they've never touched the XP grant, which stays flat 1:1 per pickup event regardless of level.
+- The auto-forage multipliers (`petFoodWaterBonus`, `petHoneyBonus`, `petFishBonus`, `coinBonus` — computed from `character.level` at the top of `Pet.update()`) only scale resource/coin amounts for *passive* pet foraging. `gainPlayerXP` is never called from `Pet.update()` at all — auto-forage has never granted player XP, by design (only manual pickup and manual feeding do), so there was no bonus/XP interaction to be unsound there.
+
+**Verification method:** New permanent vm-harness test: feeds the bear a single honey unit (well below its level-up threshold) and confirms XP increases by exactly 1 immediately, repeats 3x to confirm it's not a one-off, and confirms honey consumption still matches 1:1. All 42 tests across the full suite pass, no regressions.
+
+---
+
+### 2026-09-16 — Pet Detail overlay + Region 6: Pig Sty
+
+**Added — Pet Detail overlay (request: click a Codex portrait for details):**
+- Clicking/tapping any revealed pet portrait in the Codex now opens a detail screen showing the pet's name, level, current foraging yield (or honey capacity / fishing for bee/bear), and a full level-perk checklist with perks the pet has already reached shown in green with a ✓.
+- New in `ui.js`: `showPetDetail(pet)` / `hidePetDetail()` (built dynamically in JS, same technique as the whistle picker) and `getPetPerkDescriptions(type)`, which derives the numeric yield milestones straight from `FORAGE_TIERS` (so it can never drift out of sync with the real numbers) and appends the non-numeric perks (digging, egg-laying, play minigame, mud-play, honey capacity, fishing speed) by hand.
+- Click/tap handlers are wired inside `renderMiniPet()` and rebuilt on every render call — deliberately not bound once-and-cached, because the same element ID can render a locked placeholder object first and the real pet object later, and a stale closure would keep pointing at the placeholder.
+- **Works immediately for all 6 existing pets with zero HTML changes** — the portraits already exist in `index.html`; this just adds a listener to them.
+
+**Added — Region 6: Pig Sty:**
+- New region with 2 pigs (pink `Pig`, grey `Mud Pig`), spawning food/water the same way Regions 1-3 do. Locked behind the same "tame all Regions 1-3 pets to level 2+" requirement as Regions 4-5 (not explicitly specified either way — flagged in case a different unlock condition is wanted).
+- **Leveling:** 50 food / 30 water required at level 1 (an intentional 62.5%/37.5% split, not the usual 50/50 or elephant's 45/55 — added as a `pig`-specific case in `getLevelRequirement()` in `state.js`), scaling up with the same level^1.2 curve as every other pet.
+- **Forage yield tiers** (`FORAGE_TIERS.pig` in `state.js`): +2/+2 base, +3/+2 at Lv5, +4/+3 at Lv10, +5/+4 at Lv15, +7/+6 at Lv20 — exactly as specified, verified against the table at every boundary level.
+- **Autonomous foraging** once tamed (level 2+) required zero new state-machine code — pigs reuse the exact same generic wander/forage/whistled pipeline every other land pet already uses, just with their own entry in the forage-yield chain.
+- **Mud-play minigame:** 5% chance per successful forage to enter a 5-second `mud_play` state (mirrors the dog-digging architecture exactly — mud splash particles spawn during the countdown via a new `mudParticles` array, coins awarded exactly once at the end): 2 coins, with a 5% chance to double to 4.
+- **Spawn positioning:** the two pigs start 150px apart (their sprite size is 36px, so more than 2x clearance) — verified untamed pets (level < 2) don't move *at all* until tamed (existing `if (this.level < 2) return;` gate in `Pet.update()`), so this spacing guarantees zero overlap before taming with no new collision-avoidance code needed.
+- New `createPig()` factory in `world.js`, following the same "one factory, used everywhere a pig is created" pattern as `createBee()`/`createBear()`.
+- Full-size and mini-portrait pig sprites added (pink/grey via the same "accent color" trick the squirrel sprite already uses for its two color variants).
+- Region 6 pig-sty background (straw ground, fence posts, muddy pit) added to `main.js`'s per-region draw block.
+- **Region 6 dropdown option is injected via JS** in `main.js`'s startup sequence (only if not already present) — consistent with this project's "build it in JS, don't require an HTML edit" pattern. **No `index.html` change needed to reach the region.**
+- `processSpawns()`'s food/water refill logic was generalized from a hardcoded `r <= 3` range to a `FOOD_WATER_REGIONS = [1, 2, 3, 6]` array, so future regions with food/water don't need another hardcoded range edit.
+- Save/load required **zero pig-specific code** — the per-region array save format (from the 2026-09-15 bee fix) already generically covers any region, and since pigs are a fixed 2-per-region (not purchasable/variable like bees), they don't need the "reconstruct extras beyond the default slots" logic either. Verified directly: saved a leveled/renamed pig, reloaded, confirmed it round-tripped correctly.
+- **One HTML addition is still needed** (optional, gameplay works without it): the pig *Codex cards* — portrait canvas + info box + rename input — need 2 new elements in `index.html`, since the existing Codex is built around fixed per-species element IDs (`viewDog`, `infoDog`, etc.) rather than being fully data-driven. A copy-pasteable snippet is in `PIG_CODEX_HTML.md`. Until added, pigs simply don't appear in the Codex grid (safe no-op — `updateCodexData()`'s pig block checks for the elements before writing to them).
+
+**Verification method:** vm-harness tests added for: forage yield at every tier boundary (1, 4, 5, 9, 10, 14, 15, 19, 20, 25) matching the spec exactly; level-1 requirement is exactly 50/30; the two pigs spawn >2x their size apart with different colors; an untamed pig's position is provably unchanged after 50 update ticks; a tamed pig's mud-play session ends with the state back to `wander`, awards either 2 or 4 coins, and finishes with zero leftover particles; the Region 6 dropdown option exists after boot without any HTML; clicking a mini-portrait opens the detail overlay with the correct name and level; and a full save→reload round-trip of pig level/label. All passing, alongside every prior round's tests (no regressions).
+
+---
 
 ### 2026-09-15 (3) — Per-pet whistle picker
 
