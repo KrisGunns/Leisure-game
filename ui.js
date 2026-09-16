@@ -14,6 +14,76 @@ const openBagBtn = document.getElementById('openBagBtn');
 const bagClose = document.getElementById('bagClose');
 const spawnBeeBtn = document.getElementById('spawnBeeBtn');
 
+// Built dynamically in JS (same technique as showLevelUpToast in state.js) rather than
+// declared in index.html, so no HTML changes are needed to add this. Shown by the
+// whistle button in input.js when a region has more than one eligible pet — lets the
+// player pick which pet(s) to call instead of whistling everyone in the region at once.
+function showWhistlePicker(pets) {
+    let picker = document.getElementById('whistlePicker');
+    if (!picker) {
+        picker = document.createElement('div');
+        picker.id = 'whistlePicker';
+        picker.style.cssText = `
+            position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.85); border: 2px solid #f1c40f; border-radius: 10px;
+            padding: 10px; z-index: 9998; font-family: monospace; color: #fff;
+            display: flex; flex-direction: column; gap: 6px; min-width: 170px;
+        `;
+        document.body.appendChild(picker);
+    }
+
+    // Clear and rebuild each time so button labels stay in sync with pet state
+    // (e.g. after tapping one, it flips from "Call" to "Return").
+    while (picker.firstChild) picker.removeChild(picker.firstChild);
+
+    let title = document.createElement('div');
+    title.textContent = 'Whistle Which Pet?';
+    title.style.cssText = 'font-weight:bold; text-align:center; margin-bottom:4px; color:#f1c40f;';
+    picker.appendChild(title);
+
+    pets.forEach(pet => {
+        let btn = document.createElement('button');
+        let isCalled = pet.state === 'whistled';
+        btn.textContent = isCalled ? `${pet.label} — Return` : `${pet.label} — Call`;
+        btn.style.cssText = `
+            padding: 8px 10px; border-radius: 6px; border: none; cursor: pointer;
+            font-family: monospace; font-weight: bold; font-size: 13px;
+            background: ${isCalled ? '#e67e22' : '#27ae60'}; color: #fff;
+        `;
+        const toggle = (e) => {
+            if (e) e.preventDefault();
+            if (pet.state !== 'whistled') {
+                pet.state = 'whistled';
+            } else {
+                pet.state = 'wander';
+                pet.pickNewWanderTarget();
+            }
+            showWhistlePicker(pets); // rebuild so the label/color reflect the new state
+        };
+        btn.addEventListener('touchstart', toggle, { passive: false });
+        btn.addEventListener('mousedown', toggle);
+        picker.appendChild(btn);
+    });
+
+    let closeBtn = document.createElement('button');
+    closeBtn.textContent = 'Close';
+    closeBtn.style.cssText = `
+        padding: 6px 10px; border-radius: 6px; border: none; cursor: pointer;
+        font-family: monospace; background: #555; color: #fff; margin-top: 4px;
+    `;
+    const closeHandler = (e) => { if (e) e.preventDefault(); hideWhistlePicker(); };
+    closeBtn.addEventListener('touchstart', closeHandler, { passive: false });
+    closeBtn.addEventListener('mousedown', closeHandler);
+    picker.appendChild(closeBtn);
+
+    picker.style.display = 'flex';
+}
+
+function hideWhistlePicker() {
+    let picker = document.getElementById('whistlePicker');
+    if (picker) picker.style.display = 'none';
+}
+
 function updateUI() {
     // Pinned Playfield Resources
     if (lblFood) lblFood.textContent = inventory.food;
