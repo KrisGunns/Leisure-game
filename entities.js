@@ -159,12 +159,12 @@ class Pet {
     update(dt, regionFoods, regionWaters, activeFlowers = []) {
 
         let petFoodWaterBonus = 1.0;
-        if (character.level >= 15) petFoodWaterBonus = 1.10; // +5% (Lv 5) + +5% (Lv 15) = 10%
-        else if (character.level >= 5) petFoodWaterBonus = 1.05;
+        if (character.level >= 15) petFoodWaterBonus = 1.30; // +30% (Lv 5) + +30% (Lv 15) = 60%
+        else if (character.level >= 5) petFoodWaterBonus = 1.30;
 
-        let petHoneyBonus = (character.level >= 10) ? 1.03 : 1.0;
-        let petFishBonus = (character.level >= 20) ? 1.03 : 1.0;
-        let coinBonus = (character.level >= 25) ? 1.01 : 1.0;
+        let petHoneyBonus = (character.level >= 10) ? 1.25 : 1.0;
+        let petFishBonus = (character.level >= 20) ? 1.25 : 1.0;
+        let coinBonus = (character.level >= 25) ? 1.25 : 1.0;
 
         // --- BEE AI SYSTEM MATRIX ---
         if (this.type === 'bee') {
