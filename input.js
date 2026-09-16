@@ -9,14 +9,34 @@ const joyContainer = document.getElementById('joystickContainer');
 const joyHandle = document.getElementById('joystickHandle');
 
 let joyActive = false;
+let joyTouchId = null; // identifier of the specific touch driving the joystick
 let joyOriginX = 0;
 let joyOriginY = 0;
+
+function findTouchById(touchList, id) {
+    for (let i = 0; i < touchList.length; i++) {
+        if (touchList[i].identifier === id) return touchList[i];
+    }
+    return null;
+}
+
+function resetJoystick() {
+    joyActive = false;
+    joyTouchId = null;
+    input.up = false;
+    input.down = false;
+    input.left = false;
+    input.right = false;
+    if (joyHandle) joyHandle.style.transform = 'translate(0px, 0px)';
+}
 
 if (joyContainer) {
     joyContainer.addEventListener('touchstart', (e) => {
         e.preventDefault();
+        if (joyActive) return; // already tracking a touch on the joystick, ignore any extra one
+        const touch = e.changedTouches[0];
         joyActive = true;
-        const touch = e.touches[0]; // Restored single touch indexing
+        joyTouchId = touch.identifier;
         const rect = joyContainer.getBoundingClientRect();
         joyOriginX = rect.left + rect.width / 2;
         joyOriginY = rect.top + rect.height / 2;
@@ -26,19 +46,40 @@ if (joyContainer) {
     joyContainer.addEventListener('touchmove', (e) => {
         e.preventDefault();
         if (!joyActive) return;
-        const touch = e.touches[0]; // Restored single touch indexing
+        // Find the joystick's own touch by identifier rather than assuming touches[0] —
+        // with a second finger down elsewhere (e.g. holding GIVE), touches[0] can be
+        // that OTHER touch, which was dragging the handle toward wherever that finger
+        // was instead of tracking the finger actually on the joystick.
+        const touch = findTouchById(e.touches, joyTouchId);
+        if (!touch) return;
         handleJoystickMove(touch.clientX, touch.clientY);
     }, { passive: false });
 }
 
-window.addEventListener('touchend', () => {
+// Listen on window (not just the joystick) so lifting the finger anywhere still
+// releases the joystick, but only reset when it's actually the joystick's own touch
+// ending — otherwise lifting a different finger (e.g. GIVE) would wrongly cancel it.
+window.addEventListener('touchend', (e) => {
     if (!joyActive) return;
-    joyActive = false;
-    input.up = false;
-    input.down = false;
-    input.left = false;
-    input.right = false;
-    if (joyHandle) joyHandle.style.transform = 'translate(0px, 0px)';
+    if (findTouchById(e.changedTouches, joyTouchId)) resetJoystick();
+});
+
+// touchcancel was previously unhandled: if the OS/WebView cancels the touch instead of
+// sending touchend (common in APK wrapper WebViews, e.g. WebIntoApp), joyActive/input
+// would stay stuck at their last values forever, walking the character in that
+// direction indefinitely. This is very likely what caused the "joystick stuck after
+// lifting finger" bug seen in the APK build.
+window.addEventListener('touchcancel', (e) => {
+    if (!joyActive) return;
+    if (findTouchById(e.changedTouches, joyTouchId)) resetJoystick();
+});
+
+// Extra safety nets, mirroring the GIVE button's haltFeedTimers pattern below —
+// guarantees the joystick can never get stuck pushing a direction even if no
+// touch-ending event ever arrives at all (app backgrounded, dialog steals input, etc.)
+window.addEventListener('blur', resetJoystick);
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) resetJoystick();
 });
 
 function handleJoystickMove(clientX, clientY) {

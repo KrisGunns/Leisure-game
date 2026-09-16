@@ -108,7 +108,7 @@ function getPetPerkDescriptions(type) {
     } else if (type === 'elephant') {
         perks.push({ level: 20, text: '10% chance to start a "catch me" play minigame (+5 coins)' });
     } else if (type === 'pig') {
-        perks.push({ level: 1, text: '5% chance per forage to play in the mud for 5s (+2 coins, 5% chance to double to +4)' });
+        perks.push({ level: 20, text: '5% chance per forage to play in the mud for 5s (+2 coins, 5% chance to double to +4)' });
     } else if (type === 'bee') {
         perks.push({ level: 1, text: 'Carries 1 honey load before returning to the hive' });
         perks.push({ level: 5, text: 'Honey capacity increases to 2' });
@@ -281,16 +281,60 @@ function renderMiniPet(pet, elementId) {
     // elementId can be rendered once as a locked placeholder object and later as the
     // real pet, and we don't want the click handler stuck referencing the old one.
     if (miniCanvas._detailHandler) {
-        miniCanvas.removeEventListener('touchstart', miniCanvas._detailHandler);
+        miniCanvas.removeEventListener('touchstart', miniCanvas._detailTouchStart);
+        miniCanvas.removeEventListener('touchmove', miniCanvas._detailTouchMove);
+        miniCanvas.removeEventListener('touchend', miniCanvas._detailTouchEnd);
+        miniCanvas.removeEventListener('touchcancel', miniCanvas._detailTouchCancel);
         miniCanvas.removeEventListener('mousedown', miniCanvas._detailHandler);
     }
     const openDetail = (e) => {
         if (e) e.preventDefault();
         if (typeof showPetDetail === 'function') showPetDetail(pet);
     };
+
+    // Tap-vs-scroll detection: opening on touchstart used to fire the instant the
+    // codex list was touched, so starting a scroll drag on a portrait would yank the
+    // detail popup open before the finger ever moved. Instead we track the touch and
+    // only treat it as a tap (and open the popup) if the finger stayed roughly in
+    // place and was released quickly — a real scroll gets to move the list untouched.
+    let detailTouchStartX = 0, detailTouchStartY = 0, detailTouchStartTime = 0, detailTouchMoved = false;
+    const TAP_MOVE_THRESHOLD = 10; // px of finger travel before we call it a scroll, not a tap
+    const TAP_MAX_DURATION = 500;  // ms - long holds are treated as a scroll/hold, not a tap
+
+    const onTouchStart = (e) => {
+        if (!e.touches || e.touches.length === 0) return;
+        const t = e.touches[0];
+        detailTouchStartX = t.clientX;
+        detailTouchStartY = t.clientY;
+        detailTouchStartTime = Date.now();
+        detailTouchMoved = false;
+        // Intentionally NOT calling preventDefault here so the list's native scroll
+        // still gets to start normally if this turns out to be a drag.
+    };
+    const onTouchMove = (e) => {
+        if (detailTouchMoved || !e.touches || e.touches.length === 0) return;
+        const t = e.touches[0];
+        const dx = t.clientX - detailTouchStartX;
+        const dy = t.clientY - detailTouchStartY;
+        if (Math.sqrt(dx * dx + dy * dy) > TAP_MOVE_THRESHOLD) detailTouchMoved = true;
+    };
+    const onTouchEnd = (e) => {
+        if (!detailTouchMoved && (Date.now() - detailTouchStartTime) < TAP_MAX_DURATION) {
+            openDetail(e); // genuine tap — preventDefault here also suppresses the trailing synthetic click/mousedown
+        }
+    };
+    const onTouchCancel = () => { detailTouchMoved = true; };
+
     miniCanvas._detailHandler = openDetail;
+    miniCanvas._detailTouchStart = onTouchStart;
+    miniCanvas._detailTouchMove = onTouchMove;
+    miniCanvas._detailTouchEnd = onTouchEnd;
+    miniCanvas._detailTouchCancel = onTouchCancel;
     miniCanvas.style.cursor = 'pointer';
-    miniCanvas.addEventListener('touchstart', openDetail, { passive: false });
+    miniCanvas.addEventListener('touchstart', onTouchStart, { passive: true });
+    miniCanvas.addEventListener('touchmove', onTouchMove, { passive: true });
+    miniCanvas.addEventListener('touchend', onTouchEnd, { passive: false });
+    miniCanvas.addEventListener('touchcancel', onTouchCancel, { passive: true });
     miniCanvas.addEventListener('mousedown', openDetail);
 
     // --- REVELATION LAYER ---

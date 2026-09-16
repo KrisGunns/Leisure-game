@@ -161,13 +161,26 @@ class Pet {
 
     update(dt, regionFoods, regionWaters, activeFlowers = []) {
 
+        // Character-level perk bonuses (stack cumulatively as milestones are reached):
+        // Lv5/15/35/45: +30% food & water gained from pets. Lv10/30: +25% honey.
+        // Lv20/40: +25% fish. Lv25/50: +25% coin.
         let petFoodWaterBonus = 1.0;
-        if (character.level >= 15) petFoodWaterBonus = 1.10; // +5% (Lv 5) + +5% (Lv 15) = 10%
-        else if (character.level >= 5) petFoodWaterBonus = 1.05;
+        if (character.level >= 5) petFoodWaterBonus += 0.30;
+        if (character.level >= 15) petFoodWaterBonus += 0.30;
+        if (character.level >= 35) petFoodWaterBonus += 0.30;
+        if (character.level >= 45) petFoodWaterBonus += 0.30;
 
-        let petHoneyBonus = (character.level >= 10) ? 1.03 : 1.0;
-        let petFishBonus = (character.level >= 20) ? 1.03 : 1.0;
-        let coinBonus = (character.level >= 25) ? 1.01 : 1.0;
+        let petHoneyBonus = 1.0;
+        if (character.level >= 10) petHoneyBonus += 0.25;
+        if (character.level >= 30) petHoneyBonus += 0.25;
+
+        let petFishBonus = 1.0;
+        if (character.level >= 20) petFishBonus += 0.25;
+        if (character.level >= 40) petFishBonus += 0.25;
+
+        let coinBonus = 1.0;
+        if (character.level >= 25) coinBonus += 0.25;
+        if (character.level >= 50) coinBonus += 0.25;
 
         // --- BEE AI SYSTEM MATRIX ---
         if (this.type === 'bee') {
@@ -264,7 +277,7 @@ class Pet {
                     if (this.level >= 20 && Math.random() < 0.10) {
                         dropCount *= 2; 
                     }
-                    inventory.honey += dropCount;
+                    inventory.honey += Math.round(dropCount * petHoneyBonus);
                     this.honeyCarried = 0;
                     updateUI();
                     saveGameProgress();
@@ -377,7 +390,7 @@ class Pet {
                     } else if (this.level >= 10) {
                         fishCaught = 3;
                     }
-                    inventory.fish += fishCaught;
+                    inventory.fish += Math.round(fishCaught * petFishBonus);
                     updateUI();
                     saveGameProgress();
                     this.setNextFishingCooldown();
@@ -654,8 +667,9 @@ class Pet {
                             if (targetItem.type === 'food') inventory.food += Math.round(y.food * petFoodWaterBonus);
                             else inventory.water += Math.round(y.water * petFoodWaterBonus);
 
-                            // 5% chance to play in the mud for 5s after a successful forage.
-                            if (Math.random() < 0.05) {
+                            // 5% chance to play in the mud for 5s after a successful forage
+                            // (Level 20+ only — matches the dog/chicken rare-bonus pattern).
+                            if (this.level >= 20 && Math.random() < 0.05) {
                                 this.state = 'mud_play';
                                 this.stateTimer = 5.0;
                                 return;
