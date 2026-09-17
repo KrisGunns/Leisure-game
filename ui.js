@@ -215,7 +215,7 @@ function getPetPerkDescriptions(type) {
         perks.push({ level: 20, text: '5% chance per forage to play in the mud for 5s (+2 coins, 5% chance to double to +4)' });
     } else if (type === 'cat') {
         perks.push({ level: 1, text: '10% chance per forage to double the food/water gained' });
-        perks.push({ level: 1, text: '3% chance per forage to enter the "Schrödinger" state — approach and choose Dead or Alive for a chance at +10 coins' });
+        perks.push({ level: 20, text: '3% chance per forage to enter the "Schrödinger" state — approach and choose Dead or Alive for a chance at +10 coins' });
     } else if (type === 'bird') {
         perks.push({ level: 20, text: '5% chance per forage to fly off to a random region for 60s — forages there with +20% food/water (fishes in Region 5, boosts bees +20% in Region 4), then returns home with +2 coins' });
     } else if (type === 'bee') {
@@ -305,7 +305,7 @@ function showPetDetail(pet) {
         let li = document.createElement('li');
         let reached = pet.level >= p.level;
         li.style.color = reached ? '#2ecc71' : '#7f8c8d';
-        li.textContent = `Lv.${p.level}: ${p.text}${reached ? ' ✓' : ''}`;
+        li.textContent = `Lv.${p.level}: ${p.text}`;
         perksList.appendChild(li);
     });
     card.appendChild(perksList);
@@ -903,7 +903,7 @@ function updateCharacterScreen() {
             let li = document.createElement('li');
             let reached = character.level >= p.level;
             li.style.color = reached ? '#2ecc71' : '#7f8c8d';
-            li.textContent = `Lv.${p.level}: ${p.text}${reached ? ' ✓' : ''}`;
+            li.textContent = `Lv.${p.level}: ${p.text}`;
             perksList.appendChild(li);
         });
     }

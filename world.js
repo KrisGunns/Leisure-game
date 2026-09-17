@@ -140,7 +140,7 @@ const petsByRegion = {
             return p;
         })(),
         (() => {
-            let p = new Pet('cat', 'Tabby', '#e08a3e');
+            let p = new Pet('cat', 'Cat', '#e08a3e');
             p.x = 260;
             p.y = 220;
             return p;
@@ -148,10 +148,15 @@ const petsByRegion = {
     ],
     2: [new Pet('elephant', 'Elephant', '#95a5a6')],
     3: [
-        new Pet('squirrel', 'Squirrel', '#d35400'),
+        (() => {
+            let p = new Pet('squirrel', 'Squirrel', '#d35400');
+            p.x = 130;
+            p.y = 200;
+            return p;
+        })(),
         (() => {
             let p = new Pet('chicken', 'Chicken', '#ffffff');
-            p.x = 260;
+            p.x = 280;
             p.y = 200;
             return p;
         })(),

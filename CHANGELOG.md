@@ -79,6 +79,21 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Changelog
 
+### 2026-09-16 (9) — Polish pass: button sizing, cat defaults, spacing, Schrödinger gate, perk checkmarks
+
+**Fixed:**
+- **Cat's Schrödinger state had no level gate at all** (same class of bug as the pig mud-play fix in 2026-09-16 (5)) — could trigger starting at level 1 instead of level 20. Added the `this.level >= 20 &&` check, and corrected the Codex perk description from `level: 1` to `level: 20` to match.
+
+**Changed:**
+- 🧑 CHARACTER button label shortened to "🧑 CHAR" so its width matches 🎒 BAG (the overlay's own header still reads "CHARACTER" in full).
+- Cat's default name changed from "Tabby" to "Cat".
+- Squirrel/chicken default spacing in Region 3 now mirrors the pigs' pattern exactly — both at the same y with a 150px x-gap (130/280) — instead of the previous 60px gap (200/260). Bird's fixed spawn point (140, 280) was already clear of both at the old spacing and remains clear at the new one (200px y-gap between the bird and squirrel/chicken's row).
+- Removed the ✓ checkmark from both the pet perk checklist (`showPetDetail()`) and the new Character screen's perk checklist — the green highlight color alone now signifies a reached milestone, per feedback that the two signals were redundant.
+
+**Verification method:** `node --check` on all touched files, `index.html` div-balance check, and a `grep` confirming zero remaining ✓/✔ characters in `ui.js`.
+
+---
+
 ### 2026-09-16 (8) — New pet: Bird (Region 3) + regional excursion mechanic
 
 **Added:**

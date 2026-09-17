@@ -760,9 +760,10 @@ class Pet {
                             if (targetItem.type === 'food') inventory.food += finalGain;
                             else inventory.water += finalGain;
 
-                            // 3% chance per successful forage to enter the Schrödinger box —
-                            // freezes in place until the player comes over and calls it.
-                            if (Math.random() < 0.03) {
+                            // Level 20+: 3% chance per successful forage to enter the
+                            // Schrödinger box — freezes in place until the player comes
+                            // over and calls it.
+                            if (this.level >= 20 && Math.random() < 0.03) {
                                 this.state = 'schrodinger';
                                 this.schrodingerOutcome = Math.random() < 0.5 ? 'alive' : 'dead';
                                 this.schrodingerVisible = true;
