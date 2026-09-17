@@ -45,23 +45,26 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 - Region 5: bear — locked behind the same Regions 1–3 requirement. Bear fishes periodically for fish.
 - Region 6: **Pig Sty** — locked behind the same Regions 1–3 requirement (flagged as an assumption, not explicitly specified). 2 pigs (pink `Pig`, grey `Mud Pig`), spawns food/water like Regions 1-3. See "Pig specifics" below.
 
-**Pets:** dog, elephant, squirrel, chicken, bee, bear. Each has its own AI state machine in `Pet.update()` (wander/idle/forage/whistled/etc., plus type-specific states like `digging`, `fishing`, `playing_*`).
+**Pets:** dog, cat, elephant, squirrel, chicken, bird, bee, bear, pig. Each has its own AI state machine in `Pet.update()` (wander/idle/forage/whistled/etc., plus type-specific states like `digging`, `fishing`, `playing_*`, `schrodinger`, `mud_play`, and the bird's excursion handling).
 
 **Character progression:**
-- Player has `level`/`xp`, separate from pet levels.
+- Player has `level`/`xp`/`name` (editable, see Character screen below), separate from pet levels.
 - Gains **+1 XP** for: walking over a food/water/egg drop on the map, or manually feeding a pet (holding the GIVE button).
 - Level-up shows a non-blocking on-screen toast (not a blocking `alert()` — see Changelog).
-- At certain character levels, pets get small passive bonuses to auto-foraged resource amounts (e.g. +5% at level 5, +10% at level 15) and manually-collected resources scale slightly with `character.level * 0.01`.
+- At certain character levels, pets get passive bonuses to auto-foraged resource amounts, and manually-collected resources scale with `character.level * 0.10`. All of this is computed by a single shared function, `getCharacterBonuses(level)` in `state.js` — see the 2026-09-16 (6) changelog entry — so `entities.js`, `world.js`, and the Character screen can never disagree about what's actually in effect.
+- **Character screen:** opened via the 🧑 CHARACTER button (beneath BAG). Shows the editable name, current level, the live % bonus totals from `getCharacterBonuses()`, and the full Lv5–50 perk checklist (`CHARACTER_LEVEL_PERKS` in `state.js`) with reached milestones checked off in green — same visual treatment as a pet's perk checklist.
 
 **Pet leveling:** each pet requires cumulative food/water (or honey, for bear) to level up, calculated via `getLevelRequirement()`. Pets level up either passively (auto-foraging map items) or via manual feeding (holding GIVE near a pet, which drains the player's food/water inventory).
 
 **Pet-specific mechanics:**
 - **Dog** (level 20): 10% chance per successful forage to enter a `digging` state — plays a dirt-particle animation, then awards 1 coin.
+- **Cat** (Region 1): 10% chance per forage to double the food/water it just collected. 3% chance per forage to enter a "Schrödinger" state — frozen in place, flickering between two visual states — until the player approaches (within 70px) and presses PLAY, opening a Dead/Alive picker; correct guess pays 10 coins either way the box resolves and it returns to wandering.
 - **Elephant** (level 20, Region 2): 10% chance to trigger a multi-step "tag" minigame (approach → retreat → wait for player to move → chase) rewarding 5 coins if caught.
 - **Chicken** (level 20): 5% chance per forage to lay an egg on the map (Region 3 only).
+- **Bird** (Region 3, level 20): 5% chance per successful forage to fly off to a random other region for 60s. Forages there with a +20% food/water bonus if it's a food/water region, fishes (10% chance/sec) if it lands in Region 5, or gives every bee in Region 4 a temporary +20% speed boost for the visit. Returns home after 60s with +2 coins. Fly-away/landing visual effects play in whichever region the player is currently viewing at each end of the trip. See the 2026-09-16 (8) changelog entry for full mechanics and the save/load handling this required.
 - **Bee**: forages flowers, carries honey (capacity scales with level: 1/2/3/5 at levels 1/5/10/20), returns to hive to deposit, then goes idle. Up to 3 bees total per save (the starter bee + 2 purchasable "Worker Bee" hires at 10 coins each via the hive's spawn button); all bees — starter or purchased — are built through the same `createBee()` factory so they behave identically.
 - **Bear** (level 2+): travels to a lake, fishes for ~20s per cycle, yields more fish at higher levels (10% chance of double catch at level 20).
-- **Pig** (either color): forages food/water like dog/squirrel/chicken (see `FORAGE_TIERS.pig` in `state.js`), no level-gated tier for its special perk — 5% chance per successful forage to enter a 5-second mud-play state, awarding 2 coins (5% chance to double to 4). Level-1 XP requirement is 50 food / 30 water (not a 50/50 split — see `getLevelRequirement()`'s pig-specific branch).
+- **Pig** (either color): forages food/water like dog/squirrel/chicken (see `FORAGE_TIERS.pig` in `state.js`). Level 20+: 5% chance per successful forage to enter a 5-second mud-play state, awarding 2 coins (5% chance to double to 4). Level-1 XP requirement is 50 food / 30 water (not a 50/50 split — see `getLevelRequirement()`'s pig-specific branch).
 
 **Other systems:**
 - Joystick (touch) + WASD/arrow keys (desktop) movement, spacebar/E to feed.
@@ -75,6 +78,96 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 ---
 
 ## Changelog
+
+### 2026-09-16 (8) — New pet: Bird (Region 3) + regional excursion mechanic
+
+**Added:**
+- **New pet: Bird**, Region 3 alongside the squirrel and chicken, spawned 60–90px clear of both (no sprite overlap). Tames at level 2 and forages food/water autonomously exactly like every other Regions 1–3 pet — no new state-machine plumbing needed for that part, same as the cat.
+- **Forage tiers** (`FORAGE_TIERS.bird` in `state.js`): +1/+1 base, +2/+1 at Lv5, +2/+2 at Lv10, +3/+2 at Lv15, +4/+3 at Lv20 — matches the spec exactly at every boundary. Level-1 requirement is 25 food / 25 water (`baseMap.bird = 50` in `getLevelRequirement()`, split 50/50 — same trick used for the cat's 20/20).
+- **Lv20 perk — regional excursion:** 5% chance per successful forage (checked only while at home, so it can't retrigger mid-trip) to fly to a random region other than its home (Region 3) for 60 seconds:
+    - **Food/water regions (1, 2, 6):** forages normally there with a +20% bonus on top of the usual character-level bonus (stacks multiplicatively).
+    - **Region 5 (bear's lake):** doesn't forage — instead rolls a 10% fish-catch chance **every whole second** it's present (accumulator-based so it can't skip rolls on a slow frame), for the full 60s. Not capped — can catch more than one fish per trip.
+    - **Region 4 (hive):** applies a one-time +20% speed boost to every bee currently in the region for the duration of the visit (tracked per-bee via a `_birdBoosted` flag so it can't be double-applied or under-reverted), reverted the instant the bird leaves.
+    - Always returns home after 60s with **+2 coins**, regardless of which region it visited.
+- **Visual effects:** a small expanding/fading "poof" burst (`spawnRegionFX()`/`updateRegionFX()`/`drawRegionFX()`, new in `world.js`) fires at both ends of *every* leg of the trip — depart-burst wherever the bird just vanished from, arrive-burst wherever it just appeared — but only actually renders if the player is currently looking at that specific region. This means: proc while standing in Region 3 → you see it fly away; proc while standing in whatever region it randomly picked → you see it land; same pair plays symmetrically on the way back 60s later. Effects are a generic per-region list, not attached to the bird object (it isn't "in" a region at the exact instant a burst fires), drawn every frame alongside the pet loop in `main.js`.
+- **How the "physically visiting another region" trick works:** the bird is spliced out of `petsByRegion[3]` and pushed into `petsByRegion[targetRegion]` for the duration, then spliced back on return. This isn't a special case — it's exactly how `main.js`'s existing per-region update/draw loop already expects pets to be organized, so the bird correctly forages using that region's actual food/water pools and is only drawn when the player is actually viewing wherever it currently, physically, is.
+- **New pet-only sprite:** small round black body, dark wing, orange beak, pointed tail, subtle idle bob. Full-size and Codex mini-portrait versions added.
+- **New Codex card** (`viewBird`/`infoBird`/`renameBoxBird` in `index.html`) — shows `(away)` next to its TAMED status while on an excursion. Rename button uses a dedicated handler (not the generic `bindPetRename()`) since it may not be sitting in its default array slot while away.
+
+**Save/load — the one genuinely tricky part of this feature:**
+- Every other pet lives at a fixed `[region][index]` slot forever. The bird doesn't — it's temporarily elsewhere for up to 60s at a time, which matters if an autosave (every 10s) lands mid-trip. Handled by giving the bird a **permanent reference** (`birdPet` in `world.js`, independent of which array currently holds it) and saving/restoring it **separately** from the normal per-region arrays rather than trying to make the positional save format account for a pet that moves: `saveGameProgress()` filters any `type === 'bird'` entry out of every region's array and writes a standalone `stateMatrix.birdData` (label/level/foodEaten/waterEaten only); `loadGameProgress()` applies that directly to the always-present default bird object.
+- **Deliberate simplification:** an in-progress excursion (which region, remaining timer, any live bee-speed boost) is **not** resumed across a reload — the bird always comes back home at rest, `excursionActive: false`. Given a 60-second window, the odds of a reload landing mid-trip are low, and correctly resuming (including re-finding and re-verifying which bees still have a boost flag that's actually theirs) added meaningfully more risk than the feature's value justified. Flagging this explicitly in case a future request wants true resume-on-load.
+- One more small correctness fix that fell out of this: a bird that teleports between regions mid-frame (inside its own `update()` call) would otherwise flash for exactly one frame at its new region's coordinates while the canvas is still showing the region it just left, because `main.js`'s draw call for that frame was already dispatched based on the pre-teleport region. Added a `_justTeleported` one-shot flag, checked at the top of `draw()`, to skip that single frame cleanly.
+
+**Verification method:** manual trace of the state machine (confirmed the array-splice-during-forEach doesn't skip sibling pets, since the bird is always pushed to — and therefore spliced from — the *end* of whichever array it's in) plus `node --check` on every touched file and an `index.html` div-balance/ID-existence pass. No automated test harness was built for this round (none of this session's turns have used one) — noting this plainly since the pre-2026-09-16-session entries below describe a `vm`-based harness that hasn't been maintained or re-run since.
+
+---
+
+### 2026-09-16 (7) — New screen: Character (name, level, live bonuses, perk checklist)
+
+**Added:**
+- **🧑 CHARACTER button**, positioned directly beneath 🎒 BAG. Opens a new full-screen overlay (`characterOverlay` in `index.html`, styled to match the existing Codex/Bag overlays) showing:
+    - **Editable name** — `character.name` (new field, defaults to `'Player'`; existing saves without it get backfilled on load) via the same rename-input-plus-button pattern already used for pets.
+    - **Current level.**
+    - **Live active bonuses** — food/water, honey, fish, and coin % gained from pets, plus the manual-gather %, read straight from `getCharacterBonuses(character.level)`.
+    - **Full Lv5–50 perk checklist** (`CHARACTER_LEVEL_PERKS`, new in `state.js`) with already-reached milestones shown in green with a ✓ — same visual treatment as a pet's perk checklist in `showPetDetail()`.
+- Screen refreshes live while open (guarded by a visibility check inside the already-every-frame `updateUI()` from the cat feature), so leveling up mid-session with it open updates immediately.
+
+**Changed (refactor, no behavior change):**
+- **Extracted the character-level bonus formulas into a single shared function**, `getCharacterBonuses(level)` in `state.js`, returning `{ petFoodWater, petHoney, petFish, coin, manualGather }`. `entities.js` (pet foraging bonuses) and `world.js` (manual pickup multiplier) were both duplicating this logic inline — now both call the shared function instead. This was done specifically so the new Character screen's displayed numbers are structurally guaranteed to match what's actually applied in gameplay, rather than being a second copy of the thresholds that could silently drift out of sync after a future balance change.
+- Verified byte-for-byte equivalent output before/after the refactor at every threshold level (1, 4, 5, 14, 15, 24, 25, 29, 30, 34, 35, 39, 40, 44, 45, 49, 50).
+
+---
+
+### 2026-09-16 (6) — New pet: Cat (Region 1)
+
+**Added:**
+- **New pet: Cat**, Region 1 alongside the dog, spawned 150px clear (dog at x=110, cat at x=260, both y=220). Tames at level 2, forages food/water autonomously — same generic wander/forage pipeline every other land pet uses.
+- **Forage tiers** (`FORAGE_TIERS.cat`): +1/+1 base → +2/+2 (Lv5) → +3/+3 (Lv10) → +4/+4 (Lv15) → +5/+5 (Lv20). Level-1 requirement is 20 food / 20 water (`baseMap.cat = 40`, split 50/50).
+- **10% chance per forage to double** whatever food/water was just granted (applied after the character-level bonus, so e.g. a Lv20 cat's +5 water becomes +10 on a double).
+- **3% chance per forage to enter a "Schrödinger" state** — freezes in place, alternates between two visual states (upright / flipped-upside-down via a canvas rotation, plus a purple glow ring) until the player approaches within 70px, at which point the interact button switches from GIVE to PLAY. Pressing it opens a Dead/Alive picker (built dynamically, same technique as the whistle picker); the outcome is randomized 50/50 the instant the box is entered (not when guessed). Correct guess: +10 coins and a result toast. Either way, the box resolves and the cat returns to wandering.
+- **`updateUI()` now runs every single frame** (previously only after discrete events like feeding) — needed so the PLAY button appears/disappears in real time as the player walks toward/away from a boxed cat, rather than lagging until the next unrelated event. Confirmed cheap enough (a handful of `textContent` writes) to not be a performance concern, but flagging the change since it's a new "hot path" addition.
+- New sprite (orange body, dark stripes, triangular ears) — full-size and Codex mini-portrait versions.
+- New Codex card, perk descriptions, and rename binding, following the existing per-pet pattern exactly.
+
+**Verification method:** `node --check` on every touched file, `index.html` div-balance and ID-existence checks, and a manual trace confirming the PLAY-button proximity check only fires while `currentRegion === 1` (so it can't falsely trigger from another region).
+
+---
+
+### 2026-09-16 (5) — Pig mud-play was missing its Lv20 gate
+
+**Fixed:**
+- **Pig's mud-play trigger had no level requirement at all** — `if (Math.random() < 0.05) { this.state = 'mud_play'; ... }` could fire starting at level 1, contradicting both the intended design (confirmed by the person) and the pattern every other rare-bonus-state pet uses (dog's digging, chicken's egg-laying — both explicitly gated at `level >= 20`). Added the missing `this.level >= 20 &&` check.
+- Updated the pig's mud-play line in the Codex perk checklist (`getPetPerkDescriptions()`) from `level: 1` to `level: 20` to match, so the in-game description isn't contradicted by the actual behavior.
+
+**Consulted, no change made (per explicit request):** whether confining mud-play to only trigger while the pig is standing inside the *visual* mud patch (currently purely decorative — mud-play can trigger anywhere in the region) would look good. Traced the actual fill colors: the mud patch (`#5c4326`/`#3e2f1c`) is very close in hue/luminance to the splash particles' own colors (`#6b4226`/`#3e2723`), so confining it there would likely make the effect harder to see, not easier, without also brightening the particle palette. Left the roam area exactly as-is per the person's decision.
+
+---
+
+### 2026-09-16 (4) — Touch input: joystick multitouch + Codex portrait scroll-vs-tap
+
+**Fixed:**
+- **Joystick would jump toward the GIVE button (or stop responding) whenever both were held at once.** Root cause: the joystick's `touchmove` handler blindly read `e.touches[0]` on every move, assuming that index always referred to its own finger — with a second touch down elsewhere (GIVE), `touches[0]` can be *that* touch instead, so the handle would visibly drag toward wherever GIVE was. Fixed by tracking the joystick's own touch via its `identifier` (captured on `touchstart`, matched explicitly on every subsequent `touchmove`/`touchend`/`touchcancel`) instead of assuming array position.
+- **Joystick could get stuck pushing a direction indefinitely after lifting the finger, specifically in the APK build (WebIntoApp wrapper).** There was no `touchcancel` listener at all — only `touchend`. WebView wrappers commonly fire `touchcancel` instead of `touchend` when a touch is interrupted, so the direction flags never got reset. Added `touchcancel` handling, plus `blur`/`document.visibilitychange` listeners as a last-resort safety net (mirroring the pattern the GIVE button's hold-timer already used) so the joystick can't get stuck even if no touch-ending event ever arrives at all.
+- **Pets Codex portrait would instantly open the detail popup the moment you touched it to start scrolling the list**, because it opened on raw `touchstart`. Replaced with real tap-vs-scroll detection: tracks finger position/time from `touchstart`, and only opens the popup on `touchend` if the finger stayed within ~10px and released within ~500ms (a genuine tap); anything that moves further is left alone to scroll normally.
+- Added `touch-action: none` to `#interactBtn` in `style.css` so the browser/WebView can't intercept that touch as a page-gesture candidate, for the same multitouch-stability reasons as the joystick's existing `touch-action: none`.
+
+**Verification method:** manual trace of the touch event sequence for the specific reported repro (hold GIVE, then touch joystick) confirming the identifier-based lookup returns the correct touch regardless of array order; `node --check` on all touched files.
+
+---
+
+### 2026-09-16 (3) — Region 6 Pig Sty Codex cards, restored 1%→10% level-bonus amendment, honey/fish bonus never applied
+
+**Added:**
+- The 2 pig Codex cards (`viewPig1`/`viewPig2` + info/rename boxes) that the 2026-09-16 Pig Sty entry below had flagged as the one remaining manual `index.html` step — added once the file was actually provided.
+
+**Fixed:**
+- **The person's earlier amendment to the character-level bonus system (multiplier per level: 1% → 10%) had only partially carried over into the files provided this session.** Cross-referenced against the full 10-milestone spec (Lv5/15/35/45 +30% food&water, Lv10/30 +25% honey, Lv20/40 +25% fish, Lv25/50 +25% coin) and found the actual code only had 4 of the 10 milestones, at the old lower percentages (5%/10% food-water, 3% honey, 3% fish, 1% coin) — rewrote the block to the full cumulative-stacking table. Separately, `world.js`'s manual-pickup multiplier was still literally `character.level * 0.01` — bumped to `0.10` to match "1% to 10%".
+- **Real bug found while fixing the above, unrelated to the amendment itself: `petHoneyBonus` and `petFishBonus` were computed every tick but never actually multiplied into the honey/fish grants** — `inventory.honey += dropCount;` and `inventory.fish += fishCaught;` used the raw values, silently ignoring both bonus variables entirely. Fixed both lines to apply their respective bonus multiplier. This means the Lv10/20/30/40 honey/fish perks had never actually done anything until this fix, regardless of the 1%-vs-10% question.
+
+**Verification method:** `node --check` on both touched files; manually recomputed the cumulative bonus at every milestone level (5, 10, 15, 20, 25, 30, 35, 40, 45, 50) against the spec table.
+
+---
 
 ### 2026-09-16 (2) — Bear honey feeding granted no XP
 

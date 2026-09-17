@@ -192,6 +192,11 @@ function gameLoop(timestamp) {
 
         player.draw();
 
+        // Bird excursion fly-away/landing poof effects (world.js) — drawn last so they
+        // sit on top of everything else in whichever region they were spawned in.
+        updateRegionFX(dt);
+        drawRegionFX();
+
         // Runs every frame (not just after feed/forage events) so the interactBtn
         // label reacts immediately as the player walks toward/away from a boxed cat —
         // proximity has to be checked continuously, unlike the elephant's PLAY check

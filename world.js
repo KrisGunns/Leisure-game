@@ -21,6 +21,49 @@ const regionalItems = {
 // flowers instead (bees), Region 5 (bear) gets neither (fishes at the lake instead).
 const FOOD_WATER_REGIONS = [1, 2, 3, 6];
 
+// All regions that currently exist — used by the bird's Lv20 excursion perk to pick a
+// random destination other than its home region (3). Update this if a Region 7+ is added.
+const ALL_REGIONS = [1, 2, 3, 4, 5, 6];
+
+// Bird excursion fly-away/landing visual effects — simple one-shot expanding+fading poof
+// bursts. Not attached to any pet object, since the bird literally isn't present in a
+// region at the instant these fire (it's either just vanished or just appeared) — kept
+// as their own small list here instead. See entities.js's `excursionActive` handling.
+let regionFX = [];
+function spawnRegionFX(region, x, y, type) {
+    regionFX.push({ region: region, x: x, y: y, type: type, age: 0, life: 0.6 });
+}
+function updateRegionFX(dt) {
+    for (let i = regionFX.length - 1; i >= 0; i--) {
+        regionFX[i].age += dt;
+        if (regionFX[i].age >= regionFX[i].life) regionFX.splice(i, 1);
+    }
+}
+function drawRegionFX() {
+    regionFX.forEach(fx => {
+        if (fx.region !== currentRegion) return;
+        let t = fx.age / fx.life; // 0 -> 1
+        let radius = 6 + t * 26;
+        let alpha = 1 - t;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = fx.type === 'depart' ? '#2c3e50' : '#f1c40f';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(fx.x, fx.y, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        // A few little feather/sparkle flecks radiating outward from the burst
+        ctx.fillStyle = fx.type === 'depart' ? '#34495e' : '#f39c12';
+        for (let i = 0; i < 5; i++) {
+            let ang = (i / 5) * Math.PI * 2 + t * 2;
+            let fxx = fx.x + Math.cos(ang) * radius;
+            let fxy = fx.y + Math.sin(ang) * radius;
+            ctx.fillRect(fxx - 2, fxy - 2, 4, 4);
+        }
+        ctx.restore();
+    });
+}
+
 let foods = regionalItems[currentRegion].foods;
 let waters = regionalItems[currentRegion].waters;
 let flowers = regionalItems[currentRegion].flowers;
@@ -70,6 +113,21 @@ function createPig(label, color, x, y) {
     return p;
 }
 
+// Same idea for the bird. Kept as a factory (even though there's only ever one) for
+// consistency with the rest of this file, and so save/load has one correct place to
+// re-derive a fresh bird instance from if that's ever needed.
+function createBird(label, x, y) {
+    let p = new Pet('bird', label, '#1c1c1c');
+    p.speed = 95;
+    p.level = 1;
+    p.state = 'wander';
+    p.x = (typeof x === 'number') ? x : 200;
+    p.y = (typeof y === 'number') ? y : 200;
+    p.homeRegion = 3;
+    p.pickNewWanderTarget();
+    return p;
+}
+
 const petsByRegion = {
     // Positioned well apart — untamed pets (level < 2) don't move at all (see the
     // `if (this.level < 2) return;` gate early in Pet.update()), so starting them
@@ -96,7 +154,8 @@ const petsByRegion = {
             p.x = 260;
             p.y = 200;
             return p;
-        })()
+        })(),
+        createBird('Sparrow', 140, 280)
     ],
     4: [ createBee('Bee', 200, 150) ],
     5: [ createBear('Bear', 200, 250) ],
@@ -105,6 +164,13 @@ const petsByRegion = {
         createPig('Mud Pig', '#95a5a6', 280, 460)
     ]
 };
+
+// Permanent reference to the one bird instance, independent of which region's array it
+// currently lives in (it physically moves between petsByRegion[r] arrays during its Lv20
+// excursion perk — see entities.js — so `petsByRegion[3][2]` alone isn't reliable while
+// it's away). Used by save/load in state.js to persist/restore it correctly regardless
+// of where it happens to be at save time.
+const birdPet = petsByRegion[3][2];
 
 function resizeCanvas() {
     const parent = canvas.parentElement;

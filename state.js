@@ -17,7 +17,7 @@ const whistleBtn = document.getElementById('whistleBtn');
 
 // New Core Dynamic Math Formula Engine (Max Level 20 scaling factor)
 function getLevelRequirement(type, currentLevel) {
-    const baseMap = { dog: 20, elephant: 35, squirrel: 10, chicken: 15, bee: 8, bear: 15, pig: 80, cat: 40 };
+    const baseMap = { dog: 20, elephant: 35, squirrel: 10, chicken: 15, bee: 8, bear: 15, pig: 80, cat: 40, bird: 50 };
     let base = baseMap[type] || 20;
     
     // Safety fallback: If currentLevel is accidentally passed as an object or undefined, default to 1
@@ -49,6 +49,7 @@ function getLevelRequirement(type, currentLevel) {
 const FORAGE_TIERS = {
     dog:      [ [1, 1, 1], [5, 2, 2], [10, 3, 3], [20, 5, 5] ],
     cat:      [ [1, 1, 1], [5, 2, 2], [10, 3, 3], [15, 4, 4], [20, 5, 5] ],
+    bird:     [ [1, 1, 1], [5, 2, 1], [10, 2, 2], [15, 3, 2], [20, 4, 3] ],
     pig:      [ [1, 2, 2], [5, 3, 2], [10, 4, 3], [15, 5, 4], [20, 7, 6] ],
     elephant: [ [1, 1, 2], [5, 2, 3], [10, 3, 4], [20, 5, 7] ],
     squirrel: [ [1, 1, 0], [5, 3, 1], [10, 5, 1], [20, 8, 1] ],
@@ -228,15 +229,32 @@ function saveGameProgress() {
         };
 
         for (let r in petsByRegion) {
-            stateMatrix.petsByRegion[r] = petsByRegion[r].map(pet => ({
-                type: pet.type,
-                label: pet.label,
-                level: pet.level,
-                foodEaten: pet.foodEaten,
-                waterEaten: pet.waterEaten,
-                honeyCarried: pet.honeyCarried || 0,
-                fishingTimer: pet.fishingTimer || 0
-            }));
+            stateMatrix.petsByRegion[r] = petsByRegion[r]
+                .filter(pet => pet.type !== 'bird') // saved separately below — see birdData
+                .map(pet => ({
+                    type: pet.type,
+                    label: pet.label,
+                    level: pet.level,
+                    foodEaten: pet.foodEaten,
+                    waterEaten: pet.waterEaten,
+                    honeyCarried: pet.honeyCarried || 0,
+                    fishingTimer: pet.fishingTimer || 0
+                }));
+        }
+
+        // Bird is saved by itself rather than through the per-region arrays above,
+        // because its Lv20 excursion perk physically moves it into a foreign region's
+        // array for up to 60s — at the moment of an autosave it might not be sitting in
+        // its home region 3 at index 2 at all. Only persistent stats are kept; an
+        // in-progress excursion (and any bee-speed boost it applied) is intentionally
+        // NOT resumed across a reload — see loadGameProgress().
+        if (typeof birdPet !== 'undefined' && birdPet) {
+            stateMatrix.birdData = {
+                label: birdPet.label,
+                level: birdPet.level,
+                foodEaten: birdPet.foodEaten,
+                waterEaten: birdPet.waterEaten
+            };
         }
 
         stateMatrix.characterData = character;
@@ -315,6 +333,21 @@ function loadGameProgress() {
                     pet.honeyCarried = savedPet.honeyCarried || 0;
                     if (pet.type === 'bear') pet.fishingTimer = savedPet.fishingTimer || 0;
                 });
+            }
+
+            // Bird: restore persistent stats only. Deliberately does NOT attempt to
+            // resume an in-progress excursion (region, timer, any bee-speed boost it had
+            // applied) across a reload — it always comes back home, at rest. See the
+            // matching note in saveGameProgress().
+            if (stateMatrix.birdData && typeof birdPet !== 'undefined' && birdPet) {
+                birdPet.level = stateMatrix.birdData.level || 1;
+                birdPet.label = stateMatrix.birdData.label || birdPet.label;
+                birdPet.foodEaten = stateMatrix.birdData.foodEaten || 0;
+                birdPet.waterEaten = stateMatrix.birdData.waterEaten || 0;
+                birdPet.excursionActive = false;
+                birdPet.excursionRegion = null;
+                birdPet.excursionTimer = 0;
+                birdPet.state = 'wander';
             }
         } else if (stateMatrix.petsData) {
             // Legacy format from before this fix (keyed by pet.type, so multiple bees

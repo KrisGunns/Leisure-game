@@ -216,6 +216,8 @@ function getPetPerkDescriptions(type) {
     } else if (type === 'cat') {
         perks.push({ level: 1, text: '10% chance per forage to double the food/water gained' });
         perks.push({ level: 1, text: '3% chance per forage to enter the "Schrödinger" state — approach and choose Dead or Alive for a chance at +10 coins' });
+    } else if (type === 'bird') {
+        perks.push({ level: 20, text: '5% chance per forage to fly off to a random region for 60s — forages there with +20% food/water (fishes in Region 5, boosts bees +20% in Region 4), then returns home with +2 coins' });
     } else if (type === 'bee') {
         perks.push({ level: 1, text: 'Carries 1 honey load before returning to the hive' });
         perks.push({ level: 5, text: 'Honey capacity increases to 2' });
@@ -626,6 +628,27 @@ function renderMiniPet(pet, elementId) {
             mctx.fillStyle = '#000000';
             mctx.fillRect(ox + 21, oy + 6, 2, 2);
             mctx.fillRect(ox + 27, oy + 6, 2, 2);
+        } else if (pet.type === 'bird') {
+            mctx.fillStyle = pet.color;
+            mctx.beginPath();
+            mctx.ellipse(ox + 16, oy + 20, 12, 9, 0, 0, Math.PI * 2);
+            mctx.fill();
+            mctx.beginPath();
+            mctx.arc(ox + 26, oy + 12, 7, 0, Math.PI * 2);
+            mctx.fill();
+            mctx.fillStyle = '#f39c12';
+            mctx.beginPath();
+            mctx.moveTo(ox + 32, oy + 12);
+            mctx.lineTo(ox + 38, oy + 14);
+            mctx.lineTo(ox + 32, oy + 16);
+            mctx.closePath();
+            mctx.fill();
+            mctx.fillStyle = '#000000';
+            mctx.fillRect(ox + 27, oy + 9, 2, 2);
+            mctx.fillStyle = '#2c2c2c';
+            mctx.beginPath();
+            mctx.ellipse(ox + 12, oy + 18, 7, 5, -0.4, 0, Math.PI * 2);
+            mctx.fill();
         }
     }
 
@@ -635,6 +658,7 @@ function updateCodexData() {
     const elephant = petsByRegion[2][0];
     const squirrel = petsByRegion[3][0];
     const chicken = petsByRegion[3][1];
+    const bird = (typeof birdPet !== 'undefined') ? birdPet : petsByRegion[3][2];
     const bee = petsByRegion[4][0];
     const bear = petsByRegion[5][0];
 
@@ -643,6 +667,7 @@ function updateCodexData() {
     renderMiniPet(elephant, 'viewElephant');
     renderMiniPet(squirrel, 'viewSquirrel');
     renderMiniPet(chicken, 'viewChicken');
+    renderMiniPet(bird, 'viewBird');
 
     let dogReq = getLevelRequirement('dog', dog.level);
     document.getElementById('infoDog').innerHTML = `
@@ -663,6 +688,16 @@ function updateCodexData() {
     `;
 
     document.getElementById('renameBoxCat').style.display = cat.level >= 2 ? 'block' : 'none';
+
+    let birdReq = getLevelRequirement('bird', bird.level);
+    document.getElementById('infoBird').innerHTML = `
+        <strong>${bird.level >= 2 ? bird.label : '???'}</strong><br>
+        Status: <span class="${bird.level >= 2 ? 'codexTamed' : 'codexWild'}">${bird.level >= 2 ? 'TAMED' : 'WILD'}${bird.excursionActive ? ' (away)' : ''}</span><br>
+        Level: ${bird.level}/20<br>
+        Next Req: ${bird.level < 20 ? '🍪' + birdReq.food + ' 💧' + birdReq.water : 'MAX'}
+    `;
+
+    document.getElementById('renameBoxBird').style.display = bird.level >= 2 ? 'block' : 'none';
 
 
     let elReq = getLevelRequirement('elephant', elephant.level);
@@ -1047,6 +1082,27 @@ bindPetRename('btnRenameBee', 'inputBee', 4, 0);       // Region 4, Bee (Base)
 bindPetRename('btnRenameBear', 'inputBear', 5, 0);     // Region 5, Bear
 bindPetRename('btnRenamePig1', 'inputPig1', 6, 0);     // Region 6, Pig (pink)
 bindPetRename('btnRenamePig2', 'inputPig2', 6, 1);     // Region 6, Mud Pig (grey)
+
+// Bird uses its own handler rather than bindPetRename's fixed [regionIdx][petIdx] lookup,
+// since it may be physically away on an excursion (not sitting at petsByRegion[3][2]) —
+// renames the permanent birdPet reference (world.js) directly instead.
+(function bindBirdRename() {
+    const btn = document.getElementById('btnRenameBird');
+    const input = document.getElementById('inputBird');
+    if (btn && input) {
+        btn.addEventListener('click', () => {
+            let nameVal = input.value.trim();
+            if (nameVal && typeof birdPet !== 'undefined' && birdPet) {
+                birdPet.label = nameVal;
+                input.value = '';
+                saveGameProgress();
+                updateUI();
+                if (typeof updateCodexData === 'function') updateCodexData();
+                alert(`✨ Name successfully updated to: ${nameVal}!`);
+            }
+        });
+    }
+})();
 
 const handleOpenBag = (e) => {
     if (e) e.preventDefault();

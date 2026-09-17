@@ -148,6 +148,14 @@ class Pet {
         this.schrodingerOutcome = null;
         this.schrodingerVisible = true;
         this.schrodingerBlinkTimer = 0;
+
+        // Bird-only fields, same reasoning. homeRegion is set once by createBird() in
+        // world.js; the rest track its Lv20 "fly off to a random region" excursion perk.
+        this.homeRegion = null;
+        this.excursionActive = false;
+        this.excursionRegion = null;
+        this.excursionTimer = 0;
+        this.excursionFishTimer = 0;
     }
 
     pickNewWanderTarget() {
@@ -464,6 +472,69 @@ class Pet {
             return;
         }
 
+                // --- BIRD EXCURSION IN PROGRESS (Lv20 perk): away from home region 3 for
+        // 60s. Region 5: rolls a 10% fish-catch chance every whole second it's present.
+        // Region 4: a one-time +20% bee speed boost was already applied on arrival (see
+        // the trigger below) and reverted here on return. Food/water regions (1/2/6):
+        // no special-case needed here — falls through to the normal wander/forage
+        // pipeline below, which already grants a +20% excursion bonus (see that branch). ---
+        if (this.type === 'bird' && this.excursionActive) {
+            this.excursionTimer -= dt;
+
+            if (this.excursionRegion === 5) {
+                this.excursionFishTimer += dt;
+                while (this.excursionFishTimer >= 1.0) {
+                    this.excursionFishTimer -= 1.0;
+                    if (Math.random() < 0.10) {
+                        inventory.fish += 1;
+                        updateUI();
+                    }
+                }
+            }
+
+            if (this.excursionTimer <= 0) {
+                // Revert the bee speed boost if this trip was to the hive.
+                if (this.excursionRegion === 4 && petsByRegion[4]) {
+                    petsByRegion[4].forEach(bee => {
+                        if (bee._birdBoosted) {
+                            bee.speed /= 1.20;
+                            bee._birdBoosted = false;
+                        }
+                    });
+                }
+
+                // Leave the away region — show the fly-away visual there if the player
+                // is currently looking at it.
+                let awayArr = petsByRegion[this.excursionRegion];
+                if (awayArr) {
+                    let idx = awayArr.indexOf(this);
+                    if (idx > -1) awayArr.splice(idx, 1);
+                }
+                if (typeof currentRegion !== 'undefined' && currentRegion === this.excursionRegion) {
+                    spawnRegionFX(this.excursionRegion, this.x, this.y, 'depart');
+                }
+
+                // Arrive back home — show the landing visual there if the player is
+                // currently looking at region 3.
+                this.excursionActive = false;
+                this.excursionRegion = null;
+                petsByRegion[this.homeRegion].push(this);
+                this.pickNewWanderTarget();
+                this.x = this.targetX;
+                this.y = this.targetY;
+                this.state = 'wander';
+                if (typeof currentRegion !== 'undefined' && currentRegion === this.homeRegion) {
+                    spawnRegionFX(this.homeRegion, this.x, this.y, 'arrive');
+                }
+
+                inventory.coins += 2;
+                updateUI();
+                saveGameProgress();
+                this._justTeleported = true;
+                return;
+            }
+        }
+
                 // --- CAT SCHRÖDINGER BOX STATE: frozen in place, flickering between two
         // visual states, until the player approaches and resolves it via the PLAY
         // button (input.js) and the Dead/Alive picker (ui.js). ---
@@ -699,6 +770,58 @@ class Pet {
                                 updateUI();
                                 return;
                             }
+                        } else if (this.type === 'bird') {
+                            let y = getForageYield('bird', this.level);
+                            let gain = (targetItem.type === 'food') ? y.food : y.water;
+                            // +20% while away on an excursion (stacks with the normal
+                            // character-level petFoodWaterBonus, same as everywhere else).
+                            let finalGain = Math.round(gain * petFoodWaterBonus * (this.excursionActive ? 1.20 : 1.0));
+                            if (targetItem.type === 'food') inventory.food += finalGain;
+                            else inventory.water += finalGain;
+
+                            // Lv20+: 5% chance per successful forage (from its home region
+                            // only — can't trigger a new trip mid-excursion) to fly off to a
+                            // random other region for 60s.
+                            if (this.level >= 20 && !this.excursionActive && Math.random() < 0.05) {
+                                let choices = ALL_REGIONS.filter(r => r !== this.homeRegion);
+                                let target = choices[Math.floor(Math.random() * choices.length)];
+
+                                if (typeof currentRegion !== 'undefined' && currentRegion === this.homeRegion) {
+                                    spawnRegionFX(this.homeRegion, this.x, this.y, 'depart');
+                                }
+
+                                let homeArr = petsByRegion[this.homeRegion];
+                                let idx = homeArr.indexOf(this);
+                                if (idx > -1) homeArr.splice(idx, 1);
+
+                                this.excursionActive = true;
+                                this.excursionRegion = target;
+                                this.excursionTimer = 60.0;
+                                this.excursionFishTimer = 0;
+                                this.pickNewWanderTarget();
+                                this.x = this.targetX;
+                                this.y = this.targetY;
+                                this.state = 'wander';
+                                petsByRegion[target].push(this);
+
+                                if (target === 4 && petsByRegion[4]) {
+                                    petsByRegion[4].forEach(bee => {
+                                        if (!bee._birdBoosted) {
+                                            bee.speed *= 1.20;
+                                            bee._birdBoosted = true;
+                                        }
+                                    });
+                                }
+
+                                if (typeof currentRegion !== 'undefined' && currentRegion === target) {
+                                    spawnRegionFX(target, this.x, this.y, 'arrive');
+                                }
+
+                                updateUI();
+                                saveGameProgress();
+                                this._justTeleported = true;
+                                return;
+                            }
                         }
 
                         updateUI();
@@ -729,6 +852,10 @@ class Pet {
 
 
 draw() {
+        if (this._justTeleported) {
+            this._justTeleported = false;
+            return;
+        }
         if (this.type === 'dog') {
             ctx.fillStyle = '#f1c40f'; 
             ctx.fillRect(this.x + 4, this.y + 10, 26, 16); 
@@ -917,6 +1044,36 @@ draw() {
                 ctx.ellipse(this.x + this.size / 2, this.y + this.size / 2, this.size / 2 + 5, this.size / 2 + 5, 0, 0, Math.PI * 2);
                 ctx.stroke();
             }
+        } else if (this.type === 'bird') {
+            let bob = Math.sin(Date.now() / 180) * 2; // small idle bob, purely cosmetic
+            let by = this.y + bob;
+            ctx.fillStyle = this.color;                  // body
+            ctx.beginPath();
+            ctx.ellipse(this.x + 16, by + 20, 12, 9, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();                              // head
+            ctx.arc(this.x + 26, by + 12, 7, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#f39c12';                    // beak
+            ctx.beginPath();
+            ctx.moveTo(this.x + 32, by + 12);
+            ctx.lineTo(this.x + 38, by + 14);
+            ctx.lineTo(this.x + 32, by + 16);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = '#000000';                    // eye
+            ctx.fillRect(this.x + 27, by + 9, 2, 2);
+            ctx.fillStyle = '#2c2c2c';                     // wing
+            ctx.beginPath();
+            ctx.ellipse(this.x + 12, by + 18, 7, 5, -0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = this.color;                   // tail
+            ctx.beginPath();
+            ctx.moveTo(this.x + 4, by + 18);
+            ctx.lineTo(this.x - 6, by + 12);
+            ctx.lineTo(this.x - 6, by + 24);
+            ctx.closePath();
+            ctx.fill();
         }
 
         ctx.fillStyle = '#fff';
