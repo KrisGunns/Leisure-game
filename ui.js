@@ -84,6 +84,110 @@ function hideWhistlePicker() {
     if (picker) picker.style.display = 'none';
 }
 
+// Set by updateUI() every frame to the Schrödinger-state cat the player is currently
+// standing close enough to, or null otherwise. input.js reads this on PLAY press to
+// decide whether to open the picker below instead of the normal feed action.
+let activeSchrodingerCat = null;
+
+// Built dynamically in JS (same technique as showWhistlePicker) — opened from the PLAY
+// button when the player is near a cat in the Schrödinger state. Presents a "Dead or
+// Alive?" choice; correct guess pays out 10 coins, either way the box resolves and the
+// cat goes back to wandering.
+function showSchrodingerPicker(cat) {
+    let picker = document.getElementById('schrodingerPicker');
+    if (!picker) {
+        picker = document.createElement('div');
+        picker.id = 'schrodingerPicker';
+        picker.style.cssText = `
+            position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.85); border: 2px solid #9b59b6; border-radius: 10px;
+            padding: 10px; z-index: 9998; font-family: monospace; color: #fff;
+            display: flex; flex-direction: column; gap: 6px; min-width: 170px;
+        `;
+        document.body.appendChild(picker);
+    }
+
+    while (picker.firstChild) picker.removeChild(picker.firstChild);
+
+    let title = document.createElement('div');
+    title.textContent = `${cat.label}: Dead or Alive?`;
+    title.style.cssText = 'font-weight:bold; text-align:center; margin-bottom:4px; color:#9b59b6;';
+    picker.appendChild(title);
+
+    const resolve = (guess) => (e) => {
+        if (e) e.preventDefault();
+        let correct = (guess === cat.schrodingerOutcome);
+        if (correct) {
+            inventory.coins += 10;
+            saveGameProgress();
+        }
+        hideSchrodingerPicker();
+        showSchrodingerResultToast(correct, cat.schrodingerOutcome);
+        cat.state = 'wander';
+        cat.schrodingerOutcome = null;
+        cat.pickNewWanderTarget();
+        activeSchrodingerCat = null;
+        updateUI();
+    };
+
+    [['alive', 'Alive', '#27ae60'], ['dead', 'Dead', '#7f8c8d']].forEach(([value, label, color]) => {
+        let btn = document.createElement('button');
+        btn.textContent = label;
+        btn.style.cssText = `
+            padding: 8px 10px; border-radius: 6px; border: none; cursor: pointer;
+            font-family: monospace; font-weight: bold; font-size: 13px;
+            background: ${color}; color: #fff;
+        `;
+        const handler = resolve(value);
+        btn.addEventListener('touchstart', handler, { passive: false });
+        btn.addEventListener('mousedown', handler);
+        picker.appendChild(btn);
+    });
+
+    let closeBtn = document.createElement('button');
+    closeBtn.textContent = 'Close';
+    closeBtn.style.cssText = `
+        padding: 6px 10px; border-radius: 6px; border: none; cursor: pointer;
+        font-family: monospace; background: #555; color: #fff; margin-top: 4px;
+    `;
+    const closeHandler = (e) => { if (e) e.preventDefault(); hideSchrodingerPicker(); };
+    closeBtn.addEventListener('touchstart', closeHandler, { passive: false });
+    closeBtn.addEventListener('mousedown', closeHandler);
+    picker.appendChild(closeBtn);
+
+    picker.style.display = 'flex';
+}
+
+function hideSchrodingerPicker() {
+    let picker = document.getElementById('schrodingerPicker');
+    if (picker) picker.style.display = 'none';
+}
+
+// Small result toast so a correct/incorrect guess is legible feedback, not just a
+// silent coin-count change. Same dynamically-built-element technique as the toast in
+// state.js's showLevelUpToast.
+function showSchrodingerResultToast(correct, outcome) {
+    let toast = document.getElementById('schrodingerToast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'schrodingerToast';
+        toast.style.cssText = `
+            position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.85); color: #fff; font-family: monospace;
+            padding: 8px 14px; border-radius: 8px; z-index: 9999; font-size: 13px;
+            border: 2px solid #27ae60;
+        `;
+        document.body.appendChild(toast);
+    }
+    toast.style.borderColor = correct ? '#27ae60' : '#e74c3c';
+    toast.textContent = correct
+        ? `🐱 It was ${outcome}! +10 coins!`
+        : `🐱 It was ${outcome}! Better luck next time.`;
+    toast.style.display = 'block';
+    clearTimeout(toast._hideTimeout);
+    toast._hideTimeout = setTimeout(() => { toast.style.display = 'none'; }, 2500);
+}
+
 // Returns the level-perk checklist for a pet type as an ordered array of
 // { level, text }. Pulls the numeric tiers straight from FORAGE_TIERS (state.js) so
 // this list never drifts out of sync with the actual yield numbers, then appends the
@@ -109,6 +213,9 @@ function getPetPerkDescriptions(type) {
         perks.push({ level: 20, text: '10% chance to start a "catch me" play minigame (+5 coins)' });
     } else if (type === 'pig') {
         perks.push({ level: 20, text: '5% chance per forage to play in the mud for 5s (+2 coins, 5% chance to double to +4)' });
+    } else if (type === 'cat') {
+        perks.push({ level: 1, text: '10% chance per forage to double the food/water gained' });
+        perks.push({ level: 1, text: '3% chance per forage to enter the "Schrödinger" state — approach and choose Dead or Alive for a chance at +10 coins' });
     } else if (type === 'bee') {
         perks.push({ level: 1, text: 'Carries 1 honey load before returning to the hive' });
         perks.push({ level: 5, text: 'Honey capacity increases to 2' });
@@ -230,7 +337,24 @@ function updateUI() {
                 elephantPlaying = true;
             }
         }
-        interactBtn.textContent = elephantPlaying ? 'PLAY' : 'GIVE';
+
+        // Cat's Schrödinger box: unlike the elephant check above (which doesn't care
+        // about distance), the PLAY button here only shows once the player is actually
+        // standing near the boxed cat — per spec, the player has to "go over to it".
+        activeSchrodingerCat = null;
+        if (typeof currentRegion !== 'undefined' && currentRegion === 1 &&
+            typeof petsByRegion !== 'undefined' && petsByRegion && petsByRegion[1]) {
+            petsByRegion[1].forEach(pet => {
+                if (pet.type === 'cat' && pet.state === 'schrodinger') {
+                    let dx = (pet.x + pet.size / 2) - (player.x + player.size / 2);
+                    let dy = (pet.y + pet.size / 2) - (player.y + player.size / 2);
+                    let dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 70) activeSchrodingerCat = pet;
+                }
+            });
+        }
+
+        interactBtn.textContent = (activeSchrodingerCat || elephantPlaying) ? 'PLAY' : 'GIVE';
     }
 
     const charLevel = document.getElementById('charLevel');
@@ -240,6 +364,14 @@ function updateUI() {
     if (charLevel) charLevel.textContent = character.level;
     if (charXP) charXP.textContent = character.xp;
     if (charNextXP) charNextXP.textContent = getCharacterNextXP(character.level);
+
+    // Keep the Character screen's level/bonus numbers live while it's open (e.g. if the
+    // player levels up mid-session with the screen up) without redrawing it every frame
+    // when it's closed.
+    const characterOverlayEl = document.getElementById('characterOverlay');
+    if (characterOverlayEl && characterOverlayEl.style.display !== 'none' && typeof updateCharacterScreen === 'function') {
+        updateCharacterScreen();
+    }
 }
 function renderMiniPet(pet, elementId) {
     const miniCanvas = document.getElementById(elementId);
@@ -470,11 +602,36 @@ function renderMiniPet(pet, elementId) {
             mctx.fillStyle = pet.color;
             mctx.fillRect(ox + 8, oy + 28, 4, 6);
             mctx.fillRect(ox + 22, oy + 28, 4, 6);
+        } else if (pet.type === 'cat') {
+            mctx.fillStyle = pet.color;
+            mctx.fillRect(ox + 4, oy + 12, 26, 16);
+            mctx.fillRect(ox + 18, oy + 2, 12, 12);
+            mctx.beginPath();
+            mctx.moveTo(ox + 18, oy + 2);
+            mctx.lineTo(ox + 20, oy - 5);
+            mctx.lineTo(ox + 23, oy + 2);
+            mctx.closePath();
+            mctx.fill();
+            mctx.beginPath();
+            mctx.moveTo(ox + 26, oy + 2);
+            mctx.lineTo(ox + 29, oy - 5);
+            mctx.lineTo(ox + 31, oy + 2);
+            mctx.closePath();
+            mctx.fill();
+            mctx.fillStyle = '#7a3d10';
+            mctx.fillRect(ox + 8, oy + 12, 3, 16);
+            mctx.fillRect(ox + 15, oy + 12, 3, 16);
+            mctx.fillRect(ox + 21, oy + 4, 2, 8);
+            mctx.fillRect(ox + 27, oy + 4, 2, 8);
+            mctx.fillStyle = '#000000';
+            mctx.fillRect(ox + 21, oy + 6, 2, 2);
+            mctx.fillRect(ox + 27, oy + 6, 2, 2);
         }
     }
 
 function updateCodexData() {
     const dog = petsByRegion[1][0];
+    const cat = petsByRegion[1][1];
     const elephant = petsByRegion[2][0];
     const squirrel = petsByRegion[3][0];
     const chicken = petsByRegion[3][1];
@@ -482,6 +639,7 @@ function updateCodexData() {
     const bear = petsByRegion[5][0];
 
     renderMiniPet(dog, 'viewDog');
+    renderMiniPet(cat, 'viewCat');
     renderMiniPet(elephant, 'viewElephant');
     renderMiniPet(squirrel, 'viewSquirrel');
     renderMiniPet(chicken, 'viewChicken');
@@ -495,6 +653,16 @@ function updateCodexData() {
     `;
 
     document.getElementById('renameBoxDog').style.display = dog.level >= 2 ? 'block' : 'none';
+
+    let catReq = getLevelRequirement('cat', cat.level);
+    document.getElementById('infoCat').innerHTML = `
+        <strong>${cat.level >= 2 ? cat.label : '???'}</strong><br>
+        Status: <span class="${cat.level >= 2 ? 'codexTamed' : 'codexWild'}">${cat.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
+        Level: ${cat.level}/20<br>
+        Next Req: ${cat.level < 20 ? '🍪' + catReq.food + ' 💧' + catReq.water : 'MAX'}
+    `;
+
+    document.getElementById('renameBoxCat').style.display = cat.level >= 2 ? 'block' : 'none';
 
 
     let elReq = getLevelRequirement('elephant', elephant.level);
@@ -664,6 +832,86 @@ if (codexClose) {
     codexClose.addEventListener('mousedown', handleCloseCodex);
 }
 
+const characterOverlay = document.getElementById('characterOverlay');
+const openCharacterBtn = document.getElementById('openCharacterBtn');
+const characterClose = document.getElementById('characterClose');
+
+// Renders the Character screen's live contents: name, level, the cumulative % bonuses
+// currently in effect (straight from getCharacterBonuses() in state.js, so it can never
+// drift from what's actually applied to foraging/gathering), and the full perk
+// checklist with already-reached milestones highlighted — same visual treatment as a
+// pet's Level Perks list in showPetDetail().
+function updateCharacterScreen() {
+    const nameDisplay = document.getElementById('characterNameDisplay');
+    const levelValue = document.getElementById('characterLevelValue');
+    const bonusList = document.getElementById('characterBonusList');
+    const perksList = document.getElementById('characterPerksList');
+
+    if (nameDisplay) nameDisplay.textContent = character.name || 'Player';
+    if (levelValue) levelValue.textContent = character.level;
+
+    if (bonusList && typeof getCharacterBonuses === 'function') {
+        let b = getCharacterBonuses(character.level);
+        const pct = (mult) => Math.round((mult - 1) * 100);
+        bonusList.innerHTML = `
+            🍪💧 Pet food/water gain: <strong>+${pct(b.petFoodWater)}%</strong><br>
+            🍯 Pet honey gain: <strong>+${pct(b.petHoney)}%</strong><br>
+            🐟 Pet fish gain: <strong>+${pct(b.petFish)}%</strong><br>
+            🪙 Coin gain: <strong>+${pct(b.coin)}%</strong><br>
+            🖐️ Manual gather (walking over food/water): <strong>+${pct(b.manualGather)}%</strong>
+        `;
+    }
+
+    if (perksList && typeof CHARACTER_LEVEL_PERKS !== 'undefined') {
+        while (perksList.firstChild) perksList.removeChild(perksList.firstChild);
+        CHARACTER_LEVEL_PERKS.forEach(p => {
+            let li = document.createElement('li');
+            let reached = character.level >= p.level;
+            li.style.color = reached ? '#2ecc71' : '#7f8c8d';
+            li.textContent = `Lv.${p.level}: ${p.text}${reached ? ' ✓' : ''}`;
+            perksList.appendChild(li);
+        });
+    }
+}
+
+const handleOpenCharacter = (e) => {
+    if (e) e.preventDefault();
+    updateCharacterScreen();
+    if (characterOverlay) characterOverlay.style.display = 'flex';
+};
+
+const handleCloseCharacter = (e) => {
+    if (e) e.preventDefault();
+    if (characterOverlay) characterOverlay.style.display = 'none';
+};
+
+if (openCharacterBtn) {
+    openCharacterBtn.addEventListener('touchstart', handleOpenCharacter, { passive: false });
+    openCharacterBtn.addEventListener('mousedown', handleOpenCharacter);
+}
+if (characterClose) {
+    characterClose.addEventListener('touchstart', handleCloseCharacter, { passive: false });
+    characterClose.addEventListener('mousedown', handleCloseCharacter);
+}
+
+// Renaming the character works the same way as renaming a pet (bindPetRename), just
+// against character.name instead of a petsByRegion slot.
+const btnRenameCharacter = document.getElementById('btnRenameCharacter');
+const characterNameInput = document.getElementById('characterNameInput');
+if (btnRenameCharacter && characterNameInput) {
+    const handleCharacterRename = () => {
+        let nameVal = characterNameInput.value.trim();
+        if (nameVal) {
+            character.name = nameVal;
+            characterNameInput.value = '';
+            saveGameProgress();
+            updateCharacterScreen();
+            alert(`✨ Name successfully updated to: ${nameVal}!`);
+        }
+    };
+    btnRenameCharacter.addEventListener('click', handleCharacterRename);
+}
+
 const settingsBtn = document.getElementById('settingsBtn');
 const devPanel = document.getElementById('devPanel');
 const closeDev = document.getElementById('closeDev');
@@ -791,6 +1039,7 @@ function bindPetRename(btnId, inputId, regionIdx, petIdx) {
 
 // Bind all 8 pets securely to their exact 2D array coordinates mapping slots:
 bindPetRename('btnRenameDog', 'inputDog', 1, 0);       // Region 1, Dog
+bindPetRename('btnRenameCat', 'inputCat', 1, 1);       // Region 1, Cat
 bindPetRename('btnRenameElephant', 'inputElephant', 2, 0); // Region 2, Elephant
 bindPetRename('btnRenameSquirrel', 'inputSquirrel', 3, 0); // Region 3, Squirrel
 bindPetRename('btnRenameChicken', 'inputChicken', 3, 1);   // Region 3, Chicken

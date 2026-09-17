@@ -17,7 +17,7 @@ const whistleBtn = document.getElementById('whistleBtn');
 
 // New Core Dynamic Math Formula Engine (Max Level 20 scaling factor)
 function getLevelRequirement(type, currentLevel) {
-    const baseMap = { dog: 20, elephant: 35, squirrel: 10, chicken: 15, bee: 8, bear: 15, pig: 80 };
+    const baseMap = { dog: 20, elephant: 35, squirrel: 10, chicken: 15, bee: 8, bear: 15, pig: 80, cat: 40 };
     let base = baseMap[type] || 20;
     
     // Safety fallback: If currentLevel is accidentally passed as an object or undefined, default to 1
@@ -48,6 +48,7 @@ function getLevelRequirement(type, currentLevel) {
 // `if (this.level >= X)` checks in Pet.update() since they're more than a food/water number.
 const FORAGE_TIERS = {
     dog:      [ [1, 1, 1], [5, 2, 2], [10, 3, 3], [20, 5, 5] ],
+    cat:      [ [1, 1, 1], [5, 2, 2], [10, 3, 3], [15, 4, 4], [20, 5, 5] ],
     pig:      [ [1, 2, 2], [5, 3, 2], [10, 4, 3], [15, 5, 4], [20, 7, 6] ],
     elephant: [ [1, 1, 2], [5, 2, 3], [10, 3, 4], [20, 5, 7] ],
     squirrel: [ [1, 1, 0], [5, 3, 1], [10, 5, 1], [20, 8, 1] ],
@@ -80,6 +81,7 @@ const inventory = {
 
 // NEW: Core Character Database Profile Properties
 let character = {
+    name: 'Player',
     level: 1,
     xp: 0
 };
@@ -88,6 +90,57 @@ let character = {
 function getCharacterNextXP(currentLevel) {
     return Math.floor(100 * Math.pow(currentLevel, 0.6)); // Scaled curve scaling boundaries
 }
+
+// Character-level perk bonuses (stack cumulatively as milestones are reached):
+// Lv5/15/35/45: +30% food & water gained from pets. Lv10/30: +25% honey.
+// Lv20/40: +25% fish. Lv25/50: +25% coin. Plus the flat +10%/level manual gather bonus.
+// Single source of truth — entities.js (pet foraging) and world.js (manual pickup) both
+// call this instead of each keeping their own copy of the thresholds, and the Character
+// screen (ui.js) reads it too, so the displayed bonuses can never drift out of sync with
+// what's actually applied in gameplay.
+function getCharacterBonuses(level) {
+    let petFoodWater = 1.0;
+    if (level >= 5) petFoodWater += 0.30;
+    if (level >= 15) petFoodWater += 0.30;
+    if (level >= 35) petFoodWater += 0.30;
+    if (level >= 45) petFoodWater += 0.30;
+
+    let petHoney = 1.0;
+    if (level >= 10) petHoney += 0.25;
+    if (level >= 30) petHoney += 0.25;
+
+    let petFish = 1.0;
+    if (level >= 20) petFish += 0.25;
+    if (level >= 40) petFish += 0.25;
+
+    let coin = 1.0;
+    if (level >= 25) coin += 0.25;
+    if (level >= 50) coin += 0.25;
+
+    return {
+        petFoodWater: petFoodWater,
+        petHoney: petHoney,
+        petFish: petFish,
+        coin: coin,
+        manualGather: 1 + (level * 0.10)
+    };
+}
+
+// Ordered milestone list backing the Character screen's perk checklist — kept as data
+// (rather than re-deriving from getCharacterBonuses' if-checks) so the screen can show
+// each individual unlock as its own line item instead of just the cumulative totals.
+const CHARACTER_LEVEL_PERKS = [
+    { level: 5,  text: '+30% food & water gained by pets' },
+    { level: 10, text: '+25% honey gained from pets' },
+    { level: 15, text: '+30% food & water gained from pets' },
+    { level: 20, text: '+25% fish gained from pets' },
+    { level: 25, text: '+25% coin gained' },
+    { level: 30, text: '+25% honey gained from pets' },
+    { level: 35, text: '+30% food & water gained from pets' },
+    { level: 40, text: '+25% fish gained from pets' },
+    { level: 45, text: '+30% food & water gained by pets' },
+    { level: 50, text: '+25% coin gained' }
+];
 
 // Global Core XP Injection Engine Function
 function gainPlayerXP(amount) {
@@ -213,6 +266,7 @@ function loadGameProgress() {
         // FIXED: Fully restore and link Character Level and XP to the HUD on page load
         if (stateMatrix.characterData) {
             character = stateMatrix.characterData;
+            if (!character.name) character.name = 'Player'; // older saves predate the name field
             
             const charLevel = document.getElementById('charLevel');
             const charXP = document.getElementById('charXP');

@@ -71,7 +71,23 @@ function createPig(label, color, x, y) {
 }
 
 const petsByRegion = {
-    1: [new Pet('dog', 'Retriever', '#f1c40f')],
+    // Positioned well apart — untamed pets (level < 2) don't move at all (see the
+    // `if (this.level < 2) return;` gate early in Pet.update()), so starting them
+    // far apart is sufficient to guarantee their sprites never overlap pre-taming.
+    1: [
+        (() => {
+            let p = new Pet('dog', 'Retriever', '#f1c40f');
+            p.x = 110;
+            p.y = 220;
+            return p;
+        })(),
+        (() => {
+            let p = new Pet('cat', 'Tabby', '#e08a3e');
+            p.x = 260;
+            p.y = 220;
+            return p;
+        })()
+    ],
     2: [new Pet('elephant', 'Elephant', '#95a5a6')],
     3: [
         new Pet('squirrel', 'Squirrel', '#d35400'),
@@ -84,9 +100,6 @@ const petsByRegion = {
     ],
     4: [ createBee('Bee', 200, 150) ],
     5: [ createBear('Bear', 200, 250) ],
-    // Positioned well apart — untamed pets (level < 2) don't move at all (see the
-    // `if (this.level < 2) return;` gate early in Pet.update()), so starting them
-    // far apart is sufficient to guarantee their sprites never overlap pre-taming.
     6: [
         createPig('Pig', '#ffb6c1', 130, 460),
         createPig('Mud Pig', '#95a5a6', 280, 460)
@@ -147,7 +160,7 @@ function checkCollisions() {
                 respawnQueue.push({ type: 'food', time: Date.now() + 10000 });
 
                 let foodBaseGain = 1;
-                let manualFoodMultiplier = 1 + (character.level * 0.10);
+                let manualFoodMultiplier = getCharacterBonuses(character.level).manualGather;
                 inventory.food += Math.round(foodBaseGain * manualFoodMultiplier);
                 
                 gainPlayerXP(1); 
@@ -176,7 +189,7 @@ function checkCollisions() {
                 respawnQueue.push({ type: 'water', time: Date.now() + 10000 });
 
                 let waterBaseGain = 1;
-                let manualWaterMultiplier = 1 + (character.level * 0.10);
+                let manualWaterMultiplier = getCharacterBonuses(character.level).manualGather;
                 inventory.water += Math.round(waterBaseGain * manualWaterMultiplier);
                 
                 gainPlayerXP(1); 

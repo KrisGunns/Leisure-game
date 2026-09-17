@@ -191,6 +191,12 @@ function gameLoop(timestamp) {
         }
 
         player.draw();
+
+        // Runs every frame (not just after feed/forage events) so the interactBtn
+        // label reacts immediately as the player walks toward/away from a boxed cat —
+        // proximity has to be checked continuously, unlike the elephant's PLAY check
+        // which doesn't depend on distance.
+        updateUI();
     } // This bracket cleanly closes the frameInterval condition block scope layer
 
     // FIXED: Only requestAnimationFrame sits down here at the safe root level!

@@ -141,6 +141,13 @@ class Pet {
 
         // Pig-only field, same reasoning.
         this.mudParticles = [];
+
+        // Cat-only fields, same reasoning. schrodingerOutcome is the (pre-determined,
+        // 50/50) truth of whether the cat is "alive" or "dead" once observed — set the
+        // moment it enters the box, revealed only once the player guesses.
+        this.schrodingerOutcome = null;
+        this.schrodingerVisible = true;
+        this.schrodingerBlinkTimer = 0;
     }
 
     pickNewWanderTarget() {
@@ -161,26 +168,13 @@ class Pet {
 
     update(dt, regionFoods, regionWaters, activeFlowers = []) {
 
-        // Character-level perk bonuses (stack cumulatively as milestones are reached):
-        // Lv5/15/35/45: +30% food & water gained from pets. Lv10/30: +25% honey.
-        // Lv20/40: +25% fish. Lv25/50: +25% coin.
-        let petFoodWaterBonus = 1.0;
-        if (character.level >= 5) petFoodWaterBonus += 0.30;
-        if (character.level >= 15) petFoodWaterBonus += 0.30;
-        if (character.level >= 35) petFoodWaterBonus += 0.30;
-        if (character.level >= 45) petFoodWaterBonus += 0.30;
-
-        let petHoneyBonus = 1.0;
-        if (character.level >= 10) petHoneyBonus += 0.25;
-        if (character.level >= 30) petHoneyBonus += 0.25;
-
-        let petFishBonus = 1.0;
-        if (character.level >= 20) petFishBonus += 0.25;
-        if (character.level >= 40) petFishBonus += 0.25;
-
-        let coinBonus = 1.0;
-        if (character.level >= 25) coinBonus += 0.25;
-        if (character.level >= 50) coinBonus += 0.25;
+        // Character-level perk bonuses — see getCharacterBonuses() in state.js for the
+        // actual thresholds (also the single source of truth the Character screen reads).
+        let charBonuses = getCharacterBonuses(character.level);
+        let petFoodWaterBonus = charBonuses.petFoodWater;
+        let petHoneyBonus = charBonuses.petHoney;
+        let petFishBonus = charBonuses.petFish;
+        let coinBonus = charBonuses.coin;
 
         // --- BEE AI SYSTEM MATRIX ---
         if (this.type === 'bee') {
@@ -470,6 +464,18 @@ class Pet {
             return;
         }
 
+                // --- CAT SCHRÖDINGER BOX STATE: frozen in place, flickering between two
+        // visual states, until the player approaches and resolves it via the PLAY
+        // button (input.js) and the Dead/Alive picker (ui.js). ---
+        if (this.state === 'schrodinger') {
+            this.schrodingerBlinkTimer -= dt;
+            if (this.schrodingerBlinkTimer <= 0) {
+                this.schrodingerVisible = !this.schrodingerVisible;
+                this.schrodingerBlinkTimer = 0.35;
+            }
+            return; // no movement, no foraging — stays put until the player observes it
+        }
+
                 // --- PIG MUD-PLAY VISUAL SYSTEM (5s timer, mirrors the dog dig system above) ---
         if (this.state === 'mud_play') {
             this.stateTimer -= dt;
@@ -674,6 +680,25 @@ class Pet {
                                 this.stateTimer = 5.0;
                                 return;
                             }
+                        } else if (this.type === 'cat') {
+                            let y = getForageYield('cat', this.level);
+                            let gain = (targetItem.type === 'food') ? y.food : y.water;
+                            let finalGain = Math.round(gain * petFoodWaterBonus);
+                            // 10% chance to double whatever was actually granted.
+                            if (Math.random() < 0.10) finalGain *= 2;
+                            if (targetItem.type === 'food') inventory.food += finalGain;
+                            else inventory.water += finalGain;
+
+                            // 3% chance per successful forage to enter the Schrödinger box —
+                            // freezes in place until the player comes over and calls it.
+                            if (Math.random() < 0.03) {
+                                this.state = 'schrodinger';
+                                this.schrodingerOutcome = Math.random() < 0.5 ? 'alive' : 'dead';
+                                this.schrodingerVisible = true;
+                                this.schrodingerBlinkTimer = 0.35;
+                                updateUI();
+                                return;
+                            }
                         }
 
                         updateUI();
@@ -839,6 +864,59 @@ draw() {
             ctx.beginPath();
             ctx.arc(this.x + 2, this.y + 14, 3, 0, Math.PI * 1.5); // curly tail
             ctx.stroke();
+        } else if (this.type === 'cat') {
+            let boxed = this.state === 'schrodinger';
+            let flipped = boxed && !this.schrodingerVisible;
+            ctx.save();
+            if (flipped) {
+                // "Flipping in place" — mirror the cat upside down in alternating frames
+                // rather than actually moving it, per the frozen-in-the-box behavior.
+                let cx = this.x + this.size / 2;
+                let cy = this.y + this.size / 2;
+                ctx.translate(cx, cy);
+                ctx.rotate(Math.PI);
+                ctx.translate(-cx, -cy);
+            }
+            ctx.fillStyle = this.color;               // body
+            ctx.fillRect(this.x + 4, this.y + 12, 26, 16);
+            ctx.fillRect(this.x + 18, this.y + 2, 12, 12); // head
+            ctx.beginPath();                            // ears
+            ctx.moveTo(this.x + 18, this.y + 2);
+            ctx.lineTo(this.x + 20, this.y - 5);
+            ctx.lineTo(this.x + 23, this.y + 2);
+            ctx.closePath();
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(this.x + 26, this.y + 2);
+            ctx.lineTo(this.x + 29, this.y - 5);
+            ctx.lineTo(this.x + 31, this.y + 2);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = '#7a3d10';                  // stripes
+            ctx.fillRect(this.x + 8, this.y + 12, 3, 16);
+            ctx.fillRect(this.x + 15, this.y + 12, 3, 16);
+            ctx.fillRect(this.x + 21, this.y + 4, 2, 8);
+            ctx.fillRect(this.x + 27, this.y + 4, 2, 8);
+            ctx.fillStyle = '#000000';                   // eyes
+            ctx.fillRect(this.x + 21, this.y + 6, 2, 2);
+            ctx.fillRect(this.x + 27, this.y + 6, 2, 2);
+            ctx.strokeStyle = this.color;                // tail
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(this.x + 4, this.y + 20);
+            ctx.quadraticCurveTo(this.x - 8, this.y + 16, this.x - 6, this.y + 6);
+            ctx.stroke();
+            ctx.restore();
+
+            if (boxed) {
+                // Subtle glow ring so the box state still reads clearly even in the
+                // instant the flip makes the sprite look like an ordinary upright cat.
+                ctx.strokeStyle = 'rgba(155, 89, 182, 0.6)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.ellipse(this.x + this.size / 2, this.y + this.size / 2, this.size / 2 + 5, this.size / 2 + 5, 0, 0, Math.PI * 2);
+                ctx.stroke();
+            }
         }
 
         ctx.fillStyle = '#fff';

@@ -106,6 +106,14 @@ const interactBtnElement = document.getElementById('interactBtn');
 if (interactBtnElement) {
     interactBtnElement.addEventListener('pointerdown', (e) => {
         e.preventDefault();
+
+        // Cat's Schrödinger box takes priority over the normal GIVE action — updateUI()
+        // (ui.js) only sets this while the player is standing near a boxed cat.
+        if (typeof activeSchrodingerCat !== 'undefined' && activeSchrodingerCat) {
+            if (typeof showSchrodingerPicker === 'function') showSchrodingerPicker(activeSchrodingerCat);
+            return;
+        }
+
         feedHoldCounter = 0; 
         executeContinuousFeed();
         
