@@ -122,6 +122,41 @@ function gameLoop(timestamp) {
             ctx.beginPath();
             ctx.ellipse(mudX + 85, mudY + 45, 14, 8, 0, 0, Math.PI * 2);
             ctx.fill();
+        } else if (currentRegion === 7) {
+            // Panda habitat: soft forest green ground, bamboo groves, and a couple of
+            // tree clusters (same tree-drawing style as Region 5's lake forest).
+            ctx.fillStyle = '#356a3d';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#3f7a48';
+            for (let x = 35; x < canvas.width; x += 75) {
+                for (let y = 35; y < canvas.height; y += 75) {
+                    ctx.fillRect(x, y, 4, 10);
+                    ctx.fillRect(x + 8, y + 5, 4, 6);
+                }
+            }
+            // Bamboo groves (tall segmented stalks) clustered in a few spots.
+            ctx.fillStyle = '#8bc34a';
+            let bambooSpots = [
+                [40, 60], [55, 90], [canvas.width - 60, 70], [canvas.width - 40, 100],
+                [40, canvas.height - 100], [canvas.width - 55, canvas.height - 90]
+            ];
+            bambooSpots.forEach(([bx, byy]) => {
+                ctx.fillStyle = '#8bc34a';
+                ctx.fillRect(bx - 3, byy - 30, 6, 60);
+                ctx.fillStyle = '#558b2f';
+                ctx.fillRect(bx - 3, byy - 30, 6, 4);
+                ctx.fillRect(bx - 3, byy - 12, 6, 4);
+                ctx.fillRect(bx - 3, byy + 6, 6, 4);
+                ctx.fillRect(bx - 3, byy + 24, 6, 4);
+            });
+            // Tree clusters.
+            ctx.fillStyle = '#5d4037';
+            for (let x = 70; x < canvas.width; x += 130) {
+                ctx.fillRect(x, 30, 10, 26);
+                ctx.fillStyle = '#2e7d32';
+                ctx.beginPath(); ctx.arc(x + 5, 25, 24, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#5d4037';
+            }
         }
 
         ctx.strokeStyle = '#ffffff';
@@ -170,8 +205,19 @@ function gameLoop(timestamp) {
             }
         }
 
-        for (let r = 1; r <= 6; r++) {
-            if (r >= 4 && !regions1to3Tamed) continue;
+        // Region 7 (panda) unlock condition: every pet across Regions 1-6 at Lv10+.
+        let regions1to6Lv10 = true;
+        for (let checkR = 1; checkR <= 6; checkR++) {
+            if (Array.isArray(petsByRegion[checkR])) {
+                petsByRegion[checkR].forEach(pet => {
+                    if (pet.level < 10) regions1to6Lv10 = false;
+                });
+            }
+        }
+
+        for (let r = 1; r <= 7; r++) {
+            if (r >= 4 && r <= 6 && !regions1to3Tamed) continue;
+            if (r === 7 && !regions1to6Lv10) continue;
 
             let activePets = petsByRegion[r];
             if (Array.isArray(activePets)) {
@@ -196,6 +242,11 @@ function gameLoop(timestamp) {
         // sit on top of everything else in whichever region they were spawned in.
         updateRegionFX(dt);
         drawRegionFX();
+
+        // Bamboo Fever minigame (Panda Lv20 perk) — countdown/collision runs regardless
+        // of region (it's a hard 30s window), drawing is gated to Region 7 internally.
+        updateBambooFever(dt);
+        drawBambooItems();
 
         // Runs every frame (not just after feed/forage events) so the interactBtn
         // label reacts immediately as the player walks toward/away from a boxed cat —
@@ -231,6 +282,14 @@ if (regionSelector && !regionSelector.querySelector('option[value="6"]')) {
     pigOption.value = '6';
     pigOption.textContent = 'Region 6';
     regionSelector.appendChild(pigOption);
+}
+
+// Same approach for Region 7 (Panda habitat).
+if (regionSelector && !regionSelector.querySelector('option[value="7"]')) {
+    let pandaOption = document.createElement('option');
+    pandaOption.value = '7';
+    pandaOption.textContent = 'Region 7';
+    regionSelector.appendChild(pandaOption);
 }
 
 if (document.getElementById('joystickContainer')) document.getElementById('joystickContainer').style.display = 'flex';

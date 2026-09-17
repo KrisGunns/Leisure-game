@@ -156,6 +156,11 @@ class Pet {
         this.excursionRegion = null;
         this.excursionTimer = 0;
         this.excursionFishTimer = 0;
+
+        // Panda-only fields, same reasoning — the Lv20 "Bamboo Fever" event.
+        // stateTimer (already declared above for other pets) is reused for the
+        // 'full'/'abandoned' durations.
+        this.bambooChoicePending = false;
     }
 
     pickNewWanderTarget() {
@@ -535,6 +540,39 @@ class Pet {
             }
         }
 
+                // --- PANDA BAMBOO FEVER STATES ---
+        // Frozen the instant the Play/Starve window opens, until the player answers it
+        // (see the trigger in the forage branch below and the picker in ui.js).
+        if (this.state === 'bamboo_wait') {
+            return;
+        }
+        // Player chose Play: asleep for 20s with a 💤 above its head (drawn in draw()).
+        if (this.state === 'full') {
+            this.stateTimer -= dt;
+            if (this.stateTimer <= 0) {
+                this.state = 'wander';
+                this.pickNewWanderTarget();
+            }
+            return; // stays completely still while asleep
+        }
+        // Player chose Starve: crying 😢 above its head, actively flees the player for 30s.
+        if (this.state === 'abandoned') {
+            this.stateTimer -= dt;
+            let dx = this.x - player.x;
+            let dy = this.y - player.y;
+            let dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            let fleeSpeed = this.speed * 1.3;
+            this.x += (dx / dist) * fleeSpeed * dt;
+            this.y += (dy / dist) * fleeSpeed * dt;
+            this.x = Math.max(10, Math.min(canvas.width - this.size - 10, this.x));
+            this.y = Math.max(10, Math.min(canvas.height - this.size - 10, this.y));
+            if (this.stateTimer <= 0) {
+                this.state = 'wander';
+                this.pickNewWanderTarget();
+            }
+            return;
+        }
+
                 // --- CAT SCHRÖDINGER BOX STATE: frozen in place, flickering between two
         // visual states, until the player approaches and resolves it via the PLAY
         // button (input.js) and the Dead/Alive picker (ui.js). ---
@@ -823,6 +861,25 @@ class Pet {
                                 this._justTeleported = true;
                                 return;
                             }
+                        } else if (this.type === 'panda') {
+                            let y = getForageYield('panda', this.level);
+                            let gain = (targetItem.type === 'food') ? y.food : y.water;
+                            let finalGain = Math.round(gain * petFoodWaterBonus);
+                            if (targetItem.type === 'food') inventory.food += finalGain;
+                            else inventory.water += finalGain;
+
+                            // Lv20+: 5% chance per forage to trigger "Bamboo Fever" — but
+                            // only while the player is actually standing in Region 7 (per
+                            // spec: "Character must be in the region for the chance to
+                            // occur"). Opens the Play/Starve picker and freezes the panda
+                            // until the player answers it.
+                            if (this.level >= 20 && typeof currentRegion !== 'undefined' && currentRegion === 7 &&
+                                Math.random() < 0.05) {
+                                this.state = 'bamboo_wait';
+                                updateUI();
+                                if (typeof showBambooFeverPicker === 'function') showBambooFeverPicker(this);
+                                return;
+                            }
                         }
 
                         updateUI();
@@ -1075,6 +1132,43 @@ draw() {
             ctx.lineTo(this.x - 6, by + 24);
             ctx.closePath();
             ctx.fill();
+        } else if (this.type === 'panda') {
+            ctx.fillStyle = '#ffffff';                    // body
+            ctx.beginPath();
+            ctx.ellipse(this.x + 18, this.y + 20, 15, 12, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();                               // head
+            ctx.arc(this.x + 18, this.y + 5, 11, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#000000';                     // ears
+            ctx.beginPath();
+            ctx.arc(this.x + 9, this.y - 3, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(this.x + 27, this.y - 3, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#000000';                     // eye patches
+            ctx.beginPath();
+            ctx.ellipse(this.x + 12, this.y + 5, 3.5, 4.5, -0.3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(this.x + 24, this.y + 5, 3.5, 4.5, 0.3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#000000';                     // legs
+            ctx.fillRect(this.x + 6, this.y + 28, 5, 7);
+            ctx.fillRect(this.x + 25, this.y + 28, 5, 7);
+
+            if (this.state === 'full') {
+                ctx.font = '14px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('💤', this.x + 18, this.y - 12);
+                ctx.textAlign = 'left';
+            } else if (this.state === 'abandoned') {
+                ctx.font = '14px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('😢', this.x + 18, this.y - 12);
+                ctx.textAlign = 'left';
+            }
         }
 
         ctx.fillStyle = '#fff';

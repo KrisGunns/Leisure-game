@@ -14,15 +14,19 @@ const regionalItems = {
     3: { foods: [], waters: [], flowers: [] },
     4: { foods: [], waters: [], flowers: [] },
     5: { foods: [], waters: [], flowers: [] },
-    6: { foods: [], waters: [], flowers: [] }
+    6: { foods: [], waters: [], flowers: [] },
+    7: { foods: [], waters: [], flowers: [] }
 };
 
 // Regions whose food/water item pools get topped up by processSpawns() — Region 4 gets
 // flowers instead (bees), Region 5 (bear) gets neither (fishes at the lake instead).
-const FOOD_WATER_REGIONS = [1, 2, 3, 6];
+const FOOD_WATER_REGIONS = [1, 2, 3, 6, 7];
 
-// All regions that currently exist — used by the bird's Lv20 excursion perk to pick a
-// random destination other than its home region (3). Update this if a Region 7+ is added.
+// All regions the bird's Lv20 excursion perk can randomly fly to — deliberately does NOT
+// include Region 7: it's gated behind a much higher unlock condition (every other pet at
+// Lv10+) than the bird itself needs to start excursions (just its own Lv20), so letting
+// it wander in there before the player has actually unlocked the panda's habitat would be
+// a strange inconsistency. Update this if a Region 8+ is added and should be eligible.
 const ALL_REGIONS = [1, 2, 3, 4, 5, 6];
 
 // Bird excursion fly-away/landing visual effects — simple one-shot expanding+fading poof
@@ -62,6 +66,101 @@ function drawRegionFX() {
         }
         ctx.restore();
     });
+}
+
+// "Bamboo Fever" minigame (Panda Lv20 perk, Region 7). See ui.js's
+// showBambooFeverPicker() for the Play/Starve choice, and entities.js for the panda's
+// own 'full' (Play) / 'abandoned' (Starve) states that run alongside this. This piece
+// only tracks the actual collectible bamboo stalks on the map and the running count
+// during an active 30s round — deliberately NOT persisted across a reload, same
+// simplification approach as the bird's excursion state.
+let bambooFever = { active: false, timer: 0, collected: 0 };
+let bambooItems = [];
+
+function spawnBambooBatch() {
+    bambooItems = [];
+    for (let i = 0; i < 10; i++) {
+        bambooItems.push({
+            x: 40 + Math.random() * (canvas.width - 80),
+            y: 40 + Math.random() * (canvas.height - 80)
+        });
+    }
+}
+
+function startBambooFever() {
+    bambooFever.active = true;
+    bambooFever.timer = 30.0;
+    bambooFever.collected = 0;
+    spawnBambooBatch();
+}
+
+function updateBambooFever(dt) {
+    if (!bambooFever.active) return;
+    bambooFever.timer -= dt;
+
+    // Collection only actually happens while standing in Region 7 — elsewhere the
+    // bamboo simply isn't drawn/reachable, but the countdown itself keeps running
+    // regardless (a hard 30s window, per spec), so wandering out just wastes time.
+    if (currentRegion === 7) {
+        for (let i = bambooItems.length - 1; i >= 0; i--) {
+            let b = bambooItems[i];
+            let dx = (player.x + player.size / 2) - b.x;
+            let dy = (player.y + player.size / 2) - b.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < player.size / 2 + 10) {
+                bambooItems.splice(i, 1);
+                bambooFever.collected++;
+                updateUI();
+                // Keep a steady supply on the map so there's always something to chase
+                // for the whole 30s instead of it petering out early.
+                bambooItems.push({
+                    x: 40 + Math.random() * (canvas.width - 80),
+                    y: 40 + Math.random() * (canvas.height - 80)
+                });
+            }
+        }
+    }
+
+    if (bambooFever.timer <= 0) {
+        bambooFever.active = false;
+        bambooItems = [];
+        let coinsEarned = Math.floor(bambooFever.collected / 5);
+        inventory.coins += coinsEarned;
+        if (typeof showBambooResultToast === 'function') showBambooResultToast(bambooFever.collected, coinsEarned);
+        updateUI();
+        saveGameProgress();
+    }
+}
+
+function drawBambooItems() {
+    if (!bambooFever.active || currentRegion !== 7) return;
+
+    bambooItems.forEach(b => {
+        ctx.fillStyle = '#8bc34a';
+        ctx.fillRect(b.x - 3, b.y - 16, 6, 32);
+        ctx.fillStyle = '#558b2f';
+        ctx.fillRect(b.x - 3, b.y - 16, 6, 3);
+        ctx.fillRect(b.x - 3, b.y - 3, 6, 3);
+        ctx.fillRect(b.x - 3, b.y + 10, 6, 3);
+        ctx.fillStyle = '#a5d6a7';
+        ctx.beginPath();
+        ctx.moveTo(b.x, b.y - 16);
+        ctx.lineTo(b.x + 10, b.y - 22);
+        ctx.lineTo(b.x + 2, b.y - 12);
+        ctx.closePath();
+        ctx.fill();
+    });
+
+    // Small HUD so the player can see the countdown and running total while it's live.
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(canvas.width / 2 - 90, 26, 180, 26);
+    ctx.fillStyle = '#8bc34a';
+    ctx.font = 'bold 13px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`🎍 ${bambooFever.collected}   ⏱️ ${Math.ceil(bambooFever.timer)}s`, canvas.width / 2, 44);
+    ctx.textAlign = 'left';
+    ctx.restore();
 }
 
 let foods = regionalItems[currentRegion].foods;
@@ -128,6 +227,18 @@ function createBird(label, x, y) {
     return p;
 }
 
+// Same idea for the panda (Region 7).
+function createPanda(label, x, y) {
+    let p = new Pet('panda', label, '#ffffff');
+    p.speed = 80;
+    p.level = 1;
+    p.state = 'wander';
+    p.x = (typeof x === 'number') ? x : 200;
+    p.y = (typeof y === 'number') ? y : 200;
+    p.pickNewWanderTarget();
+    return p;
+}
+
 const petsByRegion = {
     // Positioned well apart — untamed pets (level < 2) don't move at all (see the
     // `if (this.level < 2) return;` gate early in Pet.update()), so starting them
@@ -167,7 +278,8 @@ const petsByRegion = {
     6: [
         createPig('Pig', '#ffb6c1', 130, 460),
         createPig('Mud Pig', '#95a5a6', 280, 460)
-    ]
+    ],
+    7: [ createPanda('Panda', 200, 220) ]
 };
 
 // Permanent reference to the one bird instance, independent of which region's array it
@@ -325,7 +437,7 @@ function processSpawns(dt) {
 
     spawnTimer += dt;
     if (spawnTimer >= 10) {
-        for (let r = 1; r <= 6; r++) {
+        for (let r = 1; r <= 7; r++) {
             if (r === 4) {
                 if (regionalItems[r].flowers.length < 5) regionalItems[r].flowers.push(new Flower());
             } else if (FOOD_WATER_REGIONS.indexOf(r) !== -1) {

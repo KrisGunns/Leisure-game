@@ -181,8 +181,23 @@ if (whistleBtn) {
 if (regionSelector) {
     regionSelector.addEventListener('change', (e) => {
         let selectedRegion = parseInt(e.target.value);
-        
-        if (selectedRegion >= 4) {
+
+        if (selectedRegion === 7) {
+            let allLv10 = true;
+            for (let r = 1; r <= 6; r++) {
+                if (Array.isArray(petsByRegion[r])) {
+                    petsByRegion[r].forEach(pet => {
+                        if (pet.level < 10) allLv10 = false;
+                    });
+                }
+            }
+
+            if (!allLv10) {
+                alert("🔒 Region locked! Every pet in Regions 1-6 must reach Level 10+ to unlock the Panda's habitat.");
+                regionSelector.value = currentRegion;
+                return;
+            }
+        } else if (selectedRegion >= 4) {
             let allTamed = true;
             for (let r = 1; r <= 3; r++) {
                 if (Array.isArray(petsByRegion[r])) {

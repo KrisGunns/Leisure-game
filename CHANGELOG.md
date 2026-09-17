@@ -45,7 +45,7 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 - Region 5: bear — locked behind the same Regions 1–3 requirement. Bear fishes periodically for fish.
 - Region 6: **Pig Sty** — locked behind the same Regions 1–3 requirement (flagged as an assumption, not explicitly specified). 2 pigs (pink `Pig`, grey `Mud Pig`), spawns food/water like Regions 1-3. See "Pig specifics" below.
 
-**Pets:** dog, cat, elephant, squirrel, chicken, bird, bee, bear, pig. Each has its own AI state machine in `Pet.update()` (wander/idle/forage/whistled/etc., plus type-specific states like `digging`, `fishing`, `playing_*`, `schrodinger`, `mud_play`, and the bird's excursion handling).
+**Pets:** dog, cat, elephant, squirrel, chicken, bird, bee, bear, pig, panda. Each has its own AI state machine in `Pet.update()` (wander/idle/forage/whistled/etc., plus type-specific states like `digging`, `fishing`, `playing_*`, `schrodinger`, `mud_play`, the bird's excursion handling, and the panda's `bamboo_wait`/`full`/`abandoned`).
 
 **Character progression:**
 - Player has `level`/`xp`/`name` (editable, see Character screen below), separate from pet levels.
@@ -78,6 +78,27 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 ---
 
 ## Changelog
+
+### 2026-09-16 (10) — New region: Region 7 (Panda habitat) + New pet: Panda + "Bamboo Fever" minigame
+
+**Added:**
+- **Region 7**, shown as "Region 7" in the dropdown, a bamboo/tree habitat (new background art in `main.js`: forest-green ground, six bamboo groves, and a row of trees reusing Region 5's tree-drawing style). Seeded with food/water spawns like Regions 1/2/3/6 (`FOOD_WATER_REGIONS` now includes 7).
+- **New pet: Panda**, tames at level 2 and forages autonomously exactly like every other food/water-region pet — no new state-machine plumbing needed for that part.
+- **Forage tiers** (`FORAGE_TIERS.panda`): +3/+2 base → +4/+3 (Lv5) → +5/+4 (Lv10) → +6/+5 (Lv15) → +8/+6 (Lv20), matching the spec exactly at every boundary. Level-1 requirement is 60 food / 60 water (`baseMap.panda = 120`, split 50/50).
+- **New, stricter region-lock condition:** Region 7 requires **every pet across Regions 1-6** (not just Regions 1-3) to be **Level 10+** — separate from, and in addition to, the existing Regions-1-3-tamed gate that Regions 4-6 already use. Enforced in three places that all needed updating: `input.js` (the dropdown's `change` handler — blocks the switch with an explanatory alert), `main.js` (the pet update/draw loop — Region 7's pets simply don't animate until unlocked, mirroring how 4-6 already freeze if 1-3 aren't tamed), and `ui.js` (the Codex card shows a `???`/LOCKED placeholder, same visual treatment as the pigs before Region 6 unlocks).
+- **Lv20 perk — "Bamboo Fever":** 5% chance per successful forage, but **only rolls while the player is standing in Region 7** (per spec — the chance itself is gated on the player's location, not just the event's visibility). Opens a Play/Starve picker (same dynamically-built pattern as the whistle/Schrödinger pickers) and freezes the panda (`bamboo_wait` state) until answered:
+    - **Play:** starts a 30-second bamboo-collection round (`startBambooFever()` in `world.js`) — 10 bamboo stalks spawn on the map, replenished as collected so there's always something to chase; a small on-canvas HUD shows the running count and countdown. Every 5 collected pays 1 coin, calculated once at the end (`Math.floor(collected / 5)`), with a result toast. The panda itself enters a `full` state for 20 seconds in parallel — asleep, motionless, 💤 above its head.
+    - **Starve:** panda enters an `abandoned` state for 30 seconds — 😢 above its head, continuously moves away from the player's current position (clamped to stay on-canvas) so it's always "running away" the closer the player gets, exactly as described.
+- New panda sprite (white body, black ears/eye-patches/legs) — full-size (with the 💤/😢 state overlays) and Codex mini-portrait versions.
+- New Codex card, perk description, and rename binding, following the existing per-pet pattern.
+
+**Scope decisions worth flagging:**
+- The bird's Lv20 excursion perk (2026-09-16 (8)) does **not** treat Region 7 as a valid random destination — it's gated behind a much higher unlock condition than the bird itself needs, so letting it wander in there before the player has actually unlocked the panda's habitat would be a strange inconsistency. `ALL_REGIONS` (the bird's candidate list) was deliberately left at `[1,2,3,4,5,6]`.
+- Like the bird's excursion state and the cat's Schrödinger state before it, the panda's `bamboo_wait`/`full`/`abandoned` states and the live Bamboo Fever round (`bambooFever` in `world.js`) are **not persisted** — a reload mid-event simply resets the panda to `wander` and clears any in-progress round. This is consistent with how pet `state` has never been part of the save format for *any* pet (it already always resets to the constructor default on load), so this isn't a new category of simplification, just confirming the panda doesn't need special-casing here.
+
+**Verification method:** `node --check` on every touched file, `index.html` div-balance and ID-existence checks, and a manual trace confirming the three separate Region 7 lock-condition checks (`input.js`/`main.js`/`ui.js`) all use the identical "every pet in Regions 1-6 at Lv10+" logic so they can't disagree about whether the region is actually unlocked.
+
+---
 
 ### 2026-09-16 (9) — Polish pass: button sizing, cat defaults, spacing, Schrödinger gate, perk checkmarks
 

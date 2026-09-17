@@ -163,6 +163,87 @@ function hideSchrodingerPicker() {
     if (picker) picker.style.display = 'none';
 }
 
+// Opened from the panda's Lv20 "Bamboo Fever" trigger (entities.js). Presents a
+// Play/Starve choice; Play starts the 30s bamboo-collection minigame (world.js) and
+// puts the panda to sleep for 20s, Starve makes it flee the player (crying) for 30s.
+function showBambooFeverPicker(panda) {
+    let picker = document.getElementById('bambooFeverPicker');
+    if (!picker) {
+        picker = document.createElement('div');
+        picker.id = 'bambooFeverPicker';
+        picker.style.cssText = `
+            position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.85); border: 2px solid #8bc34a; border-radius: 10px;
+            padding: 10px; z-index: 9998; font-family: monospace; color: #fff;
+            display: flex; flex-direction: column; gap: 6px; min-width: 190px;
+        `;
+        document.body.appendChild(picker);
+    }
+
+    while (picker.firstChild) picker.removeChild(picker.firstChild);
+
+    let title = document.createElement('div');
+    title.textContent = `🎍 ${panda.label} wants bamboo!`;
+    title.style.cssText = 'font-weight:bold; text-align:center; margin-bottom:4px; color:#8bc34a;';
+    picker.appendChild(title);
+
+    const resolve = (choice) => (e) => {
+        if (e) e.preventDefault();
+        hideBambooFeverPicker();
+        if (choice === 'play') {
+            panda.state = 'full';
+            panda.stateTimer = 20.0;
+            if (typeof startBambooFever === 'function') startBambooFever();
+        } else {
+            panda.state = 'abandoned';
+            panda.stateTimer = 30.0;
+        }
+        updateUI();
+        saveGameProgress();
+    };
+
+    [['play', 'Play 🎍', '#8bc34a'], ['starve', 'Starve', '#7f8c8d']].forEach(([value, label, color]) => {
+        let btn = document.createElement('button');
+        btn.textContent = label;
+        btn.style.cssText = `
+            padding: 8px 10px; border-radius: 6px; border: none; cursor: pointer;
+            font-family: monospace; font-weight: bold; font-size: 13px;
+            background: ${color}; color: #fff;
+        `;
+        const handler = resolve(value);
+        btn.addEventListener('touchstart', handler, { passive: false });
+        btn.addEventListener('mousedown', handler);
+        picker.appendChild(btn);
+    });
+
+    picker.style.display = 'flex';
+}
+
+function hideBambooFeverPicker() {
+    let picker = document.getElementById('bambooFeverPicker');
+    if (picker) picker.style.display = 'none';
+}
+
+// Shown once the 30s bamboo-collection window ends (world.js's updateBambooFever()).
+function showBambooResultToast(collected, coinsEarned) {
+    let toast = document.getElementById('bambooToast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'bambooToast';
+        toast.style.cssText = `
+            position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.85); color: #fff; font-family: monospace;
+            padding: 8px 14px; border-radius: 8px; z-index: 9999; font-size: 13px;
+            border: 2px solid #8bc34a;
+        `;
+        document.body.appendChild(toast);
+    }
+    toast.textContent = `🎍 Collected ${collected} bamboo — +${coinsEarned} coins!`;
+    toast.style.display = 'block';
+    clearTimeout(toast._hideTimeout);
+    toast._hideTimeout = setTimeout(() => { toast.style.display = 'none'; }, 2500);
+}
+
 // Small result toast so a correct/incorrect guess is legible feedback, not just a
 // silent coin-count change. Same dynamically-built-element technique as the toast in
 // state.js's showLevelUpToast.
@@ -218,6 +299,8 @@ function getPetPerkDescriptions(type) {
         perks.push({ level: 20, text: '3% chance per forage to enter the "Schrödinger" state — approach and choose Dead or Alive for a chance at +10 coins' });
     } else if (type === 'bird') {
         perks.push({ level: 20, text: '5% chance per forage to fly off to a random region for 60s — forages there with +20% food/water (fishes in Region 5, boosts bees +20% in Region 4), then returns home with +2 coins' });
+    } else if (type === 'panda') {
+        perks.push({ level: 20, text: '5% chance per forage (while you\'re in Region 7) to start "Bamboo Fever" — choose Play to collect bamboo for coins while it naps, or Starve and it flees you for 30s' });
     } else if (type === 'bee') {
         perks.push({ level: 1, text: 'Carries 1 honey load before returning to the hive' });
         perks.push({ level: 5, text: 'Honey capacity increases to 2' });
@@ -649,6 +732,27 @@ function renderMiniPet(pet, elementId) {
             mctx.beginPath();
             mctx.ellipse(ox + 12, oy + 18, 7, 5, -0.4, 0, Math.PI * 2);
             mctx.fill();
+        } else if (pet.type === 'panda') {
+            mctx.fillStyle = '#ffffff';
+            mctx.beginPath();
+            mctx.ellipse(ox + 18, oy + 20, 15, 12, 0, 0, Math.PI * 2);
+            mctx.fill();
+            mctx.beginPath();
+            mctx.arc(ox + 18, oy + 5, 11, 0, Math.PI * 2);
+            mctx.fill();
+            mctx.fillStyle = '#000000';
+            mctx.beginPath();
+            mctx.arc(ox + 9, oy - 3, 4, 0, Math.PI * 2);
+            mctx.fill();
+            mctx.beginPath();
+            mctx.arc(ox + 27, oy - 3, 4, 0, Math.PI * 2);
+            mctx.fill();
+            mctx.beginPath();
+            mctx.ellipse(ox + 12, oy + 5, 3.5, 4.5, -0.3, 0, Math.PI * 2);
+            mctx.fill();
+            mctx.beginPath();
+            mctx.ellipse(ox + 24, oy + 5, 3.5, 4.5, 0.3, 0, Math.PI * 2);
+            mctx.fill();
         }
     }
 
@@ -661,6 +765,7 @@ function updateCodexData() {
     const bird = (typeof birdPet !== 'undefined') ? birdPet : petsByRegion[3][2];
     const bee = petsByRegion[4][0];
     const bear = petsByRegion[5][0];
+    const panda = petsByRegion[7][0];
 
     renderMiniPet(dog, 'viewDog');
     renderMiniPet(cat, 'viewCat');
@@ -841,6 +946,41 @@ function updateCodexData() {
         let renameEl = document.getElementById(slot.renameId);
         if (renameEl) renameEl.style.display = (region4Unlocked && slot.pig.level >= 2) ? 'block' : 'none';
     });
+
+    // Region 7 panda — gated behind its own, stricter unlock condition: every pet
+    // across Regions 1-6 at Lv10+ (not just Regions 1-3 tamed, like Region 4-6 above).
+    let region7Unlocked = true;
+    for (let r = 1; r <= 6; r++) {
+        if (Array.isArray(petsByRegion[r]) && petsByRegion[r].length > 0) {
+            petsByRegion[r].forEach(pet => {
+                if (pet.level < 10) region7Unlocked = false;
+            });
+        } else {
+            region7Unlocked = false;
+        }
+    }
+
+    if (panda) {
+        if (!region7Unlocked) {
+            renderMiniPet({ type: 'panda', level: 1, isLocked: true }, 'viewPanda');
+            document.getElementById('infoPanda').innerHTML = `
+                <strong>???</strong><br>
+                Status: <span class="codexWild">LOCKED</span><br>
+                Level: ?/20<br>
+                Next Req: ???
+            `;
+        } else {
+            let pandaReq = getLevelRequirement('panda', panda.level);
+            renderMiniPet(panda, 'viewPanda');
+            document.getElementById('infoPanda').innerHTML = `
+                <strong>${panda.level >= 2 ? panda.label : '???'}</strong><br>
+                Status: <span class="${panda.level >= 2 ? 'codexTamed' : 'codexWild'}">${panda.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
+                Level: ${panda.level}/20<br>
+                Next Req: ${panda.level < 20 ? '🍪' + pandaReq.food + ' 💧' + pandaReq.water : 'MAX'}
+            `;
+        }
+        document.getElementById('renameBoxPanda').style.display = (region7Unlocked && panda.level >= 2) ? 'block' : 'none';
+    }
 }
 
 const codexOverlay = document.getElementById('codexOverlay');
@@ -1082,6 +1222,7 @@ bindPetRename('btnRenameBee', 'inputBee', 4, 0);       // Region 4, Bee (Base)
 bindPetRename('btnRenameBear', 'inputBear', 5, 0);     // Region 5, Bear
 bindPetRename('btnRenamePig1', 'inputPig1', 6, 0);     // Region 6, Pig (pink)
 bindPetRename('btnRenamePig2', 'inputPig2', 6, 1);     // Region 6, Mud Pig (grey)
+bindPetRename('btnRenamePanda', 'inputPanda', 7, 0);   // Region 7, Panda
 
 // Bird uses its own handler rather than bindPetRename's fixed [regionIdx][petIdx] lookup,
 // since it may be physically away on an excursion (not sitting at petsByRegion[3][2]) —
