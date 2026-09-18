@@ -157,16 +157,8 @@ body, html {
     z-index: 100000;      /* Guarantees it floats over background canvas structures */
 }
 
-#openCodexBtn {
+#openMenuBtn {
     top: 15px;
-    left: 15px;
-}
-#openBagBtn {
-    top: 60px; /* Positioned directly beneath the PETS button with a clean 10px spacing gap layout */
-    left: 15px;
-}
-#openCharacterBtn {
-    top: 105px; /* Positioned directly beneath the BAG button, same spacing pattern */
     left: 15px;
 }
 #settingsBtn {
@@ -188,6 +180,74 @@ body, html {
 }
 .utilBtn:active {
     background: rgba(255, 255, 255, 0.4);
+}
+
+/* Consolidated MENU overlay — sized to the entire game screen (gameContainer, not
+   just canvasWrapper) so it covers the topBar too and nothing of the game shows
+   through. The game keeps simulating behind it (main.js's loop isn't paused by any
+   overlay being open); this just visually and interactively blocks it, same as the
+   PETS/BAG/CHAR screens already did individually. */
+#menuOverlay {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(160deg, #f39c12, #e67e22 55%, #d35400);
+    color: #fff;
+    z-index: 9000; /* Above the canvas/joystick/GIVE (100) but below the PETS/BAG/CHAR
+                       screens (10000) that open on top of it and hand back to it on close. */
+    flex-direction: column;
+    padding: 20px;
+}
+#menuHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid rgba(255,255,255,0.4);
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+}
+#menuHeader h2 {
+    text-shadow: 0 2px 3px rgba(0,0,0,0.25);
+}
+#menuClose {
+    background: #c0392b;
+    border: none;
+    color: white;
+    padding: 6px 12px;
+    font-weight: bold;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: monospace;
+}
+#menuClose:active {
+    background: #e74c3c;
+}
+#menuButtonList {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 18px;
+    padding-bottom: 40px;
+}
+.menuBtn {
+    background: rgba(255, 255, 255, 0.92);
+    color: #7a3b00;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    border-radius: 12px;
+    padding: 18px;
+    font-family: monospace;
+    font-size: 17px;
+    font-weight: bold;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.25);
+}
+.menuBtn:active {
+    background: rgba(255, 237, 214, 1);
 }
 #devPanel {
     display: none;

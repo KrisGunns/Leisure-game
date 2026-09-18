@@ -973,6 +973,33 @@ const codexOverlay = document.getElementById('codexOverlay');
 const openCodexBtn = document.getElementById('openCodexBtn');
 const codexClose = document.getElementById('codexClose');
 
+// Consolidated MENU overlay — houses the PETS/BAG/CHAR buttons (still the same
+// elements/ids above, just relocated into the menu). Opening one of them shows that
+// screen layered on top of the menu (z-index 10000 vs. the menu's 9000); closing it
+// reveals the menu again underneath, since this never hides the menu itself.
+const menuOverlay = document.getElementById('menuOverlay');
+const openMenuBtn = document.getElementById('openMenuBtn');
+const menuClose = document.getElementById('menuClose');
+
+const handleOpenMenu = (e) => {
+    if (e) e.preventDefault();
+    if (menuOverlay) menuOverlay.style.display = 'flex';
+};
+
+const handleCloseMenu = (e) => {
+    if (e) e.preventDefault();
+    if (menuOverlay) menuOverlay.style.display = 'none';
+};
+
+if (openMenuBtn) {
+    openMenuBtn.addEventListener('touchstart', handleOpenMenu, { passive: false });
+    openMenuBtn.addEventListener('mousedown', handleOpenMenu);
+}
+if (menuClose) {
+    menuClose.addEventListener('touchstart', handleCloseMenu, { passive: false });
+    menuClose.addEventListener('mousedown', handleCloseMenu);
+}
+
 const handleOpenCodex = (e) => {
     if (e) e.preventDefault();
     updateCodexData();

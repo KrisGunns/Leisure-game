@@ -42,9 +42,7 @@
 <div id="canvasWrapper">
     <canvas id="gameCanvas"></canvas>
 
-    <button id="openCodexBtn" class="utilBtn">🐾 PETS</button>
-    <button id="openBagBtn" class="utilBtn">🎒 BAG</button>
-    <button id="openCharacterBtn" class="utilBtn">🧑 CHAR</button>
+    <button id="openMenuBtn" class="utilBtn">☰ MENU</button>
     <button id="settingsBtn" class="utilBtn">⚙️</button>
     
     <!-- FIXED: Removed inline positioning coordinates so it maps cleanly to your right-side style.css parameters! -->
@@ -253,6 +251,25 @@
             </div>
 
             <div id="interactBtn">GIVE</div>
+        </div>
+
+        <!-- Consolidated MENU overlay: opened from the single MENU button (where the
+             PETS button used to sit). Sized to the entire game screen (covers the
+             topBar too, not just the canvas) so nothing of the game is visible while
+             it's open, even though the game itself keeps running/foraging behind it.
+             Reuses the existing PETS/BAG/CHAR buttons (same ids), so opening any of
+             them still opens that screen exactly as before, layered on top of this
+             menu — closing that screen returns to the menu underneath. -->
+        <div id="menuOverlay" style="display: none;">
+            <div id="menuHeader">
+                <h2>☰ MENU</h2>
+                <button id="menuClose">X</button>
+            </div>
+            <div id="menuButtonList">
+                <button id="openCodexBtn" class="menuBtn">🐾 PETS</button>
+                <button id="openBagBtn" class="menuBtn">🎒 BAG</button>
+                <button id="openCharacterBtn" class="menuBtn">🧑 CHAR</button>
+            </div>
         </div>
     </div>
     <script src="state.js"></script>
