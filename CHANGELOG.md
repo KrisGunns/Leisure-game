@@ -38,18 +38,19 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Current Features
 
-**Regions:** 5 total, selected via a dropdown.
+**Regions:** 7 total, selected via a dropdown.
 - Regions 1–3: starter pets (dog, elephant, squirrel + chicken respectively), food/water item spawns.
 - Region 3 also spawns collectible eggs (from chickens reaching level 20).
 - Region 4: bee hive — locked until every pet in Regions 1–3 is level 2+. Bees forage flowers, carry honey back to the hive, and cost 10 coins to spawn (max 3 bees).
 - Region 5: bear — locked behind the same Regions 1–3 requirement. Bear fishes periodically for fish.
 - Region 6: **Pig Sty** — locked behind the same Regions 1–3 requirement (flagged as an assumption, not explicitly specified). 2 pigs (pink `Pig`, grey `Mud Pig`), spawns food/water like Regions 1-3. See "Pig specifics" below.
+- Region 7: **Panda habitat** — locked behind its own, stricter condition: pets in Regions 1-3 must be Level 10+, **and** pets in Regions 4-6 must be Level 5+ (changed from the original "every pet in Regions 1-6 at Lv10+" — see 2026-09-17 (1)). Single source of truth is `isRegion7Unlocked()` in `world.js`. The player-facing locked-region alerts (`input.js`) deliberately describe only the *requirement*, never the region's identity/theme, so unlocking it stays a surprise.
 
 **Pets:** dog, cat, elephant, squirrel, chicken, bird, bee, bear, pig, panda. Each has its own AI state machine in `Pet.update()` (wander/idle/forage/whistled/etc., plus type-specific states like `digging`, `fishing`, `playing_*`, `schrodinger`, `mud_play`, the bird's excursion handling, and the panda's `bamboo_wait`/`full`/`abandoned`).
 
 **Character progression:**
 - Player has `level`/`xp`/`name` (editable, see Character screen below), separate from pet levels.
-- Gains **+1 XP** for: walking over a food/water/egg drop on the map, or manually feeding a pet (holding the GIVE button).
+- Gains XP **1:1 with the amount of food/water actually collected** (post character-level multiplier) for walking over a drop on the map — e.g. collecting 3 water at once grants +3 XP, not a flat +1. Egg pickups and manually feeding a pet (holding the GIVE button) still grant a flat +1 XP per item/unit.
 - Level-up shows a non-blocking on-screen toast (not a blocking `alert()` — see Changelog).
 - At certain character levels, pets get passive bonuses to auto-foraged resource amounts, and manually-collected resources scale with `character.level * 0.10`. All of this is computed by a single shared function, `getCharacterBonuses(level)` in `state.js` — see the 2026-09-16 (6) changelog entry — so `entities.js`, `world.js`, and the Character screen can never disagree about what's actually in effect.
 - **Character screen:** opened via the 🧑 CHARACTER button (beneath BAG). Shows the editable name, current level, the live % bonus totals from `getCharacterBonuses()`, and the full Lv5–50 perk checklist (`CHARACTER_LEVEL_PERKS` in `state.js`) with reached milestones checked off in green — same visual treatment as a pet's perk checklist.
@@ -58,13 +59,13 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 **Pet-specific mechanics:**
 - **Dog** (level 20): 10% chance per successful forage to enter a `digging` state — plays a dirt-particle animation, then awards 1 coin.
-- **Cat** (Region 1): 10% chance per forage to double the food/water it just collected. 3% chance per forage to enter a "Schrödinger" state — frozen in place, flickering between two visual states — until the player approaches (within 70px) and presses PLAY, opening a Dead/Alive picker; correct guess pays 10 coins either way the box resolves and it returns to wandering.
+- **Cat** (Region 1): Level 15+: 10% chance per forage to double the food/water it just collected. Level 20+: 3% chance per forage — **only while the player is standing in Region 1** — to enter a "Schrödinger" state — frozen in place, flickering between two visual states — until the player approaches (within 70px) and presses PLAY, opening a Dead/Alive picker; correct guess pays 10 coins either way the box resolves and it returns to wandering.
 - **Elephant** (level 20, Region 2): 10% chance to trigger a multi-step "tag" minigame (approach → retreat → wait for player to move → chase) rewarding 5 coins if caught.
 - **Chicken** (level 20): 5% chance per forage to lay an egg on the map (Region 3 only).
 - **Bird** (Region 3, level 20): 5% chance per successful forage to fly off to a random other region for 60s. Forages there with a +20% food/water bonus if it's a food/water region, fishes (10% chance/sec) if it lands in Region 5, or gives every bee in Region 4 a temporary +20% speed boost for the visit. Returns home after 60s with +2 coins. Fly-away/landing visual effects play in whichever region the player is currently viewing at each end of the trip. See the 2026-09-16 (8) changelog entry for full mechanics and the save/load handling this required.
-- **Bee**: forages flowers, carries honey (capacity scales with level: 1/2/3/5 at levels 1/5/10/20), returns to hive to deposit, then goes idle. Up to 3 bees total per save (the starter bee + 2 purchasable "Worker Bee" hires at 10 coins each via the hive's spawn button); all bees — starter or purchased — are built through the same `createBee()` factory so they behave identically.
-- **Bear** (level 2+): travels to a lake, fishes for ~20s per cycle, yields more fish at higher levels (10% chance of double catch at level 20).
-- **Pig** (either color): forages food/water like dog/squirrel/chicken (see `FORAGE_TIERS.pig` in `state.js`). Level 20+: 5% chance per successful forage to enter a 5-second mud-play state, awarding 2 coins (5% chance to double to 4). Level-1 XP requirement is 50 food / 30 water (not a 50/50 split — see `getLevelRequirement()`'s pig-specific branch).
+- **Bee**: forages flowers, carries honey (capacity scales with level: 1/2/3/5 at levels 1/5/10/20); time to forage a single flower also drops with level (5.0s base → 4.5s at Lv5 → 4.0s at Lv10 → 3.0s at Lv20 — travel speed to/from the hive is unaffected by level). Returns to hive to deposit, then goes idle. Up to 3 bees total per save (the starter bee + 2 purchasable "Worker Bee" hires at 10 coins each via the hive's spawn button); all bees — starter or purchased — are built through the same `createBee()` factory so they behave identically.
+- **Bear** (tames at level 2, but doesn't start fishing until level 5): travels to a lake, fishes for ~20s per cycle, catches 1 fish per cycle (3 from level 10). Fishing cycle cooldown speeds up at level 10 and again at level 15. 10% chance of a double catch (up to 6 fish) at level 20.
+- **Pig** (either color): forages food/water like dog/squirrel/chicken (see `FORAGE_TIERS.pig` in `state.js`). Level 20+: 5% chance per successful forage to enter a 5-second mud-play state, awarding 2 coins (5% chance to double to 4 — the Codex's one-line perk summary was simplified to "+2 coins" per request, but the underlying 5%-double roll is unchanged). Level-1 XP requirement is 50 food / 30 water (not a 50/50 split — see `getLevelRequirement()`'s pig-specific branch).
 
 **Other systems:**
 - Joystick (touch) + WASD/arrow keys (desktop) movement, spacebar/E to feed.
@@ -78,6 +79,35 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 ---
 
 ## Changelog
+
+### 2026-09-17 (1) — Bug-fix batch: Schrödinger region gate, locked-region spoilers, Codex mystery state, resource XP ratio, Region 7 requirement, bee/bear state labels, cat/bear perk levels & copy
+
+**Fixed:**
+- **Cat's Schrödinger roll ignored the player's location.** The 3% Lv20 chance was rolling regardless of which region the player was actually standing in — inconsistent with the panda's Bamboo Fever, which correctly only rolls while the player is in Region 7. Added the same `currentRegion === 1` guard (the cat lives in Region 1) so the box can only open while the player is there to see it.
+- **Locked-region alerts leaked the destination's theme.** The Region 7 alert said "...to unlock the Panda's habitat," naming the pet/theme before the player had ever unlocked it. Reworded both `input.js` alerts (Region 7 and the shared Region 4-6 one) to state only the numeric requirement and say "this region," never the region's identity.
+- **Codex showed real level/requirement numbers for untamed starter pets.** Dog, cat, bird, elephant, squirrel, and chicken (the six pets that live in Regions 1-3) showed `Level: 1/20` and their real next-level food/water cost even while still `WILD` (untamed) — spoiling info that should stay hidden, and inconsistent with how bee/bear/pig/panda already show `?/20` / `???` while locked. All six now show `?/20` and `???` until Level 2+, matching the others.
+- **Manual resource pickup always granted a flat +1 XP**, regardless of how much food/water the pickup actually granted (character-level bonuses can push a single pickup above 1). Changed `world.js`'s food/water collision handlers to call `gainPlayerXP()` with the actual post-multiplier amount collected, so a 3-water pickup grants +3 XP, not +1. (Egg pickups and per-unit feeding XP are unaffected — those were already 1:1 with a real unit each.)
+
+**Changed:**
+- **Region 7 unlock requirement reworked**: was "every pet in Regions 1-6 at Level 10+"; now **pets in Regions 1-3 must be Level 10+, and pets in Regions 4-6 must be Level 5+** — a deliberately lighter bar for the bee/bear/pig tier. Factored into a single new shared function, `isRegion7Unlocked()` in `world.js`, replacing three previously-separate (and now old-requirement) copies of this check in `main.js` (render/update gating), `input.js` (region-select gate + alert), and `ui.js` (Codex lock display) — same "single source of truth" pattern already used for `getCharacterBonuses()`.
+- **Bee state label cleanup**: the on-map tag under a bee's name showed the raw internal state name — `[TRAVEL]` while flying to a flower, `[RETURN_HIVE]` while flying back to deposit honey. Both now display `[FORAGE]`, since from the player's perspective both legs are just "the bee is out foraging." Applies to all bees (starter + purchased), since it's handled once in the shared `Pet.draw()` label logic rather than per-instance.
+- **Bear state label cleanup**: same idea — `[FISHING_TRAVEL]` (walking to the lake) now displays `[FISHING]`, matching the label already shown once it arrives and starts actually fishing.
+- **Cat's double-yield perk moved from "always active" to Level 15+.** The 10% chance to double a forage's food/water was rolling from level 1 onward with no gate at all; it's now correctly gated behind `this.level >= 15`, and the Codex perk list entry moved from `Lv.1` to `Lv.15` to match.
+- **Bear perks renumbered and fishing now actually gated to match:**
+    - Lv.5 (was Lv.2 / effectively "as soon as tamed"): fishing itself doesn't start until now — below Lv.5 the bear is tame and wanders normally but never queues a fishing trip. Catches 1 fish per cycle.
+    - Lv.10 (was Lv.3): fishing cycle cooldown speeds up; catch also increases to 3 fish per cycle (this fish-count threshold was already Lv.10 in the underlying code — only the cooldown-speedup level number moved to match it).
+    - Lv.15 (was Lv.5): fishing cycle cooldown speeds up further.
+    - Lv.20 (unchanged): 10% chance of a double catch (up to 6 fish).
+    - The Codex's Fishing yield line now states the actual numbers ("catches 1 fish per cycle... 3 from level 10... 10% chance of a double catch" at 20) instead of the vague "faster at higher levels."
+- **Perk-list copy simplified/corrected per request**, no mechanic change unless noted above:
+    - Bird Lv.20: shortened to "5% chance per forage to fly off to a random region" (full mechanic — the +20% regional bonus, the Region 4/5 special cases, the +2 coin return — is unchanged and still documented above and in the 2026-09-16 (8) entry, just no longer spelled out in the short Codex perk line).
+    - Pig Lv.20 (both colors): shortened to "5% chance per forage to play in mud +2 coins." The underlying 5%-chance-to-double-to-4 roll is **unchanged in code** — only the short Codex summary was trimmed.
+    - Cat Lv.20: reworded to "3% chance per forage to enter Schrödinger's state" (was a longer sentence spelling out the Dead/Alive picker and coin payout).
+    - Bee: Lv.5/10/20 perk lines now also call out that time-to-forage-a-flower drops at each of those levels (5.0s → 4.5s → 4.0s → 3.0s) alongside the existing honey-capacity increases. Travel speed to the flower and back to the hive is constant regardless of level, so that part was deliberately *not* claimed as reduced.
+
+**Verification method:** `node --check` on every touched file (`entities.js`, `world.js`, `main.js`, `input.js`, `ui.js`), and a manual trace confirming `main.js`/`input.js`/`ui.js` all now call the same `isRegion7Unlocked()` rather than keeping their own copies of the threshold logic.
+
+---
 
 ### 2026-09-16 (10) — New region: Region 7 (Panda habitat) + New pet: Panda + "Bamboo Fever" minigame
 
