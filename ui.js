@@ -118,7 +118,9 @@ function showSchrodingerPicker(cat) {
         if (e) e.preventDefault();
         let correct = (guess === cat.schrodingerOutcome);
         if (correct) {
-            inventory.coins += 10;
+            let catCoinsEarned = 10;
+            inventory.coins += catCoinsEarned;
+            if (typeof spawnCoinPopup === 'function') spawnCoinPopup(cat.homeRegion || 1, cat.x + cat.size / 2, cat.y, catCoinsEarned);
             saveGameProgress();
         }
         hideSchrodingerPicker();
@@ -191,9 +193,12 @@ function showBambooFeverPicker(panda) {
         if (e) e.preventDefault();
         hideBambooFeverPicker();
         if (choice === 'play') {
-            panda.state = 'full';
-            panda.stateTimer = 20.0;
-            if (typeof startBambooFever === 'function') startBambooFever();
+            // Resume normal behavior while the 30s minigame plays out — the panda goes
+            // to sleep (the 'full' state) only once the round actually finishes, over
+            // in updateBambooFever()'s completion block (world.js).
+            panda.state = 'wander';
+            panda.pickNewWanderTarget();
+            if (typeof startBambooFever === 'function') startBambooFever(panda);
         } else {
             panda.state = 'abandoned';
             panda.stateTimer = 30.0;
@@ -446,10 +451,16 @@ function updateUI() {
     const charLevel = document.getElementById('charLevel');
     const charXP = document.getElementById('charXP');
     const charNextXP = document.getElementById('charNextXP');
+    const charXPBarFill = document.getElementById('charXPBarFill');
 
     if (charLevel) charLevel.textContent = character.level;
     if (charXP) charXP.textContent = character.xp;
     if (charNextXP) charNextXP.textContent = getCharacterNextXP(character.level);
+    if (charXPBarFill) {
+        let nextNeeded = getCharacterNextXP(character.level);
+        let ratio = nextNeeded > 0 ? (character.xp / nextNeeded) : 0;
+        charXPBarFill.style.width = (Math.min(1, Math.max(0, ratio)) * 100) + '%';
+    }
 
     // Keep the Character screen's level/bonus numbers live while it's open (e.g. if the
     // player levels up mid-session with the screen up) without redrawing it every frame
@@ -836,28 +847,10 @@ function updateCodexData() {
 
     document.getElementById('renameBoxChicken').style.display = chicken.level >= 2 ? 'block' : 'none';
 
-        // FIXED: Ensure the loop strictly checks if data arrays are valid and populated before unlocking
-    let region4Unlocked = true; 
-    let checkCount = 0; // Tracks how many pets were successfully validated
-
-    for (let r = 1; r <= 3; r++) {
-        if (Array.isArray(petsByRegion[r]) && petsByRegion[r].length > 0) {
-            petsByRegion[r].forEach(pet => {
-                checkCount++;
-                if (pet.level < 2) {
-                    region4Unlocked = false; // Found an untamed pet!
-                }
-            });
-        } else {
-            // Safety Check: If any early region array is missing or empty, force lock it down!
-            region4Unlocked = false; 
-        }
-    }
-
-    // Secondary safety: If the script didn't evaluate all 4 core pets, keep it locked
-    if (checkCount < 4) {
-        region4Unlocked = false;
-    }
+    // Region 4-6 unlock condition: every pet across Regions 1-3 at Lv2+ — see
+    // areRegions1to3Tamed() in world.js (single source of truth, also used by
+    // main.js and input.js).
+    let region4Unlocked = areRegions1to3Tamed();
 
     // 2. FIXED: Re-render the mini pet canvas *only* if unlocked, otherwise pass a dummy locked object
     if (!region4Unlocked) {

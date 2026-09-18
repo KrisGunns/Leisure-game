@@ -47,6 +47,25 @@ body, html {
     font-weight: bold;
 }
 
+/* Player level badge XP fill — mirrors the food/water progress bar drawn above a
+   pet's head: a light-blue bar that fills left-to-right as XP approaches the next
+   level, then resets to empty on level-up. */
+.charXPBarFill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 0%;
+    background: linear-gradient(90deg, #4aa8e0, #8fd3ff);
+    transition: width 0.25s ease-out;
+    z-index: 0;
+    pointer-events: none;
+}
+.charBadgeContent {
+    position: relative;
+    z-index: 1;
+}
+
 #regionSelector {
     font-family: monospace;
     background: #333;

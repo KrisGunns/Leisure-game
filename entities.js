@@ -472,7 +472,9 @@ class Pet {
 
             if (this.stateTimer <= 0 && this.digParticles.length === 0) {
                 // Award the coin exactly once, after the timer AND the particle animation both finish
-                inventory.coins += Math.round(1 * coinBonus); 
+                let dogCoinsEarned = Math.round(1 * coinBonus);
+                inventory.coins += dogCoinsEarned;
+                if (typeof spawnCoinPopup === 'function') spawnCoinPopup(this.homeRegion, this.x + this.size / 2, this.y, dogCoinsEarned);
                 updateUI();
                 saveGameProgress();
                 this.state = 'wander';
@@ -536,7 +538,9 @@ class Pet {
                     spawnRegionFX(this.homeRegion, this.x, this.y, 'arrive');
                 }
 
-                inventory.coins += 2;
+                let birdCoinsEarned = 2;
+                inventory.coins += birdCoinsEarned;
+                if (typeof spawnCoinPopup === 'function') spawnCoinPopup(this.homeRegion, this.x + this.size / 2, this.y, birdCoinsEarned);
                 updateUI();
                 saveGameProgress();
                 this._justTeleported = true;
@@ -562,14 +566,39 @@ class Pet {
         // Player chose Starve: crying 😢 above its head, actively flees the player for 30s.
         if (this.state === 'abandoned') {
             this.stateTimer -= dt;
+
+            // Flee directly away from the player...
             let dx = this.x - player.x;
             let dy = this.y - player.y;
             let dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            let fleeX = dx / dist;
+            let fleeY = dy / dist;
+
+            // ...plus a wall-repulsion term. Without this, "directly away from the
+            // player" naturally funnels the panda into whichever corner happens to be
+            // opposite wherever the player was standing when it started fleeing — and
+            // once it's pinned against both edges of that corner, it has nowhere left
+            // to go even as the player keeps closing the distance, so it just sits
+            // there instead of continuing to run. Nudging the flee vector away from
+            // any edge it's already close to keeps it actively evading along/off the
+            // walls instead of getting stuck in one spot.
+            const margin = 70;
+            let minX = 10, maxX = canvas.width - this.size - 10;
+            let minY = 10, maxY = canvas.height - this.size - 10;
+            if (this.x - minX < margin) fleeX += (margin - (this.x - minX)) / margin;
+            if (maxX - this.x < margin) fleeX -= (margin - (maxX - this.x)) / margin;
+            if (this.y - minY < margin) fleeY += (margin - (this.y - minY)) / margin;
+            if (maxY - this.y < margin) fleeY -= (margin - (maxY - this.y)) / margin;
+
+            let fleeMag = Math.sqrt(fleeX * fleeX + fleeY * fleeY) || 1;
+            fleeX /= fleeMag;
+            fleeY /= fleeMag;
+
             let fleeSpeed = this.speed * 1.3;
-            this.x += (dx / dist) * fleeSpeed * dt;
-            this.y += (dy / dist) * fleeSpeed * dt;
-            this.x = Math.max(10, Math.min(canvas.width - this.size - 10, this.x));
-            this.y = Math.max(10, Math.min(canvas.height - this.size - 10, this.y));
+            this.x += fleeX * fleeSpeed * dt;
+            this.y += fleeY * fleeSpeed * dt;
+            this.x = Math.max(minX, Math.min(maxX, this.x));
+            this.y = Math.max(minY, Math.min(maxY, this.y));
             if (this.stateTimer <= 0) {
                 this.state = 'wander';
                 this.pickNewWanderTarget();
@@ -624,7 +653,9 @@ class Pet {
                 // 2 coins for the mud-play session, 5% chance to double to 4.
                 let mudCoins = 2;
                 if (Math.random() < 0.05) mudCoins *= 2;
-                inventory.coins += Math.round(mudCoins * coinBonus);
+                let pigCoinsEarned = Math.round(mudCoins * coinBonus);
+                inventory.coins += pigCoinsEarned;
+                if (typeof spawnCoinPopup === 'function') spawnCoinPopup(this.homeRegion, this.x + this.size / 2, this.y, pigCoinsEarned);
                 updateUI();
                 saveGameProgress();
                 this.state = 'wander';
@@ -674,7 +705,9 @@ class Pet {
                     this.y += (dy / dist) * (this.speed * 1.6) * dt;
                 } else {
                     // Caught you! Award coins and reset
-                    inventory.coins += 5;
+                    let elephantCoinsEarned = 5;
+                    inventory.coins += elephantCoinsEarned;
+                    if (typeof spawnCoinPopup === 'function') spawnCoinPopup(this.homeRegion, this.x + this.size / 2, this.y, elephantCoinsEarned);
                     updateUI();
                     saveGameProgress();
                     this.state = 'wander';
@@ -827,46 +860,53 @@ class Pet {
 
                             // Lv20+: 5% chance per successful forage (from its home region
                             // only — can't trigger a new trip mid-excursion) to fly off to a
-                            // random other region for 60s.
+                            // random other *unlocked* region for 60s. Filtering to unlocked
+                            // regions matters because the bird only needs to be Lv20 itself
+                            // — the other Region 1-3 pets, and therefore Regions 4-6/7, can
+                            // still be locked for the player at that point.
                             if (this.level >= 20 && !this.excursionActive && Math.random() < 0.05) {
-                                let choices = ALL_REGIONS.filter(r => r !== this.homeRegion);
-                                let target = choices[Math.floor(Math.random() * choices.length)];
+                                let choices = ALL_REGIONS.filter(r => r !== this.homeRegion &&
+                                    (typeof isRegionUnlocked !== 'function' || isRegionUnlocked(r)));
 
-                                if (typeof currentRegion !== 'undefined' && currentRegion === this.homeRegion) {
-                                    spawnRegionFX(this.homeRegion, this.x, this.y, 'depart');
+                                if (choices.length > 0) {
+                                    let target = choices[Math.floor(Math.random() * choices.length)];
+
+                                    if (typeof currentRegion !== 'undefined' && currentRegion === this.homeRegion) {
+                                        spawnRegionFX(this.homeRegion, this.x, this.y, 'depart');
+                                    }
+
+                                    let homeArr = petsByRegion[this.homeRegion];
+                                    let idx = homeArr.indexOf(this);
+                                    if (idx > -1) homeArr.splice(idx, 1);
+
+                                    this.excursionActive = true;
+                                    this.excursionRegion = target;
+                                    this.excursionTimer = 60.0;
+                                    this.excursionFishTimer = 0;
+                                    this.pickNewWanderTarget();
+                                    this.x = this.targetX;
+                                    this.y = this.targetY;
+                                    this.state = 'wander';
+                                    petsByRegion[target].push(this);
+
+                                    if (target === 4 && petsByRegion[4]) {
+                                        petsByRegion[4].forEach(bee => {
+                                            if (!bee._birdBoosted) {
+                                                bee.speed *= 1.20;
+                                                bee._birdBoosted = true;
+                                            }
+                                        });
+                                    }
+
+                                    if (typeof currentRegion !== 'undefined' && currentRegion === target) {
+                                        spawnRegionFX(target, this.x, this.y, 'arrive');
+                                    }
+
+                                    updateUI();
+                                    saveGameProgress();
+                                    this._justTeleported = true;
+                                    return;
                                 }
-
-                                let homeArr = petsByRegion[this.homeRegion];
-                                let idx = homeArr.indexOf(this);
-                                if (idx > -1) homeArr.splice(idx, 1);
-
-                                this.excursionActive = true;
-                                this.excursionRegion = target;
-                                this.excursionTimer = 60.0;
-                                this.excursionFishTimer = 0;
-                                this.pickNewWanderTarget();
-                                this.x = this.targetX;
-                                this.y = this.targetY;
-                                this.state = 'wander';
-                                petsByRegion[target].push(this);
-
-                                if (target === 4 && petsByRegion[4]) {
-                                    petsByRegion[4].forEach(bee => {
-                                        if (!bee._birdBoosted) {
-                                            bee.speed *= 1.20;
-                                            bee._birdBoosted = true;
-                                        }
-                                    });
-                                }
-
-                                if (typeof currentRegion !== 'undefined' && currentRegion === target) {
-                                    spawnRegionFX(target, this.x, this.y, 'arrive');
-                                }
-
-                                updateUI();
-                                saveGameProgress();
-                                this._justTeleported = true;
-                                return;
                             }
                         } else if (this.type === 'panda') {
                             let y = getForageYield('panda', this.level);
@@ -875,12 +915,13 @@ class Pet {
                             if (targetItem.type === 'food') inventory.food += finalGain;
                             else inventory.water += finalGain;
 
-                            // Lv20+: 5% chance per forage to trigger "Bamboo Fever" — but
-                            // only while the player is actually standing in Region 7 (per
-                            // spec: "Character must be in the region for the chance to
-                            // occur"). Opens the Play/Starve picker and freezes the panda
-                            // until the player answers it.
+                            // Lv20+: 5% chance per forage — only while the player is
+                            // actually standing in Region 7, and only if a round isn't
+                            // already running (now that Play lets the panda resume normal
+                            // foraging during the minigame instead of freezing, it could
+                            // otherwise re-roll and stack a second round on top).
                             if (this.level >= 20 && typeof currentRegion !== 'undefined' && currentRegion === 7 &&
+                                (typeof bambooFever === 'undefined' || !bambooFever.active) &&
                                 Math.random() < 0.05) {
                                 this.state = 'bamboo_wait';
                                 updateUI();

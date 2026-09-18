@@ -196,22 +196,8 @@ function gameLoop(timestamp) {
         }
 
         // --- AUTOMATED PET STATE PHYSICS & DRAWS ---
-        let regions1to3Tamed = true;
-        for (let checkR = 1; checkR <= 3; checkR++) {
-            if (Array.isArray(petsByRegion[checkR])) {
-                petsByRegion[checkR].forEach(pet => {
-                    if (pet.level < 2) regions1to3Tamed = false;
-                });
-            }
-        }
-
-        // Region 7 (panda) unlock condition: pets in Regions 1-3 at Lv10+, pets in
-        // Regions 4-6 at Lv5+ — see isRegion7Unlocked() in world.js.
-        let region7Unlocked = isRegion7Unlocked();
-
         for (let r = 1; r <= 7; r++) {
-            if (r >= 4 && r <= 6 && !regions1to3Tamed) continue;
-            if (r === 7 && !region7Unlocked) continue;
+            if (!isRegionUnlocked(r)) continue;
 
             let activePets = petsByRegion[r];
             if (Array.isArray(activePets)) {
@@ -236,6 +222,10 @@ function gameLoop(timestamp) {
         // sit on top of everything else in whichever region they were spawned in.
         updateRegionFX(dt);
         drawRegionFX();
+
+        // Floating "+N coins" popups (world.js) — same idea, drawn on top.
+        updateCoinPopups(dt);
+        drawCoinPopups();
 
         // Bamboo Fever minigame (Panda Lv20 perk) — countdown/collision runs regardless
         // of region (it's a hard 30s window), drawing is gated to Region 7 internally.

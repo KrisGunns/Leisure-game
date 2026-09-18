@@ -19,10 +19,13 @@
     </div>
     
     <!-- NEW: Player Level Progress Badge Center Anchor -->
-    <div id="playerLevelBadge" style="text-align: center; font-family: monospace; font-size: 11px; background: rgba(255,255,255,0.05); padding: 4px 8px; border: 1px solid #444; border-radius: 6px;">
-        ⭐ <strong style="color: #f1c40f;">LV.<span id="charLevel">1</span></strong>
-        <br>
-        <span style="color: #aaa; font-size: 9px;"><span id="charXP">0</span>/<span id="charNextXP">100</span> XP</span>
+    <div id="playerLevelBadge" style="text-align: center; font-family: monospace; font-size: 11px; background: rgba(255,255,255,0.05); padding: 4px 8px; border: 1px solid #444; border-radius: 6px; position: relative; overflow: hidden;">
+        <div id="charXPBarFill" class="charXPBarFill"></div>
+        <div class="charBadgeContent">
+            ⭐ <strong style="color: #f1c40f;">LV.<span id="charLevel">1</span></strong>
+            <br>
+            <span style="color: #aaa; font-size: 9px;"><span id="charXP">0</span>/<span id="charNextXP">100</span> XP</span>
+        </div>
     </div>
 
     <div>

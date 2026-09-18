@@ -74,7 +74,7 @@ function drawRegionFX() {
 // only tracks the actual collectible bamboo stalks on the map and the running count
 // during an active 30s round — deliberately NOT persisted across a reload, same
 // simplification approach as the bird's excursion state.
-let bambooFever = { active: false, timer: 0, collected: 0 };
+let bambooFever = { active: false, timer: 0, collected: 0, panda: null };
 let bambooItems = [];
 
 function spawnBambooBatch() {
@@ -87,10 +87,11 @@ function spawnBambooBatch() {
     }
 }
 
-function startBambooFever() {
+function startBambooFever(panda) {
     bambooFever.active = true;
     bambooFever.timer = 30.0;
     bambooFever.collected = 0;
+    bambooFever.panda = panda || null;
     spawnBambooBatch();
 }
 
@@ -127,6 +128,17 @@ function updateBambooFever(dt) {
         let coinsEarned = Math.floor(bambooFever.collected / 5);
         inventory.coins += coinsEarned;
         if (typeof showBambooResultToast === 'function') showBambooResultToast(bambooFever.collected, coinsEarned);
+        // The panda only actually goes to sleep (the 'full' state, 💤) now that the
+        // round is over — this used to fire the instant Play was chosen, so the sleep
+        // overlay showed *during* the minigame instead of as its aftermath.
+        if (bambooFever.panda) {
+            if (coinsEarned > 0) {
+                spawnCoinPopup(bambooFever.panda.homeRegion || 7, bambooFever.panda.x + bambooFever.panda.size / 2, bambooFever.panda.y, coinsEarned);
+            }
+            bambooFever.panda.state = 'full';
+            bambooFever.panda.stateTimer = 20.0;
+            bambooFever.panda = null;
+        }
         updateUI();
         saveGameProgress();
     }
@@ -289,6 +301,68 @@ const petsByRegion = {
 // of where it happens to be at save time.
 const birdPet = petsByRegion[3][2];
 
+// Tag every pet with the region it was created in. Used for gating things that must
+// only happen/show while the player is actually looking at that pet's region — e.g.
+// coin popups below — for the pets that don't already track this themselves (the
+// bird already has `homeRegion`, left untouched since it's the same value anyway).
+for (let r = 1; r <= 7; r++) {
+    if (Array.isArray(petsByRegion[r])) {
+        petsByRegion[r].forEach(pet => { if (!pet.homeRegion) pet.homeRegion = r; });
+    }
+}
+
+// Floating "+N 🪙" popups shown above a pet right after it rewards the player with
+// coins (dog digging, elephant tag, pig mud play, bird's excursion return, cat's
+// correct Schrödinger guess, panda's Bamboo Fever payout). Same one-shot,
+// region-filtered pattern as spawnRegionFX above — a pet's coin event can fire while
+// the player is looking at an entirely different region (pets simulate in the
+// background), so popups are tagged with the region they belong to and only drawn
+// while the player is actually there to see them.
+let coinPopups = [];
+function spawnCoinPopup(region, x, y, amount) {
+    coinPopups.push({ region: region, x: x, y: y, amount: amount, age: 0, life: 1.1 });
+}
+function updateCoinPopups(dt) {
+    for (let i = coinPopups.length - 1; i >= 0; i--) {
+        coinPopups[i].age += dt;
+        if (coinPopups[i].age >= coinPopups[i].life) coinPopups.splice(i, 1);
+    }
+}
+function drawCoinPopups() {
+    coinPopups.forEach(p => {
+        if (p.region !== currentRegion) return;
+        let t = p.age / p.life; // 0 -> 1
+        let riseY = p.y - t * 28;
+        let alpha = t < 0.75 ? 1 : 1 - (t - 0.75) / 0.25;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, alpha);
+        ctx.font = 'bold 13px monospace';
+        ctx.textAlign = 'center';
+        let text = `+${p.amount} 🪙`;
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(0,0,0,0.65)';
+        ctx.strokeText(text, p.x, riseY);
+        ctx.fillStyle = '#f1c40f';
+        ctx.fillText(text, p.x, riseY);
+        ctx.restore();
+    });
+}
+
+// Whether Regions 4-6 are unlocked: every pet across Regions 1-3 must be Level 2+
+// (tamed). Single source of truth — used by main.js (render/update gating), input.js
+// (region-select gate), ui.js (Codex lock display), and entities.js (the bird's
+// excursion target picker, so it can't send the bird to a region the player hasn't
+// actually unlocked yet).
+function areRegions1to3Tamed() {
+    for (let r = 1; r <= 3; r++) {
+        if (!Array.isArray(petsByRegion[r]) || petsByRegion[r].length === 0) return false;
+        for (let i = 0; i < petsByRegion[r].length; i++) {
+            if (petsByRegion[r][i].level < 2) return false;
+        }
+    }
+    return true;
+}
+
 // Region 7 (panda) unlock condition — single source of truth used by main.js (render
 // gating), input.js (region-select gate), and ui.js (Codex lock display) so the rule
 // can't drift out of sync between them: pets in Regions 1-3 must be Level 10+, and
@@ -307,6 +381,16 @@ function isRegion7Unlocked() {
         }
     }
     return true;
+}
+
+// Whether a given region is currently accessible to the player at all. Wraps the two
+// checks above into one lookup so callers (the render loop, the bird's excursion
+// target picker, etc.) don't have to know the per-region-range rules themselves.
+function isRegionUnlocked(r) {
+    if (r >= 1 && r <= 3) return true;
+    if (r === 7) return isRegion7Unlocked();
+    if (r >= 4 && r <= 6) return areRegions1to3Tamed();
+    return false;
 }
 
 function resizeCanvas() {

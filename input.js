@@ -114,6 +114,18 @@ if (interactBtnElement) {
             return;
         }
 
+        // Capture the pointer to this button for the duration of the press. Without
+        // this, a touch's natural micro-movement during a hold (a few px of finger
+        // drift, still very much on the screen) fires a real `pointerleave` the moment
+        // it crosses the button's edge — which haltFeedTimers() below was treating as
+        // "the player let go," cutting the hold short or making a press feel like it
+        // never registered in the first place. Capturing keeps every subsequent event
+        // for this pointer targeted at the button regardless of where the finger
+        // actually drifts, so the hold only ever ends on a genuine release.
+        if (typeof interactBtnElement.setPointerCapture === 'function') {
+            try { interactBtnElement.setPointerCapture(e.pointerId); } catch (err) { /* unsupported/already released — fine, falls back to normal hit-testing */ }
+        }
+
         feedHoldCounter = 0; 
         executeContinuousFeed();
         
@@ -126,6 +138,10 @@ if (interactBtnElement) {
     interactBtnElement.addEventListener('pointerup', haltFeedTimers);
     interactBtnElement.addEventListener('pointerleave', haltFeedTimers);
     interactBtnElement.addEventListener('pointercancel', haltFeedTimers);
+    // Fallback in case capture is released by the OS/browser without a matching
+    // pointerup/pointercancel ever arriving (rare, but same spirit as the other
+    // safety nets below) — makes sure the hold can't get stuck running forever.
+    interactBtnElement.addEventListener('lostpointercapture', haltFeedTimers);
 }
 
 // SAFETY NET: guarantees the feed-hold interval always stops, even if the button
@@ -189,18 +205,7 @@ if (regionSelector) {
                 return;
             }
         } else if (selectedRegion >= 4) {
-            let allTamed = true;
-            for (let r = 1; r <= 3; r++) {
-                if (Array.isArray(petsByRegion[r])) {
-                    petsByRegion[r].forEach(pet => {
-                        if (pet.level < 2) {
-                            allTamed = false;
-                        }
-                    });
-                }
-            }
-            
-            if (!allTamed) {
+            if (!areRegions1to3Tamed()) {
                 alert("🔒 Region locked! You must tame all pets in Regions 1-3 (reach Level 2+) to unlock this region.");
                 regionSelector.value = currentRegion;
                 return;
@@ -213,6 +218,25 @@ if (regionSelector) {
         flowers = regionalItems[currentRegion].flowers;
         if (whistleBtn) whistleBtn.textContent = 'WHISTLE';
         if (typeof hideWhistlePicker === 'function') hideWhistlePicker();
+
+        // Pending pet-choice pickers (Schrödinger, Bamboo Fever) are fixed-position DOM
+        // overlays, not tied to the canvas — nothing was hiding them on a region switch,
+        // so they used to stay on screen and follow the player to every other region.
+        if (typeof hideSchrodingerPicker === 'function') hideSchrodingerPicker();
+        if (typeof hideBambooFeverPicker === 'function') hideBambooFeverPicker();
+        // Bamboo Fever's picker (unlike Schrödinger's) opens immediately with no
+        // proximity-based re-open once dismissed — so if it's closed here before the
+        // player actually answers it, also reset the panda out of 'bamboo_wait', or it
+        // would stay frozen forever with no way to ever resume the choice.
+        if (typeof petsByRegion !== 'undefined' && petsByRegion[7]) {
+            petsByRegion[7].forEach(p => {
+                if (p.type === 'panda' && p.state === 'bamboo_wait') {
+                    p.state = 'wander';
+                    if (typeof p.pickNewWanderTarget === 'function') p.pickNewWanderTarget();
+                }
+            });
+        }
+
         saveGameProgress();
     });
 }
@@ -257,11 +281,24 @@ function executeContinuousFeed() {
         
         if (dist < 80) {
             let req = getLevelRequirement(pet.type, pet.level);
-            let feedAmount = 1;
 
-            if (feedHoldCounter > 30) feedAmount = 25;      
-            else if (feedHoldCounter > 15) feedAmount = 8;  
-            else if (feedHoldCounter > 5) feedAmount = 3;
+            // Feed speed scales with how much this pet's current level actually needs,
+            // rather than a fixed unit count per tick — a flat rate meant a pet needing
+            // a few hundred food/water at high levels took far longer to fill than one
+            // needing a handful. These fractions (of the total still needed) are tuned
+            // so holding at max speed fills the bar in ~3 seconds regardless of the
+            // pet's actual requirement: roughly 1% per tick for the first 0.5s, 2.5%
+            // per tick through 1.5s, then ~4.7% per tick from 1.5s onward (which is
+            // also the sustained "max speed" rate for any overflow into further levels).
+            let totalNeeded = (pet.type === 'bear') ? req : (req.food + req.water);
+            if (!(totalNeeded > 0)) totalNeeded = 1;
+
+            let feedFraction;
+            if (feedHoldCounter > 15) feedFraction = 0.0467;
+            else if (feedHoldCounter > 5) feedFraction = 0.025;
+            else feedFraction = 0.01;
+
+            let feedAmount = Math.max(1, Math.ceil(totalNeeded * feedFraction));
 
             for (let i = 0; i < feedAmount; i++) {
                 if (pet.level >= 20) break;
