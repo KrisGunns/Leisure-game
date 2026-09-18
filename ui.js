@@ -293,24 +293,24 @@ function getPetPerkDescriptions(type) {
     } else if (type === 'elephant') {
         perks.push({ level: 20, text: '10% chance to start a "catch me" play minigame (+5 coins)' });
     } else if (type === 'pig') {
-        perks.push({ level: 20, text: '5% chance per forage to play in the mud for 5s (+2 coins, 5% chance to double to +4)' });
+        perks.push({ level: 20, text: '5% chance per forage to play in mud +2 coins' });
     } else if (type === 'cat') {
-        perks.push({ level: 1, text: '10% chance per forage to double the food/water gained' });
-        perks.push({ level: 20, text: '3% chance per forage to enter the "Schrödinger" state — approach and choose Dead or Alive for a chance at +10 coins' });
+        perks.push({ level: 15, text: '10% chance per forage to double the food/water gained' });
+        perks.push({ level: 20, text: "3% chance per forage to enter Schrödinger's state" });
     } else if (type === 'bird') {
-        perks.push({ level: 20, text: '5% chance per forage to fly off to a random region for 60s — forages there with +20% food/water (fishes in Region 5, boosts bees +20% in Region 4), then returns home with +2 coins' });
+        perks.push({ level: 20, text: '5% chance per forage to fly off to a random region' });
     } else if (type === 'panda') {
         perks.push({ level: 20, text: '5% chance per forage (while you\'re in Region 7) to start "Bamboo Fever" — choose Play to collect bamboo for coins while it naps, or Starve and it flees you for 30s' });
     } else if (type === 'bee') {
         perks.push({ level: 1, text: 'Carries 1 honey load before returning to the hive' });
-        perks.push({ level: 5, text: 'Honey capacity increases to 2' });
-        perks.push({ level: 10, text: 'Honey capacity increases to 3' });
-        perks.push({ level: 20, text: 'Honey capacity increases to 5, plus a 10% chance of double honey' });
+        perks.push({ level: 5, text: 'Honey capacity increases to 2, and time to forage a flower decreases to 4.5s' });
+        perks.push({ level: 10, text: 'Honey capacity increases to 3, and time to forage a flower decreases to 4.0s' });
+        perks.push({ level: 20, text: 'Honey capacity increases to 5, time to forage a flower decreases to 3.0s, plus a 10% chance of double honey' });
     } else if (type === 'bear') {
-        perks.push({ level: 2, text: 'Starts fishing at the lake' });
-        perks.push({ level: 3, text: 'Fishing cycle speeds up' });
-        perks.push({ level: 5, text: 'Fishing cycle speeds up further' });
-        perks.push({ level: 20, text: '10% chance of a double catch' });
+        perks.push({ level: 5, text: 'Starts fishing at the lake, catching 1 fish per cycle' });
+        perks.push({ level: 10, text: 'Fishing cycle speeds up, and catch increases to 3 fish per cycle' });
+        perks.push({ level: 15, text: 'Fishing cycle speeds up further' });
+        perks.push({ level: 20, text: '10% chance of a double catch (up to 6 fish)' });
     }
 
     perks.sort((a, b) => a.level - b.level);
@@ -374,7 +374,8 @@ function showPetDetail(pet) {
         let cap = pet.level >= 20 ? 5 : pet.level >= 10 ? 3 : pet.level >= 5 ? 2 : 1;
         yieldSection.innerHTML = `<strong>Honey Capacity</strong><br>🍯 carries up to ${cap} before returning to the hive`;
     } else if (pet.type === 'bear') {
-        yieldSection.innerHTML = `<strong>Fishing</strong><br>🐟 catches fish periodically, faster at higher levels`;
+        let fishPerCycle = pet.level >= 10 ? 3 : 1;
+        yieldSection.innerHTML = `<strong>Fishing</strong><br>🐟 catches ${fishPerCycle} fish per cycle (starts at Lv.5, cycle speeds up at Lv.10 and Lv.15${pet.level >= 20 ? ', 10% chance of a double catch' : ''})`;
     }
     card.appendChild(yieldSection);
 
@@ -778,8 +779,8 @@ function updateCodexData() {
     document.getElementById('infoDog').innerHTML = `
         <strong>${dog.level >= 2 ? dog.label : '???'}</strong><br>
         Status: <span class="${dog.level >= 2 ? 'codexTamed' : 'codexWild'}">${dog.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
-        Level: ${dog.level}/20<br>
-        Next Req: ${dog.level < 20 ? '🍪' + dogReq.food + ' 💧' + dogReq.water : 'MAX'}
+        Level: ${dog.level >= 2 ? dog.level + '/20' : '?/20'}<br>
+        Next Req: ${dog.level < 2 ? '???' : (dog.level < 20 ? '🍪' + dogReq.food + ' 💧' + dogReq.water : 'MAX')}
     `;
 
     document.getElementById('renameBoxDog').style.display = dog.level >= 2 ? 'block' : 'none';
@@ -788,8 +789,8 @@ function updateCodexData() {
     document.getElementById('infoCat').innerHTML = `
         <strong>${cat.level >= 2 ? cat.label : '???'}</strong><br>
         Status: <span class="${cat.level >= 2 ? 'codexTamed' : 'codexWild'}">${cat.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
-        Level: ${cat.level}/20<br>
-        Next Req: ${cat.level < 20 ? '🍪' + catReq.food + ' 💧' + catReq.water : 'MAX'}
+        Level: ${cat.level >= 2 ? cat.level + '/20' : '?/20'}<br>
+        Next Req: ${cat.level < 2 ? '???' : (cat.level < 20 ? '🍪' + catReq.food + ' 💧' + catReq.water : 'MAX')}
     `;
 
     document.getElementById('renameBoxCat').style.display = cat.level >= 2 ? 'block' : 'none';
@@ -798,8 +799,8 @@ function updateCodexData() {
     document.getElementById('infoBird').innerHTML = `
         <strong>${bird.level >= 2 ? bird.label : '???'}</strong><br>
         Status: <span class="${bird.level >= 2 ? 'codexTamed' : 'codexWild'}">${bird.level >= 2 ? 'TAMED' : 'WILD'}${bird.excursionActive ? ' (away)' : ''}</span><br>
-        Level: ${bird.level}/20<br>
-        Next Req: ${bird.level < 20 ? '🍪' + birdReq.food + ' 💧' + birdReq.water : 'MAX'}
+        Level: ${bird.level >= 2 ? bird.level + '/20' : '?/20'}<br>
+        Next Req: ${bird.level < 2 ? '???' : (bird.level < 20 ? '🍪' + birdReq.food + ' 💧' + birdReq.water : 'MAX')}
     `;
 
     document.getElementById('renameBoxBird').style.display = bird.level >= 2 ? 'block' : 'none';
@@ -809,8 +810,8 @@ function updateCodexData() {
     document.getElementById('infoElephant').innerHTML = `
         <strong>${elephant.level >= 2 ? elephant.label : '???'}</strong><br>
         Status: <span class="${elephant.level >= 2 ? 'codexTamed' : 'codexWild'}">${elephant.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
-        Level: ${elephant.level}/20<br>
-        Next Req: ${elephant.level < 20 ? '🍪' + elReq.food + ' 💧' + elReq.water : 'MAX'}
+        Level: ${elephant.level >= 2 ? elephant.level + '/20' : '?/20'}<br>
+        Next Req: ${elephant.level < 2 ? '???' : (elephant.level < 20 ? '🍪' + elReq.food + ' 💧' + elReq.water : 'MAX')}
     `;
 
     document.getElementById('renameBoxElephant').style.display = elephant.level >= 2 ? 'block' : 'none';
@@ -819,8 +820,8 @@ function updateCodexData() {
     document.getElementById('infoSquirrel').innerHTML = `
         <strong>${squirrel.level >= 2 ? squirrel.label : '???'}</strong><br>
         Status: <span class="${squirrel.level >= 2 ? 'codexTamed' : 'codexWild'}">${squirrel.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
-        Level: ${squirrel.level}/20<br>
-        Next Req: ${squirrel.level < 20 ? '🍪' + sqReq.food + ' 💧' + sqReq.water : 'MAX'}
+        Level: ${squirrel.level >= 2 ? squirrel.level + '/20' : '?/20'}<br>
+        Next Req: ${squirrel.level < 2 ? '???' : (squirrel.level < 20 ? '🍪' + sqReq.food + ' 💧' + sqReq.water : 'MAX')}
     `;
 
     document.getElementById('renameBoxSquirrel').style.display = squirrel.level >= 2 ? 'block' : 'none';
@@ -829,8 +830,8 @@ function updateCodexData() {
     document.getElementById('infoChicken').innerHTML = `
         <strong>${chicken.level >= 2 ? chicken.label : '???'}</strong><br>
         Status: <span class="${chicken.level >= 2 ? 'codexTamed' : 'codexWild'}">${chicken.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
-        Level: ${chicken.level}/20<br>
-        Next Req: ${chicken.level < 20 ? '🍪' + chReq.food + ' 💧' + chReq.water : 'MAX'}
+        Level: ${chicken.level >= 2 ? chicken.level + '/20' : '?/20'}<br>
+        Next Req: ${chicken.level < 2 ? '???' : (chicken.level < 20 ? '🍪' + chReq.food + ' 💧' + chReq.water : 'MAX')}
     `;
 
     document.getElementById('renameBoxChicken').style.display = chicken.level >= 2 ? 'block' : 'none';
@@ -947,18 +948,10 @@ function updateCodexData() {
         if (renameEl) renameEl.style.display = (region4Unlocked && slot.pig.level >= 2) ? 'block' : 'none';
     });
 
-    // Region 7 panda — gated behind its own, stricter unlock condition: every pet
-    // across Regions 1-6 at Lv10+ (not just Regions 1-3 tamed, like Region 4-6 above).
-    let region7Unlocked = true;
-    for (let r = 1; r <= 6; r++) {
-        if (Array.isArray(petsByRegion[r]) && petsByRegion[r].length > 0) {
-            petsByRegion[r].forEach(pet => {
-                if (pet.level < 10) region7Unlocked = false;
-            });
-        } else {
-            region7Unlocked = false;
-        }
-    }
+    // Region 7 panda — gated behind its own, stricter unlock condition: pets in
+    // Regions 1-3 at Lv10+ and pets in Regions 4-6 at Lv5+ — see isRegion7Unlocked()
+    // in world.js (single source of truth, also used by main.js and input.js).
+    let region7Unlocked = isRegion7Unlocked();
 
     if (panda) {
         if (!region7Unlocked) {

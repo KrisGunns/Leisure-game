@@ -174,8 +174,8 @@ class Pet {
     // other bear created another way (e.g. a future "buy a bear" feature, or save/load
     // reconstruction) wouldn't have this method at all. Now a real class method.
     setNextFishingCooldown() {
-        if (this.level >= 5) this.fishingTimer = Math.random() * 30 + 50;
-        else if (this.level >= 3) this.fishingTimer = Math.random() * 25 + 60;
+        if (this.level >= 15) this.fishingTimer = Math.random() * 30 + 50;
+        else if (this.level >= 10) this.fishingTimer = Math.random() * 25 + 60;
         else this.fishingTimer = Math.random() * 20 + 70;
     }
 
@@ -407,10 +407,14 @@ class Pet {
                 return;
             }
 
-            this.fishingTimer -= dt;
-            if (this.fishingTimer <= 0) {
-                this.state = 'fishing_travel';
-                return;
+            // Fishing itself doesn't start until Level 5 — below that the bear is tame
+            // (Level 2+) and wanders normally, but never queues up a fishing trip.
+            if (this.level >= 5) {
+                this.fishingTimer -= dt;
+                if (this.fishingTimer <= 0) {
+                    this.state = 'fishing_travel';
+                    return;
+                }
             }
 
             if (this.state === 'idle') {
@@ -793,15 +797,18 @@ class Pet {
                             let y = getForageYield('cat', this.level);
                             let gain = (targetItem.type === 'food') ? y.food : y.water;
                             let finalGain = Math.round(gain * petFoodWaterBonus);
-                            // 10% chance to double whatever was actually granted.
-                            if (Math.random() < 0.10) finalGain *= 2;
+                            // Level 15+: 10% chance to double whatever was actually granted.
+                            if (this.level >= 15 && Math.random() < 0.10) finalGain *= 2;
                             if (targetItem.type === 'food') inventory.food += finalGain;
                             else inventory.water += finalGain;
 
                             // Level 20+: 3% chance per successful forage to enter the
                             // Schrödinger box — freezes in place until the player comes
-                            // over and calls it.
-                            if (this.level >= 20 && Math.random() < 0.03) {
+                            // over and calls it. Only rolls while the player is actually
+                            // standing in the cat's region (Region 1), matching the
+                            // panda's Bamboo Fever "must be in the region" rule.
+                            if (this.level >= 20 && typeof currentRegion !== 'undefined' && currentRegion === 1 &&
+                                Math.random() < 0.03) {
                                 this.state = 'schrodinger';
                                 this.schrodingerOutcome = Math.random() < 0.5 ? 'alive' : 'dead';
                                 this.schrodingerVisible = true;
@@ -1186,6 +1193,13 @@ draw() {
             // FIXED: Checks if Elephant is in any of its custom chase sub-states, keeping tag as [PLAYING]
             if (this.state.startsWith('playing') || this.state === 'playing_wait_for_move') {
                 text += ' [PLAYING]';
+            } else if (this.type === 'bee' && (this.state === 'travel' || this.state === 'return_hive')) {
+                // Both legs of the bee's flower run (heading to a flower, or heading
+                // back to the hive to drop off honey) read simply as foraging.
+                text += ' [FORAGE]';
+            } else if (this.type === 'bear' && this.state === 'fishing_travel') {
+                // Heading to the lake is still just "fishing" from the player's view.
+                text += ' [FISHING]';
             } else {
                 text += ` [${this.state.toUpperCase()}]`;
             }

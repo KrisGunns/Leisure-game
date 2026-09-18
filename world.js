@@ -289,6 +289,26 @@ const petsByRegion = {
 // of where it happens to be at save time.
 const birdPet = petsByRegion[3][2];
 
+// Region 7 (panda) unlock condition — single source of truth used by main.js (render
+// gating), input.js (region-select gate), and ui.js (Codex lock display) so the rule
+// can't drift out of sync between them: pets in Regions 1-3 must be Level 10+, and
+// pets in Regions 4-6 must be Level 5+.
+function isRegion7Unlocked() {
+    for (let r = 1; r <= 3; r++) {
+        if (!Array.isArray(petsByRegion[r]) || petsByRegion[r].length === 0) return false;
+        for (let i = 0; i < petsByRegion[r].length; i++) {
+            if (petsByRegion[r][i].level < 10) return false;
+        }
+    }
+    for (let r = 4; r <= 6; r++) {
+        if (!Array.isArray(petsByRegion[r]) || petsByRegion[r].length === 0) return false;
+        for (let i = 0; i < petsByRegion[r].length; i++) {
+            if (petsByRegion[r][i].level < 5) return false;
+        }
+    }
+    return true;
+}
+
 function resizeCanvas() {
     const parent = canvas.parentElement;
     let w = parent ? parent.clientWidth : 0;
@@ -344,9 +364,10 @@ function checkCollisions() {
 
                 let foodBaseGain = 1;
                 let manualFoodMultiplier = getCharacterBonuses(character.level).manualGather;
-                inventory.food += Math.round(foodBaseGain * manualFoodMultiplier);
+                let foodGained = Math.round(foodBaseGain * manualFoodMultiplier);
+                inventory.food += foodGained;
                 
-                gainPlayerXP(1); 
+                gainPlayerXP(foodGained); // 1:1 with the amount actually collected (post-multiplier)
                 updateUI();
                 saveGameProgress();
                 
@@ -373,9 +394,10 @@ function checkCollisions() {
 
                 let waterBaseGain = 1;
                 let manualWaterMultiplier = getCharacterBonuses(character.level).manualGather;
-                inventory.water += Math.round(waterBaseGain * manualWaterMultiplier);
+                let waterGained = Math.round(waterBaseGain * manualWaterMultiplier);
+                inventory.water += waterGained;
                 
-                gainPlayerXP(1); 
+                gainPlayerXP(waterGained); // 1:1 with the amount actually collected (post-multiplier)
                 updateUI();
                 saveGameProgress();
                 hasCollectedThisFrame = true;

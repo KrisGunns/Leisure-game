@@ -183,17 +183,8 @@ if (regionSelector) {
         let selectedRegion = parseInt(e.target.value);
 
         if (selectedRegion === 7) {
-            let allLv10 = true;
-            for (let r = 1; r <= 6; r++) {
-                if (Array.isArray(petsByRegion[r])) {
-                    petsByRegion[r].forEach(pet => {
-                        if (pet.level < 10) allLv10 = false;
-                    });
-                }
-            }
-
-            if (!allLv10) {
-                alert("🔒 Region locked! Every pet in Regions 1-6 must reach Level 10+ to unlock the Panda's habitat.");
+            if (!isRegion7Unlocked()) {
+                alert("🔒 Region locked! Pets in Regions 1-3 must reach Level 10+, and pets in Regions 4-6 must reach Level 5+, to unlock this region.");
                 regionSelector.value = currentRegion;
                 return;
             }
@@ -210,7 +201,7 @@ if (regionSelector) {
             }
             
             if (!allTamed) {
-                alert("🔒 Region locked! You must tame all pets in Regions 1-3 (reach Level 2+) to unlock this area.");
+                alert("🔒 Region locked! You must tame all pets in Regions 1-3 (reach Level 2+) to unlock this region.");
                 regionSelector.value = currentRegion;
                 return;
             }

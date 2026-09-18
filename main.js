@@ -205,19 +205,13 @@ function gameLoop(timestamp) {
             }
         }
 
-        // Region 7 (panda) unlock condition: every pet across Regions 1-6 at Lv10+.
-        let regions1to6Lv10 = true;
-        for (let checkR = 1; checkR <= 6; checkR++) {
-            if (Array.isArray(petsByRegion[checkR])) {
-                petsByRegion[checkR].forEach(pet => {
-                    if (pet.level < 10) regions1to6Lv10 = false;
-                });
-            }
-        }
+        // Region 7 (panda) unlock condition: pets in Regions 1-3 at Lv10+, pets in
+        // Regions 4-6 at Lv5+ — see isRegion7Unlocked() in world.js.
+        let region7Unlocked = isRegion7Unlocked();
 
         for (let r = 1; r <= 7; r++) {
             if (r >= 4 && r <= 6 && !regions1to3Tamed) continue;
-            if (r === 7 && !regions1to6Lv10) continue;
+            if (r === 7 && !region7Unlocked) continue;
 
             let activePets = petsByRegion[r];
             if (Array.isArray(activePets)) {
