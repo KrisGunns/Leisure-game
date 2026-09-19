@@ -183,7 +183,10 @@ let waters = regionalItems[currentRegion].waters;
 let flowers = regionalItems[currentRegion].flowers;
 let bananas = regionalItems[currentRegion].bananas;
 
-const region4Hive = { x: 225, y: 75 };
+// `honey` is the hive's own stored honey pool — bees deposit into it (entities.js)
+// instead of crediting the player's inventory directly, and the player collects it
+// manually via GIVE while standing near the hive (input.js). No cap.
+const region4Hive = { x: 225, y: 75, honey: 0 };
 
 // Single source of truth for creating a bee. Used for the starter bee below AND for
 // bees bought from the hive (ui.js) AND for reconstructing purchased bees on load
@@ -546,6 +549,7 @@ function checkCollisions() {
 
     // 5. 🐝 Dynamic Proximity Distance Hive Button Trigger
     const spawnBeeBtn = document.getElementById('spawnBeeBtn');
+    const hiveHoneyLabel = document.getElementById('hiveHoneyLabel');
     if (currentRegion === 4 && typeof region4Hive !== 'undefined' && region4Hive && spawnBeeBtn) {
         let hx = region4Hive.x;
         let hy = region4Hive.y;
@@ -559,11 +563,20 @@ function checkCollisions() {
             } else {
                 spawnBeeBtn.style.display = 'none';
             }
+            // Shows the hive's currently-stored (uncollected) honey whenever the player
+            // is close enough to collect it with GIVE — see executeContinuousFeed() in
+            // input.js for the actual collection.
+            if (hiveHoneyLabel) {
+                hiveHoneyLabel.style.display = 'block';
+                hiveHoneyLabel.textContent = `🍯 Hive: ${region4Hive.honey} (GIVE to collect)`;
+            }
         } else {
             spawnBeeBtn.style.display = 'none';
+            if (hiveHoneyLabel) hiveHoneyLabel.style.display = 'none';
         }
-    } else if (spawnBeeBtn) {
-        spawnBeeBtn.style.display = 'none';
+    } else {
+        if (spawnBeeBtn) spawnBeeBtn.style.display = 'none';
+        if (hiveHoneyLabel) hiveHoneyLabel.style.display = 'none';
     }
 
 }

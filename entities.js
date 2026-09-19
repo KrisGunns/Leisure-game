@@ -299,7 +299,10 @@ class Pet {
                     if (this.level >= 20 && Math.random() < 0.10) {
                         dropCount *= 2; 
                     }
-                    inventory.honey += Math.round(dropCount * petHoneyBonus);
+                    // Deposits into the hive's own stored pool now, not straight into the
+                    // player's inventory — the player collects it manually with GIVE
+                    // while standing near the hive (see executeContinuousFeed(), input.js).
+                    region4Hive.honey += Math.round(dropCount * petHoneyBonus);
                     this.honeyCarried = 0;
                     updateUI();
                     saveGameProgress();

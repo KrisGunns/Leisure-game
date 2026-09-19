@@ -232,6 +232,9 @@ function saveGameProgress() {
                 bananas: inventory.bananas
             },
             currentRegion: currentRegion,
+            // The hive's own stored (uncollected) honey pool — separate from
+            // inventory.honey, which is only what the player has actually collected.
+            hiveHoney: (typeof region4Hive !== 'undefined' && region4Hive) ? region4Hive.honey : 0,
             // Saved as an array per region (not keyed by pet type) so multiple pets of
             // the same type — e.g. purchased worker bees — don't overwrite each other.
             petsByRegion: {}
@@ -289,6 +292,10 @@ function loadGameProgress() {
             inventory.coins = stateMatrix.inventory.coins || 0;
             inventory.eggs = stateMatrix.inventory.eggs || 0;
             inventory.bananas = stateMatrix.inventory.bananas || 0;
+        }
+
+        if (typeof region4Hive !== 'undefined' && region4Hive) {
+            region4Hive.honey = stateMatrix.hiveHoney || 0;
         }
 
         // FIXED: Fully restore and link Character Level and XP to the HUD on page load

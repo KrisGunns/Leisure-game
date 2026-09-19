@@ -1266,6 +1266,8 @@ if (btnWipeSave) {
             inventory.fish = 0; 
             inventory.coins = 0; 
             inventory.eggs = 0;
+            inventory.bananas = 0;
+            if (typeof region4Hive !== 'undefined' && region4Hive) region4Hive.honey = 0;
             
             // 3. FIXED: Hard-reset all pet variables back to Level 1 wild status instantly
             for (let r in petsByRegion) {

@@ -157,6 +157,20 @@ body, html {
     z-index: 100000;      /* Guarantees it floats over background canvas structures */
 }
 
+#hiveHoneyLabel {
+    position: absolute;
+    bottom: 225px;         /* Stacks directly above spawnBeeBtn with the same 10px gap pattern */
+    right: 20px;
+    left: auto !important;
+    width: 150px;
+    padding: 6px 6px;
+    font-size: 10px;
+    font-weight: bold;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    z-index: 100000;
+}
+
 #openMenuBtn {
     top: 15px;
     left: 15px;
