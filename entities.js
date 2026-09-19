@@ -270,7 +270,10 @@ class Pet {
                     let idx = activeFlowers.indexOf(this.targetFlower);
                     if (idx > -1) {
                         activeFlowers.splice(idx, 1);
-                        respawnQueue.push({ type: 'flower', time: Date.now() + 10000 });
+                        // No respawnQueue push here — Region 4's flowers are now
+                        // refilled by processSpawns()'s count-driven "count < 5 → 2s →
+                        // batch refill to 5" model (world.js), same as food/water/
+                        // bananas, rather than a per-pickup 10-second timer.
                     }
                     this.targetFlower = null;
                     this.honeyCarried++;

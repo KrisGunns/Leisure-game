@@ -581,35 +581,31 @@ function checkCollisions() {
 
 }
 
-// Per-region "refill window" countdowns for the count-driven food/water/banana spawn
-// model below — keyed by region id. As soon as a region's resource count drops under
-// its 10-item cap, a 2-second countdown starts (if one isn't already running); once it
-// reaches 0, the region is topped straight back up to its max in one batch (not
-// trickled item-by-item), and the countdown clears until the count drops below the cap
-// again. Replaces the old fixed-10-second trickle (1 food + 1 water per tick) and the
-// old per-pickup 10-second individual respawnQueue timer for these three resources —
-// both of which made refills feel like "everything pops back in at once every 10s"
-// with long dry spells in between, rather than promptly topping back up.
+// Per-region "refill window" countdowns for the count-driven resource spawn model
+// below — keyed by region id. As soon as a region's resource count drops under its
+// cap, a 2-second countdown starts (if one isn't already running); once it reaches 0,
+// the region is topped straight back up to its max in one batch (not trickled
+// item-by-item), and the countdown clears until the count drops below the cap again.
+// Replaces the old fixed-10-second trickle and the old per-pickup 10-second individual
+// respawnQueue timer for all four spawnable resources (food, water, bananas, and now
+// flowers too) — all of which made refills feel like "everything pops back in at once
+// every 10s" with long dry spells in between, rather than promptly topping back up.
 let regionRefillTimers = {};
 
 function processSpawns(dt) {
-    let now = Date.now();
-
-    // Flowers (Region 4, bees) keep their original per-item respawnQueue + periodic
-    // top-up model, unchanged — not part of this rework.
-    for (let i = respawnQueue.length - 1; i >= 0; i--) {
-        if (now >= respawnQueue[i].time && respawnQueue[i].type === 'flower') {
-            if (regionalItems[4].flowers.length < 5) {
-                regionalItems[4].flowers.push(new Flower());
-            }
-            respawnQueue.splice(i, 1);
+    // Region 4 (bees): flowers, capped at 5 — same model as food/water/bananas below,
+    // just its own smaller cap (unchanged from before; only the *rate* changed).
+    let flowerPool = regionalItems[4].flowers;
+    if (flowerPool.length >= 5) {
+        regionRefillTimers[4] = undefined;
+    } else if (regionRefillTimers[4] === undefined) {
+        regionRefillTimers[4] = 2.0;
+    } else {
+        regionRefillTimers[4] -= dt;
+        if (regionRefillTimers[4] <= 0) {
+            while (flowerPool.length < 5) flowerPool.push(new Flower());
+            regionRefillTimers[4] = undefined;
         }
-    }
-
-    spawnTimer += dt;
-    if (spawnTimer >= 10) {
-        if (regionalItems[4].flowers.length < 5) regionalItems[4].flowers.push(new Flower());
-        spawnTimer = 0;
     }
 
     // Food/water regions (1, 2, 3, 6, 7): capped at 10 combined (5 food + 5 water).

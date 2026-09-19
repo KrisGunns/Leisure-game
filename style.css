@@ -48,7 +48,7 @@ body, html {
 }
 
 /* Player level badge XP fill — mirrors the food/water progress bar drawn above a
-   pet's head: a light-blue bar that fills left-to-right as XP approaches the next
+   pet's head: a light-green bar that fills left-to-right as XP approaches the next
    level, then resets to empty on level-up. */
 .charXPBarFill {
     position: absolute;
@@ -56,7 +56,7 @@ body, html {
     left: 0;
     bottom: 0;
     width: 0%;
-    background: linear-gradient(90deg, #4aa8e0, #8fd3ff);
+    background: linear-gradient(90deg, #4caf50, #a5e88f);
     transition: width 0.25s ease-out;
     z-index: 0;
     pointer-events: none;
@@ -154,7 +154,9 @@ body, html {
     background: #fbbf24;
     border: 2px solid #f59e0b;
     color: #000;
-    z-index: 100000;      /* Guarantees it floats over background canvas structures */
+    z-index: 100; /* Mirrors the GIVE button's layer (interactBtn) so the MENU/BAG/CHAR
+                     overlays (z-index 9000+) correctly cover it instead of floating on
+                     top of them — was 100000 before, way above every overlay. */
 }
 
 #hiveHoneyLabel {
@@ -168,7 +170,7 @@ body, html {
     font-weight: bold;
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-    z-index: 100000;
+    z-index: 100; /* Same fix/reasoning as #spawnBeeBtn above. */
 }
 
 #openMenuBtn {
