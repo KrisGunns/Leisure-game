@@ -25,9 +25,9 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 |---|---|---|
 | `state.js` | `inventory`, `character` (level/xp), `gainPlayerXP()`, `showLevelUpToast()`, `getLevelRequirement()`, `getCharacterNextXP()`, `FORAGE_TIERS` + `getForageYield()` (pet forage yield table), `saveGameProgress()`, `loadGameProgress()`, core DOM label refs | none (loads first) |
 | `entities.js` | `Player`, `Item`, `Flower`, `Pet` classes (all pet AI/state-machine logic lives in `Pet.update()`) | `state.js` |
-| `world.js` | The `player` instance, `regionalItems` (food/water/flower/egg pools per region), `petsByRegion` (pet roster per region), `region4Hive`, `createBee()`/`createBear()` factories, `resizeCanvas()`, `checkCollisions()`, `processSpawns()` | `state.js`, `entities.js` |
-| `input.js` | Virtual joystick, GIVE/PLAY interact button (hold-to-feed with ramping `feedHoldCounter`), whistle button (single-tap toggle or multi-pet picker), region selector (+ region-lock check), keyboard controls, `executeContinuousFeed()` | `state.js`, `entities.js`, `world.js` |
-| `ui.js` | `updateUI()`, `renderMiniPet()`, pet Codex overlay, settings/dev panel, pet renaming, bag overlay, bee-purchase button, whistle-picker overlay (`showWhistlePicker()`/`hideWhistlePicker()`) | `state.js`, `entities.js`, `world.js` |
+| `world.js` | The `player` instance, `regionalItems` (food/water/flower/banana/egg pools per region), `petsByRegion` (pet roster per region), `region4Hive`, `createBee()`/`createBear()`/`createMonkey()` factories, `isJungleTierUnlocked()`/`areRegions1to3Tamed()`/`isRegionUnlocked()` (region-lock single source of truth), `spawnCoinPopup()`/`spawnRegionFX()` (floating visual effects), `resizeCanvas()`, `checkCollisions()`, `processSpawns()` | `state.js`, `entities.js` |
+| `input.js` | Virtual joystick, GIVE/PLAY interact button (hold-to-feed with ramping `feedHoldCounter`, pointer-capture for reliability), whistle button (single-tap toggle or multi-pet picker), region selector (+ region-lock check), keyboard controls, `executeContinuousFeed()` | `state.js`, `entities.js`, `world.js` |
+| `ui.js` | `updateUI()`, `renderMiniPet()`, pet Codex overlay, settings/dev panel, pet renaming, bag overlay, bee-purchase button, whistle-picker overlay (`showWhistlePicker()`/`hideWhistlePicker()`), consolidated MENU overlay (`handleOpenMenu()`/`handleCloseMenu()`) | `state.js`, `entities.js`, `world.js` |
 | `main.js` | `gameLoop()` (render + update loop), startup sequence (`loadGameProgress()`, initial item spawns, `requestAnimationFrame` kickoff) | all of the above (loads last) |
 
 **Why this order works:** each file's *immediately-executing* top-level code (variable declarations, `new Pet(...)`, event listener registration) only references things defined in earlier-loaded files. Anything referenced "out of order" — like `state.js`'s `gainPlayerXP()` calling `ui.js`'s `updateUI()` — is inside a function body, which isn't actually run until later gameplay, by which point every file has finished loading.
@@ -38,47 +38,123 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Current Features
 
-**Regions:** 7 total, selected via a dropdown.
+**Regions:** 8 total, selected via a dropdown.
 - Regions 1–3: starter pets (dog, elephant, squirrel + chicken respectively), food/water item spawns.
 - Region 3 also spawns collectible eggs (from chickens reaching level 20).
 - Region 4: bee hive — locked until every pet in Regions 1–3 is level 2+. Bees forage flowers, carry honey back to the hive, and cost 10 coins to spawn (max 3 bees).
-- Region 5: bear — locked behind the same Regions 1–3 requirement. Bear fishes periodically for fish.
+- Region 5: bears — locked behind the same Regions 1–3 requirement. 2 bears (the original male `Bear` and a smaller female `Bow Bear` — see 2026-09-18 (2)); both fish periodically for fish, identical stats/mechanics, purely a cosmetic variant.
 - Region 6: **Pig Sty** — locked behind the same Regions 1–3 requirement (flagged as an assumption, not explicitly specified). 2 pigs (pink `Pig`, grey `Mud Pig`), spawns food/water like Regions 1-3. See "Pig specifics" below.
-- Region 7: **Panda habitat** — locked behind its own, stricter condition: pets in Regions 1-3 must be Level 10+, **and** pets in Regions 4-6 must be Level 5+ (changed from the original "every pet in Regions 1-6 at Lv10+" — see 2026-09-17 (1)). Single source of truth is `isRegion7Unlocked()` in `world.js`. The player-facing locked-region alerts (`input.js`) deliberately describe only the *requirement*, never the region's identity/theme, so unlocking it stays a surprise.
+- Region 7: **Panda habitat** — locked behind the "jungle tier" condition: pets in Regions 1-3 must be Level 10+, **and** pets in Regions 4-6 must be Level 5+ (changed from the original "every pet in Regions 1-6 at Lv10+" — see 2026-09-17 (1)). Single source of truth is `isJungleTierUnlocked()` in `world.js` (renamed from `isRegion7Unlocked()` when Region 8 was added — see 2026-09-19 (1) — since it now gates two regions, not one). The player-facing locked-region alerts (`input.js`) deliberately describe only the *requirement*, never the region's identity/theme, so unlocking it stays a surprise.
+- Region 8: **Monkey jungle** — locked behind the same `isJungleTierUnlocked()` condition as Region 7 (by design, per spec — see 2026-09-19 (1)). Jungle background: trees with hanging vines, brown color palette distinct from Region 7's bamboo forest. 2 brown monkeys forage a new resource, **bananas**, which only spawn in this region. See "Monkey specifics" below.
 
-**Pets:** dog, cat, elephant, squirrel, chicken, bird, bee, bear, pig, panda. Each has its own AI state machine in `Pet.update()` (wander/idle/forage/whistled/etc., plus type-specific states like `digging`, `fishing`, `playing_*`, `schrodinger`, `mud_play`, the bird's excursion handling, and the panda's `bamboo_wait`/`full`/`abandoned`).
+**New resource — bananas:** Region 8 only. Same manual-pickup pattern as food/water (1:1 XP with amount collected, same `manualGather` character bonus), own dedicated item pool/respawn queue (mirrors how Region 4 gets flowers instead of food/water), shown in the bag overlay.
+
+**Pets:** dog, cat, elephant, squirrel, chicken, bird, bee, bear (×2 — male + female), pig, panda, monkey (×2). Each has its own AI state machine in `Pet.update()` (wander/idle/forage/whistled/etc., plus type-specific states like `digging`, `fishing`, `playing_*`, `schrodinger`, `mud_play`, `swinging`, the bird's excursion handling, and the panda's `bamboo_wait`/`full`/`abandoned`).
 
 **Character progression:**
 - Player has `level`/`xp`/`name` (editable, see Character screen below), separate from pet levels.
-- Gains XP **1:1 with the amount of food/water actually collected** (post character-level multiplier) for walking over a drop on the map — e.g. collecting 3 water at once grants +3 XP, not a flat +1. Egg pickups and manually feeding a pet (holding the GIVE button) still grant a flat +1 XP per item/unit.
+- Gains XP **1:1 with the amount of food/water/bananas actually collected** (post character-level multiplier) for walking over a drop on the map — e.g. collecting 3 water at once grants +3 XP, not a flat +1. Egg pickups and manually feeding a pet (holding the GIVE button) still grant a flat +1 XP per item/unit.
 - Level-up shows a non-blocking on-screen toast (not a blocking `alert()` — see Changelog).
+- **XP progress bar:** the LV./XP badge in the top HUD fills left-to-right with a light-blue gradient as XP approaches the next level (same visual language as a pet's forage-progress bar above its head — see 2026-09-18 (1)), driven by `character.xp / getCharacterNextXP(character.level)`, recalculated every `updateUI()` call.
 - At certain character levels, pets get passive bonuses to auto-foraged resource amounts, and manually-collected resources scale with `character.level * 0.10`. All of this is computed by a single shared function, `getCharacterBonuses(level)` in `state.js` — see the 2026-09-16 (6) changelog entry — so `entities.js`, `world.js`, and the Character screen can never disagree about what's actually in effect.
-- **Character screen:** opened via the 🧑 CHARACTER button (beneath BAG). Shows the editable name, current level, the live % bonus totals from `getCharacterBonuses()`, and the full Lv5–50 perk checklist (`CHARACTER_LEVEL_PERKS` in `state.js`) with reached milestones checked off in green — same visual treatment as a pet's perk checklist.
+- **Character screen:** opened via the consolidated MENU overlay (☰ MENU button, top-left — see 2026-09-18 (3)), then the 🧑 CHAR button inside it. Shows the editable name, current level, the live % bonus totals from `getCharacterBonuses()`, and the full Lv5–50 perk checklist (`CHARACTER_LEVEL_PERKS` in `state.js`) with reached milestones checked off in green — same visual treatment as a pet's perk checklist.
 
-**Pet leveling:** each pet requires cumulative food/water (or honey, for bear) to level up, calculated via `getLevelRequirement()`. Pets level up either passively (auto-foraging map items) or via manual feeding (holding GIVE near a pet, which drains the player's food/water inventory).
+**Pet leveling:** each pet requires cumulative food/water (or a single resource — honey for bear, bananas for monkey) to level up, calculated via `getLevelRequirement()`. Pets level up either passively (auto-foraging map items) or via manual feeding (holding GIVE near a pet, which drains the player's food/water/honey/banana inventory as appropriate).
 
-**Pet-specific mechanics:**
+**Pet-specific mechanics:** most coin payouts below also spawn a floating "+N 🪙" popup above the pet that earned it (`spawnCoinPopup()` in `world.js` — see 2026-09-18 (1)), region-tagged so it only renders while the player is actually looking at that region (pets simulate in the background regardless of which region is on-screen).
 - **Dog** (level 20): 10% chance per successful forage to enter a `digging` state — plays a dirt-particle animation, then awards 1 coin.
 - **Cat** (Region 1): Level 15+: 10% chance per forage to double the food/water it just collected. Level 20+: 3% chance per forage — **only while the player is standing in Region 1** — to enter a "Schrödinger" state — frozen in place, flickering between two visual states — until the player approaches (within 70px) and presses PLAY, opening a Dead/Alive picker; correct guess pays 10 coins either way the box resolves and it returns to wandering.
 - **Elephant** (level 20, Region 2): 10% chance to trigger a multi-step "tag" minigame (approach → retreat → wait for player to move → chase) rewarding 5 coins if caught.
 - **Chicken** (level 20): 5% chance per forage to lay an egg on the map (Region 3 only).
-- **Bird** (Region 3, level 20): 5% chance per successful forage to fly off to a random other region for 60s. Forages there with a +20% food/water bonus if it's a food/water region, fishes (10% chance/sec) if it lands in Region 5, or gives every bee in Region 4 a temporary +20% speed boost for the visit. Returns home after 60s with +2 coins. Fly-away/landing visual effects play in whichever region the player is currently viewing at each end of the trip. See the 2026-09-16 (8) changelog entry for full mechanics and the save/load handling this required.
+- **Bird** (Region 3, level 20): 5% chance per successful forage to fly off to a random other region for 60s — filtered to regions the player has actually **unlocked** (see 2026-09-18 (1); it used to consider all of Regions 1-6 regardless of the player's actual progress). Forages there with a +20% food/water bonus if it's a food/water region, fishes (10% chance/sec) if it lands in Region 5, or gives every bee in Region 4 a temporary +20% speed boost for the visit. Returns home after 60s with +2 coins. Fly-away/landing visual effects play in whichever region the player is currently viewing at each end of the trip. See the 2026-09-16 (8) changelog entry for full mechanics and the save/load handling this required.
 - **Bee**: forages flowers, carries honey (capacity scales with level: 1/2/3/5 at levels 1/5/10/20); time to forage a single flower also drops with level (5.0s base → 4.5s at Lv5 → 4.0s at Lv10 → 3.0s at Lv20 — travel speed to/from the hive is unaffected by level). Returns to hive to deposit, then goes idle. Up to 3 bees total per save (the starter bee + 2 purchasable "Worker Bee" hires at 10 coins each via the hive's spawn button); all bees — starter or purchased — are built through the same `createBee()` factory so they behave identically.
-- **Bear** (tames at level 2, but doesn't start fishing until level 5): travels to a lake, fishes for ~20s per cycle, catches 1 fish per cycle (3 from level 10). Fishing cycle cooldown speeds up at level 10 and again at level 15. 10% chance of a double catch (up to 6 fish) at level 20.
+- **Bear** (tames at level 2, but doesn't start fishing until level 5) — Region 5, 2 of them: travels to a lake, fishes for ~20s per cycle, catches 1 fish per cycle (3 from level 10). Fishing cycle cooldown speeds up at level 10 and again at level 15. 10% chance of a double catch (up to 6 fish) at level 20. The second bear, `Bow Bear` (female), is a purely cosmetic variant added 2026-09-18 (2): same brown color, same base Exp/fishing mechanic/fishing yield (both driven by `type === 'bear'`, untouched by the variant), just a ~15% smaller model with a pink bow drawn above its ears (`isFemaleBear` flag in `entities.js`, set by `createBear()`'s `options.female`).
 - **Pig** (either color): forages food/water like dog/squirrel/chicken (see `FORAGE_TIERS.pig` in `state.js`). Level 20+: 5% chance per successful forage to enter a 5-second mud-play state, awarding 2 coins (5% chance to double to 4 — the Codex's one-line perk summary was simplified to "+2 coins" per request, but the underlying 5%-double roll is unchanged). Level-1 XP requirement is 50 food / 30 water (not a 50/50 split — see `getLevelRequirement()`'s pig-specific branch).
+- **Panda** (Region 7): see the 2026-09-16 (10) entry for the full "Bamboo Fever" minigame. Two timing bugs fixed 2026-09-18 (1): the `full` (sleep) state now only shows *after* the minigame ends, not during it; and the `abandoned` (Starve) flee state no longer gets pinned in a screen corner — it steers away from walls instead of just running straight away from the player.
+- **Monkey** (Region 8, brown, 2 of them): tames at level 2 exactly like dog/squirrel/pig, then autonomously forages bananas (the same "forage fills the player's inventory, GIVE converts inventory → level" pattern every other food/water forager uses — see `FORAGE_TIERS.monkey` in `state.js`). Base Exp 50 bananas; forage yield +1/+2/+3/+4/+6 bananas per successful forage at Lv1/5/10/15/20. Level 20+: 5% chance per forage to swing on a nearby vine for 20s (own `swinging` state, distinct hanging pose in `draw()`), then pays out 5 coins.
 
 **Other systems:**
 - Joystick (touch) + WASD/arrow keys (desktop) movement, spacebar/E to feed.
+- **GIVE button**: holding it feeds the nearest eligible pet(s) in range; uses `setPointerCapture()` (added 2026-09-18 (3)) so a touch drifting a few px off the button mid-hold no longer drops the hold early. Feed speed scales with *percentage* of the pet's remaining requirement rather than a flat unit count, so holding at max speed fills the progress bar in ~3 seconds regardless of whether the pet needs 20 units or 2,000.
 - Whistle button: calls eligible pets (non-bee, level 2+) to the player. In a region with one eligible pet, one tap toggles Call/Return directly. In a region with more than one (currently Region 3: Squirrel + Chicken), tapping whistle opens a picker so you can call specific pets independently rather than all at once.
+- **MENU button** (☰, top-left — see 2026-09-18 (3)): a full-screen orange overlay consolidating the old separate PETS/BAG/CHAR buttons into one entry point. The game keeps simulating behind it (nothing is paused), it's just visually/interactively blocked while the menu is up. Tapping PETS/BAG/CHAR inside it opens that screen layered on top of the menu; closing that screen reveals the menu again underneath rather than dropping straight back to gameplay.
 - Pet Codex overlay: mini-canvas renders of each pet with their current stats. Clicking/tapping any revealed portrait opens a detail screen (name, level, current forage yield, full level-perk checklist with reached perks checked off).
 - Settings/dev panel: add 50 food/water, wipe save, insta-max a region's pets to level 20 (dev/testing tools).
 - Pet renaming via text inputs bound per pet slot.
-- Bag overlay: shows "vault" resources (coins, eggs, honey, fish) separately from the pinned food/water HUD.
+- Bag overlay: shows "vault" resources (coins, eggs, honey, fish, bananas) separately from the pinned food/water HUD.
 - Auto-save every 10 seconds, plus on most state-changing events (level-ups, pet levels, purchases).
 
 ---
 
 ## Changelog
+
+### 2026-09-19 (5) — New region: Region 8 (Monkey jungle) + New pet: Monkey (×2) + New resource: Banana
+
+**Added:**
+- **Region 8**, shown as "Region 8" in the dropdown, a jungle habitat (new background art in `main.js`: deep-green canopy-shadowed ground, five trees with three hanging vines each, brown trunks/green canopies — visually distinct from Region 7's bamboo forest). Locked behind the exact same condition as Region 7 (per spec) — see the `isJungleTierUnlocked()` rename below.
+- **New resource: banana.** Spawns only in Region 8 (own dedicated pool/respawn-queue entry/10s top-up, mirroring how Region 4 gets flowers instead of food/water — `regionalItems[8].bananas`, `FOOD_WATER_REGIONS` deliberately does **not** include 8). New yellow-crescent visual in `Item.draw()`. Manual pickup is 1:1 XP with the amount collected, same `manualGather` character bonus as food/water (`world.js`'s `checkCollisions()`). Tracked in `inventory.bananas`, shown in the bag overlay (`bagBananas`), fully wired into save/load.
+- **New pet: Monkey**, brown, 2 per save (`Monkey` + `Coco`) via a new `createMonkey()` factory (`world.js`). Tames at level 2 exactly like dog/squirrel/chicken/pig, then autonomously forages bananas — same "forage fills the player's inventory, GIVE converts inventory → level" pattern every other food/water forager already uses, so the existing generic nearest-item forage-targeting code in `Pet.update()` needed zero changes; Region 8's banana pool is fed into the pet-update loop's "food" slot specifically for Region 8 (`main.js`), letting monkeys reuse that code path unmodified. GIVE-button feeding consumes `inventory.bananas` one at a time via a new `pet.type === 'monkey'` branch in `executeContinuousFeed()` (`input.js`), same shape as how bear consumes honey.
+- **Base Exp 50 bananas** (`baseMap.monkey = 50` in `getLevelRequirement()`, `state.js` — level-1 requirement lands exactly on 50 since `Math.pow(1, 1.2) === 1`). Single-resource pet (no food/water split), same bucket as bee/bear.
+- **Forage yield** (`FORAGE_TIERS.monkey`): +1 banana base → +2 (Lv5) → +3 (Lv10) → +4 (Lv15) → +6 (Lv20), matching the spec exactly at every level boundary. The tier table's unused "water" slot is always 0, kept only for shape-compatibility with `getForageYield()`.
+- **Lv20 perk — vine swinging:** 5% chance per successful forage to enter a new `swinging` state for 20s (own hanging-from-a-vine pose in `draw()` — both arms up gripping a vine drawn above it — vs. the normal resting pose), then pays out 5 coins via the existing `spawnCoinPopup()` system once the timer runs out.
+- Codex: two new entries (`viewMonkey1`/`viewMonkey2`, `infoMonkey1`/`infoMonkey2`, `renameBoxMonkey1`/`renameBoxMonkey2` in `index.html`) mirroring the existing bear1/bear2 two-slot pattern — single-resource "🍌 X Bananas" requirement text, gated behind the same jungle-tier lock as the panda, `?/20`/`???` until tamed.
+
+**Changed:**
+- **`isRegion7Unlocked()` renamed to `isJungleTierUnlocked()`** (`world.js`) since it now gates two regions, not one — Region 7 and Region 8 share the exact same unlock condition by design (pets in Regions 1-3 at Lv10+, pets in Regions 4-6 at Lv5+). All call sites updated (`main.js`, `input.js`, `ui.js`); `isRegionUnlocked(r)` extended to route both `r === 7` and `r === 8` through it.
+- Region loop bounds extended from `<= 7` to `<= 8` everywhere a region range was hardcoded (`main.js`'s render/update loop, `world.js`'s `homeRegion`-backfill loop and `processSpawns()`'s top-up loop).
+- `ALL_REGIONS` (the bird's Lv20 excursion target list) deliberately still stops at 6 — Region 8 is excluded for the same reason Region 7 already was (gated behind a much higher unlock condition than the bird's own Lv20 requirement).
+- Region 8 dropdown option and 3 starting bananas added via the same "build it in JS, no HTML edit needed" approach already used for Regions 6/7 (`main.js`, end of startup sequence).
+
+**Verification:** `node --check` on every touched file, an HTML tag-balance parser pass on `index.html`, and a script that cross-referenced every `getElementById()` call across all JS files against `index.html`'s actual `id` attributes to confirm no Monkey-related lookup was left dangling.
+
+---
+
+### 2026-09-19 (4) — New pet: Bow Bear (female, Region 5)
+
+**Added:**
+- Second bear in Region 5, **Bow Bear** — same brown color, same `type: 'bear'` (so base Exp requirement, fishing start/cooldown/yield are all automatically identical to the original bear with zero extra code, since every bear mechanic is driven purely by `type === 'bear'`), a model scaled to ~85% size, and a pink bow (two triangles + a knot) drawn above its ears. New `isFemaleBear` flag on `Pet`, set via `createBear()`'s new `options.female` param (`world.js`); scale/bow rendering lives entirely in `entities.js`'s `draw()` and mirrored in `ui.js`'s `renderMiniPet()` for the Codex thumbnail.
+- Codex split from one BEAR card into **BEAR 1 / BEAR 2** entries (`index.html`), mirroring the existing two-pig pattern in `ui.js`'s `updateCodexData()`. Rename bindings updated to match (`btnRenameBear1`/`btnRenameBear2`).
+- Every pet is now tagged with a `homeRegion` at creation (`world.js`), used for gating things that must only happen/show while the player is looking at that pet's region.
+
+**Verified:** positional per-region-array save/load (already generic, same mechanism that already handles the two pigs) needed **no changes** to persist the second bear — confirmed by trace rather than by adding redundant code.
+
+---
+
+### 2026-09-19 (3) — Consolidated PETS/BAG/CHAR into one MENU button
+
+**Changed:**
+- Replaced the three separate top-left buttons (🐾 PETS, 🎒 BAG, 🧑 CHAR) with a single **☰ MENU** button in PETS' old spot. Opens a new full-screen `#menuOverlay` (orange gradient background, sized to the entire `gameContainer` — covers the topBar too, not just the canvas) containing the same three buttons, unchanged element ids, so their existing `handleOpenCodex`/`handleOpenBag`/`handleOpenCharacter` logic needed **zero changes** — only their DOM location moved.
+- The game loop keeps running behind the menu (pets keep foraging, timers keep ticking) — it's a purely visual/interactive block, not a pause. Opening PETS/BAG/CHAR from inside the menu layers that screen on top (`z-index: 10000` vs. the menu's `9000`); closing it reveals the menu again underneath rather than dropping straight back to gameplay, since the menu is never actually hidden while a sub-screen is open.
+- New `handleOpenMenu()`/`handleCloseMenu()` in `ui.js`, bound the same `touchstart`/`mousedown` way as every other overlay button.
+
+---
+
+### 2026-09-19 (2) — Character XP progress bar, pet coin-reward popups, GIVE button reliability + feed speed
+
+**Added:**
+- **Character XP bar:** the LV./XP badge in the top HUD now fills left-to-right with a light-blue gradient as XP approaches the next level — same visual language as the progress bar already drawn above a pet's head. New `.charXPBarFill`/`.charBadgeContent` layered divs (`index.html`/`style.css`), width recalculated every `updateUI()` call (`ui.js`) from `character.xp / getCharacterNextXP(character.level)`.
+- **Coin-reward popups:** a floating "+N 🪙" now appears above a pet right after it pays out coins — dog's dig (+1), elephant's tag catch (+5), pig's mud-play (+2/+4), bird's excursion return (+2), cat's correct Schrödinger guess (+10), panda's Bamboo Fever payout (variable). New `spawnCoinPopup()`/`updateCoinPopups()`/`drawCoinPopups()` in `world.js`, following the exact same one-shot/region-tagged pattern as the existing `spawnRegionFX()` — necessary because a pet's coin event can fire while the player is looking at a completely different region (pets simulate in the background), so popups only render once the player is actually looking at the region they belong to.
+
+**Fixed:**
+- **GIVE button intermittently not registering / stopping mid-hold.** Root cause: the button listened for `pointerleave` to end a hold, but on touch, ordinary finger micro-movement during a hold (still very much on the screen) fires a real `pointerleave` the instant it crosses the button's edge — read as "the player let go." Fixed by calling `setPointerCapture(e.pointerId)` on `pointerdown` (`input.js`), which keeps all subsequent events targeted at the button regardless of where the finger drifts; added a `lostpointercapture` listener as a fallback safety net.
+- **Feed speed didn't scale with a pet's actual requirement.** Was a flat 1→3→8→25 units/tick ramp regardless of how much a pet's current level actually needed, so a high-level pet needing hundreds of food/water took noticeably longer to fill than a low one needing a handful. Replaced with **percentage-of-remaining-requirement** tiers (~1% → 2.5% → 4.7% per 100ms tick, at the same 0.5s/1.5s/3s hold thresholds as before) in `executeContinuousFeed()`, so holding at max speed fills the progress bar in ~3 seconds regardless of the pet's actual requirement size.
+
+---
+
+### 2026-09-19 (1) — Bug-fix batch: mini-game pickers following region switches, panda Bamboo Fever timing, panda flee-state corner-pinning, bird excursions to locked regions
+
+**Fixed:**
+- **Schrödinger/Bamboo Fever pickers stayed on screen and followed the player to other regions.** Both are fixed-position DOM overlays, not tied to the canvas — nothing was hiding them on a region switch (only the whistle picker already was). Added `hideSchrodingerPicker()`/`hideBambooFeverPicker()` calls to `input.js`'s region-select handler. Bamboo Fever's picker, unlike Schrödinger's, opens automatically with no proximity-based re-open once dismissed, so also reset any panda caught in `bamboo_wait` back to `wander` on switch-away — otherwise it would be stuck frozen forever with no way to resume the choice.
+- **Panda's `full` (sleep) state showed *during* the Bamboo Fever minigame instead of after it finished.** Reordered: choosing Play now resumes normal wander/forage for the panda while the 30s round plays out; `world.js`'s `updateBambooFever()` sets `state = 'full'` (with the 💤 overlay) only once the round actually ends, via a `bambooFever.panda` reference stored when the round starts. Added a guard against a second Bamboo Fever re-triggering mid-round, now that the panda forages normally (and could otherwise re-roll the 5% chance) during it.
+- **Panda's `abandoned` (Starve) flee state got pinned in a screen corner instead of continuing to evade.** "Directly away from the player" naturally funnels it into whichever corner happens to be opposite the player's position, and once both axes hit the wall it has nowhere left to go even as the player keeps closing the distance. Added a wall-repulsion term to the flee vector so it steers off/along edges instead of parking in one spot.
+- **Bird's Lv20 excursion perk could fly to a region the player hadn't actually unlocked** (e.g. Region 6 before taming Regions 1-3) — it only checked its own Lv20 requirement, not the player's actual unlock progress. Filtered its destination-choice list through the (newly shared) `isRegionUnlocked()`.
+
+**Changed:**
+- New shared `isRegionUnlocked(r)`/`areRegions1to3Tamed()` helpers in `world.js`, replacing duplicated unlock-check logic that had drifted into three separate places (`main.js`'s render loop, `ui.js`'s Codex lock display) — same "single source of truth" pattern as `isRegion7Unlocked()`/`getCharacterBonuses()`.
+
+**Verification:** `node --check` on every touched file, manual trace of the region-switch handler confirming both pickers and the panda's state reset correctly.
+
+---
 
 ### 2026-09-17 (1) — Bug-fix batch: Schrödinger region gate, locked-region spoilers, Codex mystery state, resource XP ratio, Region 7 requirement, bee/bear state labels, cat/bear perk levels & copy
 
