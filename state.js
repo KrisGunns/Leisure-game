@@ -12,12 +12,13 @@ const bagHoney = document.getElementById('bagHoney');
 const bagFish = document.getElementById('bagFish');
 const bagCoins = document.getElementById('bagCoins');
 const bagEggs = document.getElementById('bagEggs');
+const bagBananas = document.getElementById('bagBananas');
 const regionSelector = document.getElementById('regionSelector');
 const whistleBtn = document.getElementById('whistleBtn');
 
 // New Core Dynamic Math Formula Engine (Max Level 20 scaling factor)
 function getLevelRequirement(type, currentLevel) {
-    const baseMap = { dog: 20, elephant: 35, squirrel: 10, chicken: 15, bee: 8, bear: 15, pig: 80, cat: 40, bird: 50, panda: 120 };
+    const baseMap = { dog: 20, elephant: 35, squirrel: 10, chicken: 15, bee: 8, bear: 15, pig: 80, cat: 40, bird: 50, panda: 120, monkey: 50 };
     let base = baseMap[type] || 20;
     
     // Safety fallback: If currentLevel is accidentally passed as an object or undefined, default to 1
@@ -26,7 +27,9 @@ function getLevelRequirement(type, currentLevel) {
     // Base XP * (Level ^ 1.2) - Continuous scaling curve calculation matrix
     let reqValue = Math.floor(base * Math.pow(lvl, 1.2));
     
-    if (type === 'bee' || type === 'bear') {
+    // Single-resource pets (fed one item type, no food/water split): bee needs
+    // flowers, bear needs honey, monkey needs bananas.
+    if (type === 'bee' || type === 'bear' || type === 'monkey') {
         return reqValue;
     }
     
@@ -54,7 +57,10 @@ const FORAGE_TIERS = {
     pig:      [ [1, 2, 2], [5, 3, 2], [10, 4, 3], [15, 5, 4], [20, 7, 6] ],
     elephant: [ [1, 1, 2], [5, 2, 3], [10, 3, 4], [20, 5, 7] ],
     squirrel: [ [1, 1, 0], [5, 3, 1], [10, 5, 1], [20, 8, 1] ],
-    chicken:  [ [1, 1, 1], [5, 2, 1], [10, 3, 1], [20, 4, 2] ]
+    chicken:  [ [1, 1, 1], [5, 2, 1], [10, 3, 1], [20, 4, 2] ],
+    // Single-resource forager (bananas only, Region 8 never spawns water) — the water
+    // slot is always 0 and unused, kept only for shape consistency with getForageYield().
+    monkey:   [ [1, 1, 0], [5, 2, 0], [10, 3, 0], [15, 4, 0], [20, 6, 0] ]
 };
 
 function getForageYield(type, level) {
@@ -78,7 +84,8 @@ const inventory = {
     honey: 0,
     fish: 0,
     coins: 0,
-    eggs: 0
+    eggs: 0,
+    bananas: 0
 };
 
 // NEW: Core Character Database Profile Properties
@@ -221,7 +228,8 @@ function saveGameProgress() {
                 honey: inventory.honey,
                 fish: inventory.fish,
                 coins: inventory.coins,
-                eggs: inventory.eggs
+                eggs: inventory.eggs,
+                bananas: inventory.bananas
             },
             currentRegion: currentRegion,
             // Saved as an array per region (not keyed by pet type) so multiple pets of
@@ -280,6 +288,7 @@ function loadGameProgress() {
             inventory.fish = stateMatrix.inventory.fish || 0;
             inventory.coins = stateMatrix.inventory.coins || 0;
             inventory.eggs = stateMatrix.inventory.eggs || 0;
+            inventory.bananas = stateMatrix.inventory.bananas || 0;
         }
 
         // FIXED: Fully restore and link Character Level and XP to the HUD on page load
@@ -302,6 +311,7 @@ function loadGameProgress() {
             foods = regionalItems[currentRegion].foods;
             waters = regionalItems[currentRegion].waters;
             flowers = regionalItems[currentRegion].flowers;
+            bananas = regionalItems[currentRegion].bananas;
         }
 
         if (stateMatrix.petsByRegion) {

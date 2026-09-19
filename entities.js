@@ -66,6 +66,18 @@ class Item {
             ctx.fillStyle = '#3e2723';
             ctx.fillRect(this.x - 4, this.y - 4, 2, 2);
             ctx.fillRect(this.x + 2, this.y + 2, 2, 2);
+        } else if (this.type === 'banana') {
+            ctx.fillStyle = '#f5d020';
+            ctx.beginPath();
+            ctx.moveTo(this.x - 7, this.y + 6);
+            ctx.quadraticCurveTo(this.x, this.y - 10, this.x + 8, this.y - 7);
+            ctx.quadraticCurveTo(this.x + 1, this.y + 2, this.x - 4, this.y + 9);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = '#7a5c00';
+            ctx.beginPath();
+            ctx.arc(this.x + 8, this.y - 7, 1.5, 0, Math.PI * 2);
+            ctx.fill();
         } else {
             ctx.fillStyle = '#3498db';
             ctx.beginPath();
@@ -667,6 +679,22 @@ class Pet {
             return;
         }
 
+                // --- MONKEY VINE-SWINGING STATE: Lv20 perk, 20s timer, stays put (drawn
+        // hanging from a vine in draw() below), pays out 5 coins once it's done. ---
+        if (this.state === 'swinging') {
+            this.stateTimer -= dt;
+            if (this.stateTimer <= 0) {
+                let monkeyCoinsEarned = Math.round(5 * coinBonus);
+                inventory.coins += monkeyCoinsEarned;
+                if (typeof spawnCoinPopup === 'function') spawnCoinPopup(this.homeRegion, this.x + this.size / 2, this.y, monkeyCoinsEarned);
+                updateUI();
+                saveGameProgress();
+                this.state = 'wander';
+                this.pickNewWanderTarget();
+            }
+            return; // stays put on the vine for the whole 20s
+        }
+
                 // --- MULTI-STEP ELEPHANT PLAY MECHANIC ENGINE ---
         if (this.type === 'elephant' && (this.state === 'playing_approach' || this.state === 'playing_retreat' || this.state === 'playing_chase')) {
             let dx = player.x - this.x;
@@ -827,6 +855,22 @@ class Pet {
                             if (this.level >= 20 && Math.random() < 0.05) {
                                 this.state = 'mud_play';
                                 this.stateTimer = 5.0;
+                                return;
+                            }
+                        } else if (this.type === 'monkey') {
+                            // Bananas only — Region 8 never has anything in its "waters"
+                            // slot, so `targetItem` here is always the banana it just
+                            // picked up (fed in as this pet's regionFoods array by
+                            // main.js, same plumbing every other forager uses).
+                            let y = getForageYield('monkey', this.level);
+                            inventory.bananas += Math.round(y.food * petFoodWaterBonus);
+
+                            // Level 20+: 5% chance per successful forage to swing on the
+                            // vines for 20s, paying out 5 coins once it's done (handled
+                            // when the 'swinging' state's timer runs out, below).
+                            if (this.level >= 20 && Math.random() < 0.05) {
+                                this.state = 'swinging';
+                                this.stateTimer = 20.0;
                                 return;
                             }
                         } else if (this.type === 'cat') {
@@ -1135,6 +1179,53 @@ draw() {
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.arc(this.x + 2, this.y + 14, 3, 0, Math.PI * 1.5); // curly tail
+            ctx.stroke();
+        } else if (this.type === 'monkey') {
+            // Brown, same color regardless of level/state. `this.color` is set by
+            // createMonkey() (world.js) to keep this consistent with how every other
+            // pet's body color is threaded through.
+            let swinging = this.state === 'swinging';
+
+            if (swinging) {
+                // Hanging from a vine dangling down from directly above it — draw the
+                // vine first so the monkey sits in front of/at the end of it.
+                ctx.strokeStyle = '#4a7c2f';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.size / 2, this.y - 20);
+                ctx.lineTo(this.x + this.size / 2, this.y + 2);
+                ctx.stroke();
+            }
+
+            ctx.fillStyle = this.color;                         // body
+            ctx.fillRect(this.x + 6, this.y + 12, 22, 16);
+            ctx.fillRect(this.x + 10, this.y + 2, 16, 12);       // head
+            ctx.fillStyle = '#c98a55';                           // muzzle patch
+            ctx.fillRect(this.x + 13, this.y + 7, 10, 7);
+            ctx.fillStyle = this.color;                          // ears
+            ctx.beginPath();
+            ctx.arc(this.x + 10, this.y + 6, 4, 0, Math.PI * 2);
+            ctx.arc(this.x + 26, this.y + 6, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#000000';                           // eyes
+            ctx.fillRect(this.x + 14, this.y + 8, 2, 2);
+            ctx.fillRect(this.x + 20, this.y + 8, 2, 2);
+            ctx.fillStyle = this.color;                          // arms
+            if (swinging) {
+                // Both arms up, gripping the vine overhead.
+                ctx.fillRect(this.x + 4, this.y - 2, 4, 16);
+                ctx.fillRect(this.x + 28, this.y - 2, 4, 16);
+            } else {
+                ctx.fillRect(this.x + 2, this.y + 14, 4, 12);
+                ctx.fillRect(this.x + 30, this.y + 14, 4, 12);
+            }
+            ctx.fillRect(this.x + 10, this.y + 28, 4, 6);        // legs
+            ctx.fillRect(this.x + 22, this.y + 28, 4, 6);
+            ctx.strokeStyle = this.color;                        // tail
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(this.x + 6, this.y + 20);
+            ctx.quadraticCurveTo(this.x - 8, this.y + 22, this.x - 6, this.y + 10);
             ctx.stroke();
         } else if (this.type === 'cat') {
             let boxed = this.state === 'schrodinger';

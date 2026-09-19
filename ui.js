@@ -316,6 +316,8 @@ function getPetPerkDescriptions(type) {
         perks.push({ level: 10, text: 'Fishing cycle speeds up, and catch increases to 3 fish per cycle' });
         perks.push({ level: 15, text: 'Fishing cycle speeds up further' });
         perks.push({ level: 20, text: '10% chance of a double catch (up to 6 fish)' });
+    } else if (type === 'monkey') {
+        perks.push({ level: 20, text: '5% chance per forage to swing on the vines for 20s, then +5 coins' });
     }
 
     perks.sort((a, b) => a.level - b.level);
@@ -372,7 +374,14 @@ function showPetDetail(pet) {
 
     let yieldSection = document.createElement('div');
     yieldSection.style.cssText = 'margin-bottom: 14px; line-height: 1.6;';
-    if (typeof FORAGE_TIERS !== 'undefined' && FORAGE_TIERS[pet.type]) {
+    if (pet.type === 'monkey') {
+        // Checked before the generic FORAGE_TIERS branch below even though monkey is
+        // also in that table (for getForageYield/getLevelRequirement reuse) — it's a
+        // single-resource forager like the bee/bear, not a food/water one, so it needs
+        // its own label here rather than the generic "food/water" line.
+        let y = getForageYield('monkey', pet.level);
+        yieldSection.innerHTML = `<strong>Current Forage Yield</strong><br>🍌 +${y.food} banana${y.food === 1 ? '' : 's'} per forage`;
+    } else if (typeof FORAGE_TIERS !== 'undefined' && FORAGE_TIERS[pet.type]) {
         let y = getForageYield(pet.type, pet.level);
         yieldSection.innerHTML = `<strong>Current Forage Yield</strong><br>🍪 +${y.food} food &nbsp; 💧 +${y.water} water`;
     } else if (pet.type === 'bee') {
@@ -418,6 +427,7 @@ function updateUI() {
     if (bagEggs) bagEggs.textContent = inventory.eggs;
     if (bagHoney) bagHoney.textContent = inventory.honey;
     if (bagFish) bagFish.textContent = inventory.fish;
+    if (bagBananas) bagBananas.textContent = inventory.bananas;
 
     const interactBtn = document.getElementById('interactBtn');
     if (interactBtn) {
@@ -725,6 +735,25 @@ function renderMiniPet(pet, elementId) {
             mctx.fillStyle = pet.color;
             mctx.fillRect(ox + 8, oy + 28, 4, 6);
             mctx.fillRect(ox + 22, oy + 28, 4, 6);
+        } else if (pet.type === 'monkey') {
+            mctx.fillStyle = pet.color;
+            mctx.fillRect(ox + 6, oy + 12, 22, 16);
+            mctx.fillRect(ox + 10, oy + 2, 16, 12);
+            mctx.fillStyle = '#c98a55';
+            mctx.fillRect(ox + 13, oy + 7, 10, 7);
+            mctx.fillStyle = pet.color;
+            mctx.beginPath();
+            mctx.arc(ox + 10, oy + 6, 4, 0, Math.PI * 2);
+            mctx.arc(ox + 26, oy + 6, 4, 0, Math.PI * 2);
+            mctx.fill();
+            mctx.fillStyle = '#000000';
+            mctx.fillRect(ox + 14, oy + 8, 2, 2);
+            mctx.fillRect(ox + 20, oy + 8, 2, 2);
+            mctx.fillStyle = pet.color;
+            mctx.fillRect(ox + 2, oy + 14, 4, 12);
+            mctx.fillRect(ox + 30, oy + 14, 4, 12);
+            mctx.fillRect(ox + 10, oy + 28, 4, 6);
+            mctx.fillRect(ox + 22, oy + 28, 4, 6);
         } else if (pet.type === 'cat') {
             mctx.fillStyle = pet.color;
             mctx.fillRect(ox + 4, oy + 12, 26, 16);
@@ -978,13 +1007,14 @@ function updateCodexData() {
         if (renameEl) renameEl.style.display = (region4Unlocked && slot.pig.level >= 2) ? 'block' : 'none';
     });
 
-    // Region 7 panda — gated behind its own, stricter unlock condition: pets in
-    // Regions 1-3 at Lv10+ and pets in Regions 4-6 at Lv5+ — see isRegion7Unlocked()
-    // in world.js (single source of truth, also used by main.js and input.js).
-    let region7Unlocked = isRegion7Unlocked();
+    // Region 7 panda AND Region 8 monkeys — both gated behind the same stricter unlock
+    // condition: pets in Regions 1-3 at Lv10+ and pets in Regions 4-6 at Lv5+ — see
+    // isJungleTierUnlocked() in world.js (single source of truth, also used by main.js
+    // and input.js).
+    let jungleTierUnlocked = isJungleTierUnlocked();
 
     if (panda) {
-        if (!region7Unlocked) {
+        if (!jungleTierUnlocked) {
             renderMiniPet({ type: 'panda', level: 1, isLocked: true }, 'viewPanda');
             document.getElementById('infoPanda').innerHTML = `
                 <strong>???</strong><br>
@@ -1002,8 +1032,42 @@ function updateCodexData() {
                 Next Req: ${panda.level < 20 ? '🍪' + pandaReq.food + ' 💧' + pandaReq.water : 'MAX'}
             `;
         }
-        document.getElementById('renameBoxPanda').style.display = (region7Unlocked && panda.level >= 2) ? 'block' : 'none';
+        document.getElementById('renameBoxPanda').style.display = (jungleTierUnlocked && panda.level >= 2) ? 'block' : 'none';
     }
+
+    // Region 8 monkeys — same jungleTierUnlocked gate as the panda, same "single
+    // resource" Codex format as the bears (bananas instead of food/water).
+    const monkey1 = petsByRegion[8] ? petsByRegion[8][0] : null;
+    const monkey2 = petsByRegion[8] ? petsByRegion[8][1] : null;
+
+    [ { monkey: monkey1, viewId: 'viewMonkey1', infoId: 'infoMonkey1', renameId: 'renameBoxMonkey1' },
+      { monkey: monkey2, viewId: 'viewMonkey2', infoId: 'infoMonkey2', renameId: 'renameBoxMonkey2' }
+    ].forEach(slot => {
+        if (!slot.monkey) return;
+
+        if (!jungleTierUnlocked) {
+            renderMiniPet({ type: 'monkey', level: 1, isLocked: true }, slot.viewId);
+            let infoEl = document.getElementById(slot.infoId);
+            if (infoEl) infoEl.innerHTML = `
+                <strong>???</strong><br>
+                Status: <span class="codexWild">LOCKED</span><br>
+                Level: ?/20<br>
+                Next Req: ???
+            `;
+        } else {
+            let monkeyReq = getLevelRequirement('monkey', slot.monkey.level);
+            renderMiniPet(slot.monkey, slot.viewId);
+            let infoEl = document.getElementById(slot.infoId);
+            if (infoEl) infoEl.innerHTML = `
+                <strong>${slot.monkey.level >= 2 ? slot.monkey.label : '???'}</strong><br>
+                Status: <span class="${slot.monkey.level >= 2 ? 'codexTamed' : 'codexWild'}">${slot.monkey.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
+                Level: ${slot.monkey.level}/20<br>
+                Next Req: ${slot.monkey.level < 20 ? '🍌 ' + monkeyReq + ' Bananas' : 'MAX'}
+            `;
+        }
+        let renameEl = document.getElementById(slot.renameId);
+        if (renameEl) renameEl.style.display = (jungleTierUnlocked && slot.monkey.level >= 2) ? 'block' : 'none';
+    });
 }
 
 const codexOverlay = document.getElementById('codexOverlay');
@@ -1271,6 +1335,8 @@ bindPetRename('btnRenameChicken', 'inputChicken', 3, 1);   // Region 3, Chicken
 bindPetRename('btnRenameBee', 'inputBee', 4, 0);       // Region 4, Bee (Base)
 bindPetRename('btnRenameBear1', 'inputBear1', 5, 0);   // Region 5, Bear
 bindPetRename('btnRenameBear2', 'inputBear2', 5, 1);   // Region 5, Bow Bear (female)
+bindPetRename('btnRenameMonkey1', 'inputMonkey1', 8, 0); // Region 8, Monkey
+bindPetRename('btnRenameMonkey2', 'inputMonkey2', 8, 1); // Region 8, Coco
 bindPetRename('btnRenamePig1', 'inputPig1', 6, 0);     // Region 6, Pig (pink)
 bindPetRename('btnRenamePig2', 'inputPig2', 6, 1);     // Region 6, Mud Pig (grey)
 bindPetRename('btnRenamePanda', 'inputPanda', 7, 0);   // Region 7, Panda

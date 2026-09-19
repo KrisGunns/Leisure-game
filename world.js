@@ -9,24 +9,27 @@ const player = new Player(100, 100);
 const respawnQueue = [];
 
 const regionalItems = {
-    1: { foods: [], waters: [], flowers: [] },
-    2: { foods: [], waters: [], flowers: [] },
-    3: { foods: [], waters: [], flowers: [] },
-    4: { foods: [], waters: [], flowers: [] },
-    5: { foods: [], waters: [], flowers: [] },
-    6: { foods: [], waters: [], flowers: [] },
-    7: { foods: [], waters: [], flowers: [] }
+    1: { foods: [], waters: [], flowers: [], bananas: [] },
+    2: { foods: [], waters: [], flowers: [], bananas: [] },
+    3: { foods: [], waters: [], flowers: [], bananas: [] },
+    4: { foods: [], waters: [], flowers: [], bananas: [] },
+    5: { foods: [], waters: [], flowers: [], bananas: [] },
+    6: { foods: [], waters: [], flowers: [], bananas: [] },
+    7: { foods: [], waters: [], flowers: [], bananas: [] },
+    8: { foods: [], waters: [], flowers: [], bananas: [] }
 };
 
 // Regions whose food/water item pools get topped up by processSpawns() — Region 4 gets
-// flowers instead (bees), Region 5 (bear) gets neither (fishes at the lake instead).
+// flowers instead (bees), Region 5 (bear) gets neither (fishes at the lake instead),
+// Region 8 (monkeys) gets bananas instead (its own dedicated pool, handled the same
+// way flowers are for Region 4 — see processSpawns() below).
 const FOOD_WATER_REGIONS = [1, 2, 3, 6, 7];
 
 // All regions the bird's Lv20 excursion perk can randomly fly to — deliberately does NOT
-// include Region 7: it's gated behind a much higher unlock condition (every other pet at
-// Lv10+) than the bird itself needs to start excursions (just its own Lv20), so letting
-// it wander in there before the player has actually unlocked the panda's habitat would be
-// a strange inconsistency. Update this if a Region 8+ is added and should be eligible.
+// include Region 7 or Region 8: both are gated behind a much higher unlock condition
+// (every other pet at Lv10+/Lv5+ — see isJungleTierUnlocked()) than the bird itself needs
+// to start excursions (just its own Lv20), so letting it wander into either before the
+// player has actually unlocked them would be a strange inconsistency.
 const ALL_REGIONS = [1, 2, 3, 4, 5, 6];
 
 // Bird excursion fly-away/landing visual effects — simple one-shot expanding+fading poof
@@ -178,6 +181,7 @@ function drawBambooItems() {
 let foods = regionalItems[currentRegion].foods;
 let waters = regionalItems[currentRegion].waters;
 let flowers = regionalItems[currentRegion].flowers;
+let bananas = regionalItems[currentRegion].bananas;
 
 const region4Hive = { x: 225, y: 75 };
 
@@ -259,6 +263,19 @@ function createPanda(label, x, y) {
     return p;
 }
 
+// Same idea for monkeys (Region 8). Not purchasable, same as bear/panda — factored
+// out purely for consistency with the rest of the factories.
+function createMonkey(label, x, y) {
+    let p = new Pet('monkey', label, '#8b5a2b');
+    p.speed = 85;
+    p.level = 1;
+    p.state = 'wander';
+    p.x = (typeof x === 'number') ? x : 200;
+    p.y = (typeof y === 'number') ? y : 250;
+    p.pickNewWanderTarget();
+    return p;
+}
+
 const petsByRegion = {
     // Positioned well apart — untamed pets (level < 2) don't move at all (see the
     // `if (this.level < 2) return;` gate early in Pet.update()), so starting them
@@ -299,7 +316,8 @@ const petsByRegion = {
         createPig('Pig', '#ffb6c1', 130, 460),
         createPig('Mud Pig', '#95a5a6', 280, 460)
     ],
-    7: [ createPanda('Panda', 200, 220) ]
+    7: [ createPanda('Panda', 200, 220) ],
+    8: [ createMonkey('Monkey', 150, 200), createMonkey('Coco', 280, 200) ]
 };
 
 // Permanent reference to the one bird instance, independent of which region's array it
@@ -313,7 +331,7 @@ const birdPet = petsByRegion[3][2];
 // only happen/show while the player is actually looking at that pet's region — e.g.
 // coin popups below — for the pets that don't already track this themselves (the
 // bird already has `homeRegion`, left untouched since it's the same value anyway).
-for (let r = 1; r <= 7; r++) {
+for (let r = 1; r <= 8; r++) {
     if (Array.isArray(petsByRegion[r])) {
         petsByRegion[r].forEach(pet => { if (!pet.homeRegion) pet.homeRegion = r; });
     }
@@ -371,11 +389,12 @@ function areRegions1to3Tamed() {
     return true;
 }
 
-// Region 7 (panda) unlock condition — single source of truth used by main.js (render
-// gating), input.js (region-select gate), and ui.js (Codex lock display) so the rule
-// can't drift out of sync between them: pets in Regions 1-3 must be Level 10+, and
-// pets in Regions 4-6 must be Level 5+.
-function isRegion7Unlocked() {
+// Region 7 (panda) AND Region 8 (monkeys) unlock condition — the two "jungle tier"
+// regions share the exact same requirement by design. Single source of truth used by
+// main.js (render gating), input.js (region-select gate), and ui.js (Codex lock
+// display) so the rule can't drift out of sync between them: pets in Regions 1-3
+// must be Level 10+, and pets in Regions 4-6 must be Level 5+.
+function isJungleTierUnlocked() {
     for (let r = 1; r <= 3; r++) {
         if (!Array.isArray(petsByRegion[r]) || petsByRegion[r].length === 0) return false;
         for (let i = 0; i < petsByRegion[r].length; i++) {
@@ -396,7 +415,7 @@ function isRegion7Unlocked() {
 // target picker, etc.) don't have to know the per-region-range rules themselves.
 function isRegionUnlocked(r) {
     if (r >= 1 && r <= 3) return true;
-    if (r === 7) return isRegion7Unlocked();
+    if (r === 7 || r === 8) return isJungleTierUnlocked();
     if (r >= 4 && r <= 6) return areRegions1to3Tamed();
     return false;
 }
@@ -500,7 +519,35 @@ function checkCollisions() {
 
     if (hasCollectedThisFrame) return;
 
-    // 4. 🐝 Dynamic Proximity Distance Hive Button Trigger
+    // 4. 🍌 Banana Item Collision Loop Check (Region 8 only)
+    if (currentRItems.bananas) {
+        for (let i = currentRItems.bananas.length - 1; i >= 0; i--) {
+            let item = currentRItems.bananas[i];
+            let dx = (player.x + player.size / 2) - item.x;
+            let dy = (player.y + player.size / 2) - item.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < player.size / 2 + 8) {
+                currentRItems.bananas.splice(i, 1);
+                respawnQueue.push({ type: 'banana', time: Date.now() + 10000 });
+
+                let bananaBaseGain = 1;
+                let manualBananaMultiplier = getCharacterBonuses(character.level).manualGather;
+                let bananaGained = Math.round(bananaBaseGain * manualBananaMultiplier);
+                inventory.bananas += bananaGained;
+
+                gainPlayerXP(bananaGained); // 1:1 with the amount actually collected (post-multiplier)
+                updateUI();
+                saveGameProgress();
+                hasCollectedThisFrame = true;
+                break;
+            }
+        }
+    }
+
+    if (hasCollectedThisFrame) return;
+
+    // 5. 🐝 Dynamic Proximity Distance Hive Button Trigger
     const spawnBeeBtn = document.getElementById('spawnBeeBtn');
     if (currentRegion === 4 && typeof region4Hive !== 'undefined' && region4Hive && spawnBeeBtn) {
         let hx = region4Hive.x;
@@ -533,6 +580,10 @@ function processSpawns(dt) {
                 if (regionalItems[4].flowers.length < 5) {
                     regionalItems[4].flowers.push(new Flower());
                 }
+            } else if (type === 'banana') {
+                if (regionalItems[8].bananas.length < 5) {
+                    regionalItems[8].bananas.push(new Item('banana'));
+                }
             } else {
                 for (let ri = 0; ri < FOOD_WATER_REGIONS.length; ri++) {
                     let rItems = regionalItems[FOOD_WATER_REGIONS[ri]];
@@ -551,9 +602,11 @@ function processSpawns(dt) {
 
     spawnTimer += dt;
     if (spawnTimer >= 10) {
-        for (let r = 1; r <= 7; r++) {
+        for (let r = 1; r <= 8; r++) {
             if (r === 4) {
                 if (regionalItems[r].flowers.length < 5) regionalItems[r].flowers.push(new Flower());
+            } else if (r === 8) {
+                if (regionalItems[r].bananas.length < 5) regionalItems[r].bananas.push(new Item('banana'));
             } else if (FOOD_WATER_REGIONS.indexOf(r) !== -1) {
                 if (regionalItems[r].foods.length < 5) regionalItems[r].foods.push(new Item('food'));
                 if (regionalItems[r].waters.length < 5) regionalItems[r].waters.push(new Item('water'));

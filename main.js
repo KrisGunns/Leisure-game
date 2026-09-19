@@ -157,6 +157,38 @@ function gameLoop(timestamp) {
                 ctx.beginPath(); ctx.arc(x + 5, 25, 24, 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = '#5d4037';
             }
+        } else if (currentRegion === 8) {
+            // Jungle: deep green canopy-shadowed ground, several trees with vines
+            // hanging down from their canopies.
+            ctx.fillStyle = '#1b4d2e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#225c38';
+            for (let x = 30; x < canvas.width; x += 60) {
+                for (let y = 30; y < canvas.height; y += 60) {
+                    ctx.fillRect(x, y, 4, 10);
+                    ctx.fillRect(x + 8, y + 5, 4, 6);
+                }
+            }
+            // Trees (brown trunks, green canopies) with vines dangling from the canopy.
+            let jungleTrees = [
+                [55, 55], [canvas.width - 60, 65], [canvas.width / 2, 45],
+                [50, canvas.height - 90], [canvas.width - 55, canvas.height - 100]
+            ];
+            jungleTrees.forEach(([tx, ty]) => {
+                // Vines first, so the trunk/canopy draw on top of where they start.
+                ctx.strokeStyle = '#4a7c2f';
+                ctx.lineWidth = 3;
+                [-14, 0, 14].forEach(offset => {
+                    ctx.beginPath();
+                    ctx.moveTo(tx + offset, ty + 10);
+                    ctx.quadraticCurveTo(tx + offset + 5, ty + 45, tx + offset, ty + 80);
+                    ctx.stroke();
+                });
+                ctx.fillStyle = '#5d4037'; // trunk
+                ctx.fillRect(tx - 5, ty, 10, 26);
+                ctx.fillStyle = '#2e7d32'; // canopy
+                ctx.beginPath(); ctx.arc(tx, ty - 6, 26, 0, Math.PI * 2); ctx.fill();
+            });
         }
 
         ctx.strokeStyle = '#ffffff';
@@ -174,6 +206,12 @@ function gameLoop(timestamp) {
             let currentRItems = regionalItems[currentRegion];
             if (currentRItems && currentRItems.flowers) {
                 currentRItems.flowers.forEach(fl => fl.draw());
+            }
+        } else if (currentRegion === 8) {
+            // Region 8 only ever spawns bananas — no food/water here.
+            let currentRItems = regionalItems[currentRegion];
+            if (currentRItems && currentRItems.bananas) {
+                currentRItems.bananas.forEach(b => b.draw());
             }
         } else {
             let currentRItems = regionalItems[currentRegion];
@@ -196,14 +234,19 @@ function gameLoop(timestamp) {
         }
 
         // --- AUTOMATED PET STATE PHYSICS & DRAWS ---
-        for (let r = 1; r <= 7; r++) {
+        for (let r = 1; r <= 8; r++) {
             if (!isRegionUnlocked(r)) continue;
 
             let activePets = petsByRegion[r];
             if (Array.isArray(activePets)) {
                 activePets.forEach(pet => {
                     // Pull mapping structures safely from the unified regionalItems matrix dictionary data slots
-                    let rFood = regionalItems[r] ? regionalItems[r].foods : [];
+                    // Region 8 has no real "food"/"water" of its own — its bananas are
+                    // fed into the food slot so monkeys can reuse the exact same generic
+                    // nearest-item forage targeting every other forager already uses.
+                    let rFood = (r === 8)
+                        ? (regionalItems[8] ? regionalItems[8].bananas : [])
+                        : (regionalItems[r] ? regionalItems[r].foods : []);
                     let rWater = regionalItems[r] ? regionalItems[r].waters : [];
                     let rFlower = regionalItems[r] ? regionalItems[r].flowers : [];
                     
@@ -257,6 +300,13 @@ FOOD_WATER_REGIONS.forEach(r => {
     }
 });
 
+// Region 8 has no food/water — seed it with starting bananas instead, same idea as
+// the loop above (and matching Region 4's separate flower-seeding, not shown here
+// since flowers top up to 5 automatically on the very first processSpawns() tick).
+for (let i = 0; i < 3; i++) {
+    regionalItems[8].bananas.push(new Item('banana'));
+}
+
 // Adds the Region 6 (Pig Sty) option to the region dropdown in JS, so no index.html
 // edit is needed — same "build it in JS" approach as the level-up toast and whistle
 // picker. Only added if it isn't already there (e.g. if it's later added to the HTML
@@ -274,6 +324,14 @@ if (regionSelector && !regionSelector.querySelector('option[value="7"]')) {
     pandaOption.value = '7';
     pandaOption.textContent = 'Region 7';
     regionSelector.appendChild(pandaOption);
+}
+
+// Same approach for Region 8 (Monkey jungle).
+if (regionSelector && !regionSelector.querySelector('option[value="8"]')) {
+    let monkeyOption = document.createElement('option');
+    monkeyOption.value = '8';
+    monkeyOption.textContent = 'Region 8';
+    regionSelector.appendChild(monkeyOption);
 }
 
 if (document.getElementById('joystickContainer')) document.getElementById('joystickContainer').style.display = 'flex';

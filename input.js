@@ -198,8 +198,8 @@ if (regionSelector) {
     regionSelector.addEventListener('change', (e) => {
         let selectedRegion = parseInt(e.target.value);
 
-        if (selectedRegion === 7) {
-            if (!isRegion7Unlocked()) {
+        if (selectedRegion === 7 || selectedRegion === 8) {
+            if (!isJungleTierUnlocked()) {
                 alert("🔒 Region locked! Pets in Regions 1-3 must reach Level 10+, and pets in Regions 4-6 must reach Level 5+, to unlock this region.");
                 regionSelector.value = currentRegion;
                 return;
@@ -216,6 +216,7 @@ if (regionSelector) {
         foods = regionalItems[currentRegion].foods;
         waters = regionalItems[currentRegion].waters;
         flowers = regionalItems[currentRegion].flowers;
+        bananas = regionalItems[currentRegion].bananas;
         if (whistleBtn) whistleBtn.textContent = 'WHISTLE';
         if (typeof hideWhistlePicker === 'function') hideWhistlePicker();
 
@@ -290,7 +291,7 @@ function executeContinuousFeed() {
             // pet's actual requirement: roughly 1% per tick for the first 0.5s, 2.5%
             // per tick through 1.5s, then ~4.7% per tick from 1.5s onward (which is
             // also the sustained "max speed" rate for any overflow into further levels).
-            let totalNeeded = (pet.type === 'bear') ? req : (req.food + req.water);
+            let totalNeeded = (pet.type === 'bear' || pet.type === 'monkey') ? req : (req.food + req.water);
             if (!(totalNeeded > 0)) totalNeeded = 1;
 
             let feedFraction;
@@ -308,6 +309,21 @@ function executeContinuousFeed() {
                         inventory.honey--;
                         pet.foodEaten++;
                         gainPlayerXP(1); // +1 XP per honey given, same as every other pet's per-unit feed
+                        if (pet.foodEaten >= req) {
+                            pet.level++;
+                            pet.foodEaten = 0;
+                            pet.pickNewWanderTarget();
+                            if (pet.state === 'idle') pet.state = 'wander';
+                            saveGameProgress();
+                        }
+                    } else {
+                        break;
+                    }
+                } else if (pet.type === 'monkey') {
+                    if (inventory.bananas > 0) {
+                        inventory.bananas--;
+                        pet.foodEaten++;
+                        gainPlayerXP(1); // +1 XP per banana given, same as every other pet's per-unit feed
                         if (pet.foodEaten >= req) {
                             pet.level++;
                             pet.foodEaten = 0;
