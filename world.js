@@ -581,7 +581,10 @@ function processSpawns(dt) {
                     regionalItems[4].flowers.push(new Flower());
                 }
             } else if (type === 'banana') {
-                if (regionalItems[8].bananas.length < 5) {
+                // Region 8 only has one resource, so its cap mirrors a standard
+                // food/water region's *combined* total (5 food + 5 water = 10), not a
+                // single food/water array's individual 5-item cap.
+                if (regionalItems[8].bananas.length < 10) {
                     regionalItems[8].bananas.push(new Item('banana'));
                 }
             } else {
@@ -606,7 +609,11 @@ function processSpawns(dt) {
             if (r === 4) {
                 if (regionalItems[r].flowers.length < 5) regionalItems[r].flowers.push(new Flower());
             } else if (r === 8) {
-                if (regionalItems[r].bananas.length < 5) regionalItems[r].bananas.push(new Item('banana'));
+                // Two per tick (not one) to match the rate food/water regions gain
+                // items at — they add one food AND one water every tick, i.e. 2 items/
+                // 10s combined — capped at 10 to mirror their combined 5+5 max.
+                if (regionalItems[r].bananas.length < 10) regionalItems[r].bananas.push(new Item('banana'));
+                if (regionalItems[r].bananas.length < 10) regionalItems[r].bananas.push(new Item('banana'));
             } else if (FOOD_WATER_REGIONS.indexOf(r) !== -1) {
                 if (regionalItems[r].foods.length < 5) regionalItems[r].foods.push(new Item('food'));
                 if (regionalItems[r].waters.length < 5) regionalItems[r].waters.push(new Item('water'));

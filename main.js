@@ -301,9 +301,10 @@ FOOD_WATER_REGIONS.forEach(r => {
 });
 
 // Region 8 has no food/water — seed it with starting bananas instead, same idea as
-// the loop above (and matching Region 4's separate flower-seeding, not shown here
-// since flowers top up to 5 automatically on the very first processSpawns() tick).
-for (let i = 0; i < 3; i++) {
+// the loop above. Seeded to 6 (not 3) to mirror a standard food/water region's total
+// starting item count (3 food + 3 water = 6 items), since bananas are Region 8's only
+// resource and need to carry that same "combined" quantity on their own.
+for (let i = 0; i < 6; i++) {
     regionalItems[8].bananas.push(new Item('banana'));
 }
 
