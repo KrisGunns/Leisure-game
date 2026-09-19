@@ -281,7 +281,10 @@ function showSchrodingerResultToast(correct, outcome) {
 // fishing speed) by hand since those aren't expressible as a table row.
 function getPetPerkDescriptions(type) {
     let perks = [];
-    const tiers = (typeof FORAGE_TIERS !== 'undefined') ? FORAGE_TIERS[type] : null;
+    // Monkey is in FORAGE_TIERS too (for getForageYield()/getLevelRequirement() reuse),
+    // but it's a single-resource forager (bananas, not food/water) — skip the generic
+    // food/water tier text below and build its own bananas-only version instead.
+    const tiers = (typeof FORAGE_TIERS !== 'undefined' && type !== 'monkey') ? FORAGE_TIERS[type] : null;
 
     if (tiers) {
         tiers.forEach(tier => {
@@ -317,6 +320,13 @@ function getPetPerkDescriptions(type) {
         perks.push({ level: 15, text: 'Fishing cycle speeds up further' });
         perks.push({ level: 20, text: '10% chance of a double catch (up to 6 fish)' });
     } else if (type === 'monkey') {
+        if (typeof FORAGE_TIERS !== 'undefined' && FORAGE_TIERS.monkey) {
+            FORAGE_TIERS.monkey.forEach(tier => {
+                let [lvl, bananas] = tier;
+                if (lvl === 1) return; // level 1 is the base rate, not a milestone to list
+                perks.push({ level: lvl, text: `Forage yield increases to +${bananas} banana${bananas === 1 ? '' : 's'} per forage` });
+            });
+        }
         perks.push({ level: 20, text: '5% chance per forage to swing on the vines for 20s, then +5 coins' });
     }
 
