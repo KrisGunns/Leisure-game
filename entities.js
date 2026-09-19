@@ -135,9 +135,12 @@ class Pet {
         this.honeyCarried = 0;
         this.targetFlower = null;
 
-        // Bear-only fields, defaulted for the same reason.
+        // Bear-only fields, defaulted for the same reason. isFemaleBear controls the
+        // smaller/scaled model + pink bow drawn in draw() below — set once by
+        // createBear()'s `female` option in world.js, never changes after creation.
         this.fishingTimer = 0;
         this.fishingActionTimer = 0;
+        this.isFemaleBear = false;
 
         // Pig-only field, same reasoning.
         this.mudParticles = [];
@@ -1063,6 +1066,20 @@ draw() {
         } else if (this.type === 'bear' || (typeof pet !== 'undefined' && pet.type === 'bear')) {
             let bx = this.type === 'bear' ? this.x : ox;
             let by = this.type === 'bear' ? this.y : oy;
+            let isFemale = this.type === 'bear' && this.isFemaleBear;
+
+            ctx.save();
+            if (isFemale) {
+                // Slightly smaller model — scale the whole drawing down around its own
+                // top-left anchor (bx, by) so this.x/this.y/this.size (used for
+                // collision, wander bounds, the progress bar, etc.) still line up with
+                // what's actually drawn.
+                let scale = 0.85;
+                ctx.translate(bx, by);
+                ctx.scale(scale, scale);
+                ctx.translate(-bx, -by);
+            }
+
             ctx.fillStyle = '#5a2a00'; 
             ctx.fillRect(bx + 4, by + 8, 28, 20); 
             ctx.fillRect(bx + 10, by, 16, 12); 
@@ -1074,6 +1091,28 @@ draw() {
             ctx.fillStyle = '#3a1a00';
             ctx.fillRect(bx + 6, by + 28, 6, 6); 
             ctx.fillRect(bx + 24, by + 28, 6, 6);
+
+            if (isFemale) {
+                // Pink bow on the head — two triangular "loops" plus a small knot,
+                // sat just above the ears.
+                ctx.fillStyle = '#ff6fa5';
+                ctx.beginPath();
+                ctx.moveTo(bx + 18, by - 6);
+                ctx.lineTo(bx + 10, by - 11);
+                ctx.lineTo(bx + 10, by - 1);
+                ctx.closePath();
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(bx + 18, by - 6);
+                ctx.lineTo(bx + 26, by - 11);
+                ctx.lineTo(bx + 26, by - 1);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = '#e0559a';
+                ctx.fillRect(bx + 16, by - 8, 4, 4);
+            }
+
+            ctx.restore();
         } else if (this.type === 'pig') {
             // Accent color for ears/snout/legs: a shade darker than the body color,
             // same trick squirrel uses to keep one draw routine work for two colors.

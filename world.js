@@ -198,14 +198,22 @@ function createBee(label, x, y) {
 
 // Same idea for bears. Not purchasable today, but factored out for consistency and
 // so a future "buy a bear" feature (or save/load reconstruction) has one correct
-// place to create one from.
-function createBear(label, x, y) {
+// place to create one from. `options.female` builds the female variant (region 5's
+// second bear): same brown color, same base Exp/fishing mechanic/fishing yield
+// (all driven purely by type === 'bear' elsewhere, untouched here) — just a
+// slightly smaller model with a pink bow, handled entirely in the draw layer via
+// isFemaleBear (entities.js).
+function createBear(label, x, y, options = {}) {
     let p = new Pet('bear', label, '#5a2a00');
     p.speed = 70;
     p.level = 1;
     p.state = 'wander';
     p.x = (typeof x === 'number') ? x : 200;
     p.y = (typeof y === 'number') ? y : 250;
+    if (options.female) {
+        p.isFemaleBear = true;
+        p.size = 30; // slightly smaller than the default 36
+    }
     p.setNextFishingCooldown();
     p.pickNewWanderTarget();
     return p;
@@ -286,7 +294,7 @@ const petsByRegion = {
         createBird('Sparrow', 140, 280)
     ],
     4: [ createBee('Bee', 200, 150) ],
-    5: [ createBear('Bear', 200, 250) ],
+    5: [ createBear('Bear', 200, 250), createBear('Bow Bear', 320, 250, { female: true }) ],
     6: [
         createPig('Pig', '#ffb6c1', 130, 460),
         createPig('Mud Pig', '#95a5a6', 280, 460)

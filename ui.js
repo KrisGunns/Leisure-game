@@ -672,6 +672,14 @@ function renderMiniPet(pet, elementId) {
             mctx.fillStyle = '#000000';
             mctx.fillRect(ox + 26, oy + 15, 2, 2);
         } else if (pet.type === 'bear') {
+            let isFemale = !!pet.isFemaleBear;
+            mctx.save();
+            if (isFemale) {
+                let scale = 0.85;
+                mctx.translate(ox, oy);
+                mctx.scale(scale, scale);
+                mctx.translate(-ox, -oy);
+            }
             mctx.fillStyle = '#5a2a00'; 
             mctx.fillRect(ox + 4, oy + 8, 28, 20); 
             mctx.fillRect(ox + 10, oy + 0, 16, 12); 
@@ -683,6 +691,24 @@ function renderMiniPet(pet, elementId) {
             mctx.fillStyle = '#3a1a00';
             mctx.fillRect(ox + 6, oy + 28, 6, 6); 
             mctx.fillRect(ox + 24, oy + 28, 6, 6);
+            if (isFemale) {
+                mctx.fillStyle = '#ff6fa5';
+                mctx.beginPath();
+                mctx.moveTo(ox + 18, oy - 6);
+                mctx.lineTo(ox + 10, oy - 11);
+                mctx.lineTo(ox + 10, oy - 1);
+                mctx.closePath();
+                mctx.fill();
+                mctx.beginPath();
+                mctx.moveTo(ox + 18, oy - 6);
+                mctx.lineTo(ox + 26, oy - 11);
+                mctx.lineTo(ox + 26, oy - 1);
+                mctx.closePath();
+                mctx.fill();
+                mctx.fillStyle = '#e0559a';
+                mctx.fillRect(ox + 16, oy - 8, 4, 4);
+            }
+            mctx.restore();
         } else if (pet.type === 'pig') {
             let accent = pet.color === '#ffb6c1' ? '#ff8fab' : '#7f8c8d';
             mctx.fillStyle = pet.color;
@@ -776,7 +802,6 @@ function updateCodexData() {
     const chicken = petsByRegion[3][1];
     const bird = (typeof birdPet !== 'undefined') ? birdPet : petsByRegion[3][2];
     const bee = petsByRegion[4][0];
-    const bear = petsByRegion[5][0];
     const panda = petsByRegion[7][0];
 
     renderMiniPet(dog, 'viewDog');
@@ -879,30 +904,42 @@ function updateCodexData() {
     document.getElementById('renameBoxBee').style.display = (region4Unlocked && bee.level >= 1) ? 'block' : 'none';
 
     // FIXED: Uses the region4Unlocked variable flag to determine if Region 5 is locked as well
-    if (!region4Unlocked) {
-        // 1. Forces the mini-canvas renderer to draw a hidden black card profile with a question mark
-        renderMiniPet({ type: 'bear', level: 1, isLocked: true }, 'viewBear'); 
-        
-        // 2. Overrides the text box with mystery information at the start of the game
-        document.getElementById('infoBear').innerHTML = `
-            <strong>???</strong><br>
-            Status: <span class="codexWild">LOCKED</span><br>
-            Level: ?/20<br>
-            Next Req: ???
-        `;
-    } else {
-        // Displays full active taming metrics once the user breaks through the early zones!
-        let bearReq = getLevelRequirement('bear', bear.level);
-        renderMiniPet(bear, 'viewBear');
-        
-        document.getElementById('infoBear').innerHTML = `
-            <strong>${bear.level >= 2 ? bear.label : '???'}</strong><br>
-            Status: <span class="${bear.level >= 2 ? 'codexTamed' : 'codexWild'}">${bear.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
-            Level: ${bear.level}/20<br>
-            Next Req: ${bear.level < 20 ? '🍯 ' + bearReq + ' Honey' : 'MAX'}
-        `;
-    }
-    document.getElementById('renameBoxBear').style.display = (region4Unlocked && bear.level >= 2) ? 'block' : 'none';
+    const bear1 = petsByRegion[5] ? petsByRegion[5][0] : null;
+    const bear2 = petsByRegion[5] ? petsByRegion[5][1] : null;
+
+    [ { bear: bear1, viewId: 'viewBear1', infoId: 'infoBear1', renameId: 'renameBoxBear1' },
+      { bear: bear2, viewId: 'viewBear2', infoId: 'infoBear2', renameId: 'renameBoxBear2' }
+    ].forEach(slot => {
+        if (!slot.bear) return;
+
+        if (!region4Unlocked) {
+            // 1. Forces the mini-canvas renderer to draw a hidden black card profile with a question mark
+            renderMiniPet({ type: 'bear', level: 1, isLocked: true }, slot.viewId);
+
+            // 2. Overrides the text box with mystery information at the start of the game
+            let infoEl = document.getElementById(slot.infoId);
+            if (infoEl) infoEl.innerHTML = `
+                <strong>???</strong><br>
+                Status: <span class="codexWild">LOCKED</span><br>
+                Level: ?/20<br>
+                Next Req: ???
+            `;
+        } else {
+            // Displays full active taming metrics once the user breaks through the early zones!
+            let bearReq = getLevelRequirement('bear', slot.bear.level);
+            renderMiniPet(slot.bear, slot.viewId);
+
+            let infoEl = document.getElementById(slot.infoId);
+            if (infoEl) infoEl.innerHTML = `
+                <strong>${slot.bear.level >= 2 ? slot.bear.label : '???'}</strong><br>
+                Status: <span class="${slot.bear.level >= 2 ? 'codexTamed' : 'codexWild'}">${slot.bear.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
+                Level: ${slot.bear.level}/20<br>
+                Next Req: ${slot.bear.level < 20 ? '🍯 ' + bearReq + ' Honey' : 'MAX'}
+            `;
+        }
+        let renameEl = document.getElementById(slot.renameId);
+        if (renameEl) renameEl.style.display = (region4Unlocked && slot.bear.level >= 2) ? 'block' : 'none';
+    });
 
     // Region 6 pigs — gated behind the same region4Unlocked lock as bee/bear, since
     // Region 6 is >= 4 and follows the same Regions 1-3 taming requirement.
@@ -1232,7 +1269,8 @@ bindPetRename('btnRenameElephant', 'inputElephant', 2, 0); // Region 2, Elephant
 bindPetRename('btnRenameSquirrel', 'inputSquirrel', 3, 0); // Region 3, Squirrel
 bindPetRename('btnRenameChicken', 'inputChicken', 3, 1);   // Region 3, Chicken
 bindPetRename('btnRenameBee', 'inputBee', 4, 0);       // Region 4, Bee (Base)
-bindPetRename('btnRenameBear', 'inputBear', 5, 0);     // Region 5, Bear
+bindPetRename('btnRenameBear1', 'inputBear1', 5, 0);   // Region 5, Bear
+bindPetRename('btnRenameBear2', 'inputBear2', 5, 1);   // Region 5, Bow Bear (female)
 bindPetRename('btnRenamePig1', 'inputPig1', 6, 0);     // Region 6, Pig (pink)
 bindPetRename('btnRenamePig2', 'inputPig2', 6, 1);     // Region 6, Mud Pig (grey)
 bindPetRename('btnRenamePanda', 'inputPanda', 7, 0);   // Region 7, Panda
