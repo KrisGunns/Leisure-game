@@ -810,17 +810,13 @@ class Pet {
                     let idx = targetItem.list.indexOf(targetItem.item);
                     if (idx > -1) {
                         targetItem.list.splice(idx, 1);
-                        // Region 8's bananas are fed into this call's "food" slot (see
-                        // main.js) so monkeys can reuse this same generic nearest-item
-                        // picker instead of needing their own copy of it — but that means
-                        // `targetItem.type` is always the string 'food' here even for a
-                        // monkey eating a banana. Respawning it as 'food' would silently
-                        // misdirect the replacement into a FOOD_WATER_REGIONS region
-                        // instead of refilling Region 8 — the real cause behind bananas
-                        // depleting faster than they were replaced (every banana a monkey
-                        // foraged autonomously was a banana that never came back).
-                        let respawnType = (this.type === 'monkey') ? 'banana' : targetItem.type;
-                        respawnQueue.push({ type: respawnType, time: Date.now() + 10000 });
+                        // No respawnQueue push here — food/water/banana regions are now
+                        // refilled by processSpawns()'s count-driven "count < 10 → 2s →
+                        // batch refill to 10" model (world.js), which reacts to the pool
+                        // shrinking regardless of whether the player or a pet (like this
+                        // one) was the one who took the item. (Flowers, picked up by bees
+                        // via a separate code path, still use the older per-item
+                        // respawnQueue timer — untouched.)
                         
                         if (this.type === 'dog') {
                             let y = getForageYield('dog', this.level);

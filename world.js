@@ -471,7 +471,6 @@ function checkCollisions() {
 
             if (dist < player.size / 2 + 8) {
                 currentRItems.foods.splice(i, 1);
-                respawnQueue.push({ type: 'food', time: Date.now() + 10000 });
 
                 let foodBaseGain = 1;
                 let manualFoodMultiplier = getCharacterBonuses(character.level).manualGather;
@@ -501,7 +500,6 @@ function checkCollisions() {
 
             if (dist < player.size / 2 + 8) {
                 currentRItems.waters.splice(i, 1);
-                respawnQueue.push({ type: 'water', time: Date.now() + 10000 });
 
                 let waterBaseGain = 1;
                 let manualWaterMultiplier = getCharacterBonuses(character.level).manualGather;
@@ -529,7 +527,6 @@ function checkCollisions() {
 
             if (dist < player.size / 2 + 8) {
                 currentRItems.bananas.splice(i, 1);
-                respawnQueue.push({ type: 'banana', time: Date.now() + 10000 });
 
                 let bananaBaseGain = 1;
                 let manualBananaMultiplier = getCharacterBonuses(character.level).manualGather;
@@ -571,33 +568,26 @@ function checkCollisions() {
 
 }
 
+// Per-region "refill window" countdowns for the count-driven food/water/banana spawn
+// model below — keyed by region id. As soon as a region's resource count drops under
+// its 10-item cap, a 2-second countdown starts (if one isn't already running); once it
+// reaches 0, the region is topped straight back up to its max in one batch (not
+// trickled item-by-item), and the countdown clears until the count drops below the cap
+// again. Replaces the old fixed-10-second trickle (1 food + 1 water per tick) and the
+// old per-pickup 10-second individual respawnQueue timer for these three resources —
+// both of which made refills feel like "everything pops back in at once every 10s"
+// with long dry spells in between, rather than promptly topping back up.
+let regionRefillTimers = {};
+
 function processSpawns(dt) {
     let now = Date.now();
+
+    // Flowers (Region 4, bees) keep their original per-item respawnQueue + periodic
+    // top-up model, unchanged — not part of this rework.
     for (let i = respawnQueue.length - 1; i >= 0; i--) {
-        if (now >= respawnQueue[i].time) {
-            let type = respawnQueue[i].type;
-            if (type === 'flower') {
-                if (regionalItems[4].flowers.length < 5) {
-                    regionalItems[4].flowers.push(new Flower());
-                }
-            } else if (type === 'banana') {
-                // Region 8 only has one resource, so its cap mirrors a standard
-                // food/water region's *combined* total (5 food + 5 water = 10), not a
-                // single food/water array's individual 5-item cap.
-                if (regionalItems[8].bananas.length < 10) {
-                    regionalItems[8].bananas.push(new Item('banana'));
-                }
-            } else {
-                for (let ri = 0; ri < FOOD_WATER_REGIONS.length; ri++) {
-                    let rItems = regionalItems[FOOD_WATER_REGIONS[ri]];
-                    if (type === 'food' && rItems.foods.length < 5) {
-                        rItems.foods.push(new Item('food'));
-                        break;
-                    } else if (type === 'water' && rItems.waters.length < 5) {
-                        rItems.waters.push(new Item('water'));
-                        break;
-                    }
-                }
+        if (now >= respawnQueue[i].time && respawnQueue[i].type === 'flower') {
+            if (regionalItems[4].flowers.length < 5) {
+                regionalItems[4].flowers.push(new Flower());
             }
             respawnQueue.splice(i, 1);
         }
@@ -605,21 +595,44 @@ function processSpawns(dt) {
 
     spawnTimer += dt;
     if (spawnTimer >= 10) {
-        for (let r = 1; r <= 8; r++) {
-            if (r === 4) {
-                if (regionalItems[r].flowers.length < 5) regionalItems[r].flowers.push(new Flower());
-            } else if (r === 8) {
-                // Two per tick (not one) to match the rate food/water regions gain
-                // items at — they add one food AND one water every tick, i.e. 2 items/
-                // 10s combined — capped at 10 to mirror their combined 5+5 max.
-                if (regionalItems[r].bananas.length < 10) regionalItems[r].bananas.push(new Item('banana'));
-                if (regionalItems[r].bananas.length < 10) regionalItems[r].bananas.push(new Item('banana'));
-            } else if (FOOD_WATER_REGIONS.indexOf(r) !== -1) {
-                if (regionalItems[r].foods.length < 5) regionalItems[r].foods.push(new Item('food'));
-                if (regionalItems[r].waters.length < 5) regionalItems[r].waters.push(new Item('water'));
+        if (regionalItems[4].flowers.length < 5) regionalItems[4].flowers.push(new Flower());
+        spawnTimer = 0;
+    }
+
+    // Food/water regions (1, 2, 3, 6, 7): capped at 10 combined (5 food + 5 water).
+    FOOD_WATER_REGIONS.forEach(r => {
+        let items = regionalItems[r];
+        let total = items.foods.length + items.waters.length;
+
+        if (total >= 10) {
+            regionRefillTimers[r] = undefined; // fully stocked — no countdown needed
+            return;
+        }
+
+        if (regionRefillTimers[r] === undefined) {
+            regionRefillTimers[r] = 2.0; // just dropped below cap — start the window
+        } else {
+            regionRefillTimers[r] -= dt;
+            if (regionRefillTimers[r] <= 0) {
+                while (items.foods.length < 5) items.foods.push(new Item('food'));
+                while (items.waters.length < 5) items.waters.push(new Item('water'));
+                regionRefillTimers[r] = undefined;
             }
         }
-        spawnTimer = 0;
+    });
+
+    // Region 8 (monkeys): single resource, bananas, capped at 10 — same model as above.
+    let bananaPool = regionalItems[8].bananas;
+    if (bananaPool.length >= 10) {
+        regionRefillTimers[8] = undefined;
+    } else if (regionRefillTimers[8] === undefined) {
+        regionRefillTimers[8] = 2.0;
+    } else {
+        regionRefillTimers[8] -= dt;
+        if (regionRefillTimers[8] <= 0) {
+            while (bananaPool.length < 10) bananaPool.push(new Item('banana'));
+            regionRefillTimers[8] = undefined;
+        }
     }
 }
 
