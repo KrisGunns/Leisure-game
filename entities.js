@@ -1380,7 +1380,7 @@ draw() {
 
             if (this.level < 20) {
                 let progressRatio = 0;
-                if (this.type === 'bee' || this.type === 'bear') {
+                if (this.type === 'bee' || this.type === 'bear' || this.type === 'monkey') {
                     let totalReq = getLevelRequirement(this.type, this.level);
                     progressRatio = this.foodEaten / totalReq;
             } else {
