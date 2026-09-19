@@ -764,6 +764,23 @@ function renderMiniPet(pet, elementId) {
             mctx.fillRect(ox + 30, oy + 14, 4, 12);
             mctx.fillRect(ox + 10, oy + 28, 4, 6);
             mctx.fillRect(ox + 22, oy + 28, 4, 6);
+            if (pet.bowColor) {
+                mctx.fillStyle = pet.bowColor;
+                mctx.beginPath();
+                mctx.moveTo(ox + 18, oy - 1);
+                mctx.lineTo(ox + 12, oy - 5);
+                mctx.lineTo(ox + 12, oy + 2);
+                mctx.closePath();
+                mctx.fill();
+                mctx.beginPath();
+                mctx.moveTo(ox + 18, oy - 1);
+                mctx.lineTo(ox + 24, oy - 5);
+                mctx.lineTo(ox + 24, oy + 2);
+                mctx.closePath();
+                mctx.fill();
+                mctx.fillStyle = '#1e8449';
+                mctx.fillRect(ox + 16.5, oy - 3, 3, 3);
+            }
         } else if (pet.type === 'cat') {
             mctx.fillStyle = pet.color;
             mctx.fillRect(ox + 4, oy + 12, 26, 16);
@@ -1441,4 +1458,20 @@ if (spawnBeeBtn) {
 
     spawnBeeBtn.addEventListener('touchstart', handlePurchaseBee, { passive: false });
     spawnBeeBtn.addEventListener('mousedown', handlePurchaseBee);
+}
+
+const hiveHoneyLabel = document.getElementById('hiveHoneyLabel');
+if (hiveHoneyLabel) {
+    const handleCollectHiveHoney = (e) => {
+        if (e) e.preventDefault();
+        if (typeof region4Hive === 'undefined' || !region4Hive || region4Hive.honey <= 0) return;
+
+        inventory.honey += region4Hive.honey;
+        region4Hive.honey = 0;
+        updateUI();
+        saveGameProgress();
+    };
+
+    hiveHoneyLabel.addEventListener('touchstart', handleCollectHiveHoney, { passive: false });
+    hiveHoneyLabel.addEventListener('mousedown', handleCollectHiveHoney);
 }

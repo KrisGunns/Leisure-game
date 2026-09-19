@@ -157,6 +157,11 @@ class Pet {
         // Pig-only field, same reasoning.
         this.mudParticles = [];
 
+        // Monkey-only field, same reasoning. Set once by createMonkey()'s `bowColor`
+        // option (world.js) — purely cosmetic, draws a small bow on its head in
+        // draw() below (same idea as the female bear's pink bow).
+        this.bowColor = null;
+
         // Cat-only fields, same reasoning. schrodingerOutcome is the (pre-determined,
         // 50/50) truth of whether the cat is "alive" or "dead" once observed — set the
         // moment it enters the box, revealed only once the player guesses.
@@ -685,8 +690,9 @@ class Pet {
             return;
         }
 
-                // --- MONKEY VINE-SWINGING STATE: Lv20 perk, 20s timer, stays put (drawn
-        // hanging from a vine in draw() below), pays out 5 coins once it's done. ---
+                // --- MONKEY VINE-SWINGING STATE: Lv20 perk, 20s timer, swings from
+        // vine to vine around the region (drawn hanging/mid-swing in draw() below),
+        // pays out 5 coins once it's done. ---
         if (this.state === 'swinging') {
             this.stateTimer -= dt;
             if (this.stateTimer <= 0) {
@@ -697,8 +703,22 @@ class Pet {
                 saveGameProgress();
                 this.state = 'wander';
                 this.pickNewWanderTarget();
+                return;
             }
-            return; // stays put on the vine for the whole 20s
+
+            // Swings from spot to spot (a new "vine") at a boosted speed — arriving
+            // immediately picks the next one, with no idle pause in between, for a
+            // continuous swinging motion for the whole 20s.
+            let dx = this.targetX - this.x;
+            let dy = this.targetY - this.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist > 5) {
+                this.x += (dx / dist) * (this.speed * 1.6) * dt;
+                this.y += (dy / dist) * (this.speed * 1.6) * dt;
+            } else {
+                this.pickNewWanderTarget();
+            }
+            return;
         }
 
                 // --- MULTI-STEP ELEPHANT PLAY MECHANIC ENGINE ---
@@ -877,12 +897,14 @@ class Pet {
                             let y = getForageYield('monkey', this.level);
                             inventory.bananas += Math.round(y.food * petFoodWaterBonus);
 
-                            // Level 20+: 5% chance per successful forage to swing on the
-                            // vines for 20s, paying out 5 coins once it's done (handled
-                            // when the 'swinging' state's timer runs out, below).
+                            // Level 20+: 5% chance per successful forage to swing from
+                            // vine to vine around the region for 20s, paying out 5 coins
+                            // once it's done (handled when the 'swinging' state's timer
+                            // runs out, below).
                             if (this.level >= 20 && Math.random() < 0.05) {
                                 this.state = 'swinging';
                                 this.stateTimer = 20.0;
+                                this.pickNewWanderTarget(); // first vine to swing to
                                 return;
                             }
                         } else if (this.type === 'cat') {
@@ -1239,6 +1261,26 @@ draw() {
             ctx.moveTo(this.x + 6, this.y + 20);
             ctx.quadraticCurveTo(this.x - 8, this.y + 22, this.x - 6, this.y + 10);
             ctx.stroke();
+
+            if (this.bowColor) {
+                // Small bow on the head — same two-triangle-plus-knot shape as the
+                // female bear's, just smaller and positioned for the monkey's head.
+                ctx.fillStyle = this.bowColor;
+                ctx.beginPath();
+                ctx.moveTo(this.x + 18, this.y - 1);
+                ctx.lineTo(this.x + 12, this.y - 5);
+                ctx.lineTo(this.x + 12, this.y + 2);
+                ctx.closePath();
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(this.x + 18, this.y - 1);
+                ctx.lineTo(this.x + 24, this.y - 5);
+                ctx.lineTo(this.x + 24, this.y + 2);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = '#1e8449';
+                ctx.fillRect(this.x + 16.5, this.y - 3, 3, 3);
+            }
         } else if (this.type === 'cat') {
             let boxed = this.state === 'schrodinger';
             let flipped = boxed && !this.schrodingerVisible;

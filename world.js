@@ -267,14 +267,19 @@ function createPanda(label, x, y) {
 }
 
 // Same idea for monkeys (Region 8). Not purchasable, same as bear/panda — factored
-// out purely for consistency with the rest of the factories.
-function createMonkey(label, x, y) {
+// out purely for consistency with the rest of the factories. `options.bowColor` draws
+// a small bow on its head (same idea as the female bear's pink bow) — purely cosmetic,
+// doesn't affect stats/mechanics.
+function createMonkey(label, x, y, options = {}) {
     let p = new Pet('monkey', label, '#8b5a2b');
     p.speed = 85;
     p.level = 1;
     p.state = 'wander';
     p.x = (typeof x === 'number') ? x : 200;
     p.y = (typeof y === 'number') ? y : 250;
+    if (options.bowColor) {
+        p.bowColor = options.bowColor;
+    }
     p.pickNewWanderTarget();
     return p;
 }
@@ -320,7 +325,7 @@ const petsByRegion = {
         createPig('Mud Pig', '#95a5a6', 280, 460)
     ],
     7: [ createPanda('Panda', 200, 220) ],
-    8: [ createMonkey('Monkey', 150, 200), createMonkey('Coco', 280, 200) ]
+    8: [ createMonkey('Monkey', 150, 200), createMonkey('Coco', 280, 200, { bowColor: '#2ecc71' }) ]
 };
 
 // Permanent reference to the one bird instance, independent of which region's array it
@@ -568,7 +573,7 @@ function checkCollisions() {
             // input.js for the actual collection.
             if (hiveHoneyLabel) {
                 hiveHoneyLabel.style.display = 'block';
-                hiveHoneyLabel.textContent = `🍯 Hive: ${region4Hive.honey} (GIVE to collect)`;
+                hiveHoneyLabel.textContent = `🍯 Hive: ${region4Hive.honey} (Tap to collect)`;
             }
         } else {
             spawnBeeBtn.style.display = 'none';

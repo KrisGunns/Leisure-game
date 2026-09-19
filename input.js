@@ -261,23 +261,6 @@ window.addEventListener('keyup', (e) => {
 });
 
 function executeContinuousFeed() {
-    // Collecting stored hive honey (Region 4) — a GIVE press near the hive transfers
-    // everything the bees have deposited into the player's inventory in one go (no
-    // cap, no hold-to-fill-a-bar like pet feeding, since there's no target amount to
-    // reach — it's just a pickup). Independent of the per-pet loop below, since bees
-    // themselves were never manually feedable anyway (no branch for them there).
-    if (currentRegion === 4 && typeof region4Hive !== 'undefined' && region4Hive) {
-        let dx = (player.x + player.size / 2) - region4Hive.x;
-        let dy = (player.y + player.size / 2) - region4Hive.y;
-        let dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 65 && region4Hive.honey > 0) {
-            inventory.honey += region4Hive.honey;
-            region4Hive.honey = 0;
-            updateUI();
-            saveGameProgress();
-        }
-    }
-
     let activePets = petsByRegion[currentRegion];
     if (!Array.isArray(activePets)) return;
 
