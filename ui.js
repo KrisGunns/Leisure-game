@@ -497,6 +497,12 @@ function updateUI() {
     if (shopOverlayEl && shopOverlayEl.style.display !== 'none' && typeof refreshShopIfChanged === 'function') {
         refreshShopIfChanged();
     }
+
+    // ...and the Perk Tree (e.g. a level-up while it's open adds a point / unlocks a tier).
+    const perkTreeOverlayEl = document.getElementById('perkTreeOverlay');
+    if (perkTreeOverlayEl && perkTreeOverlayEl.style.display !== 'none' && typeof refreshPerkTreeIfChanged === 'function') {
+        refreshPerkTreeIfChanged();
+    }
 }
 function renderMiniPet(pet, elementId) {
     const miniCanvas = document.getElementById(elementId);
@@ -1163,8 +1169,8 @@ const characterClose = document.getElementById('characterClose');
 // Renders the Character screen's live contents: name, level, the cumulative % bonuses
 // currently in effect (straight from getCharacterBonuses() in state.js, so it can never
 // drift from what's actually applied to foraging/gathering), and the full perk
-// checklist with already-reached milestones highlighted — same visual treatment as a
-// pet's Level Perks list in showPetDetail().
+// checklist with the perks unlocked in the Perk Tree highlighted — same visual treatment
+// as a pet's Level Perks list in showPetDetail().
 function updateCharacterScreen() {
     const nameDisplay = document.getElementById('characterNameDisplay');
     const levelValue = document.getElementById('characterLevelValue');
@@ -1186,13 +1192,14 @@ function updateCharacterScreen() {
         `;
     }
 
-    if (perksList && typeof CHARACTER_LEVEL_PERKS !== 'undefined') {
+    // Perk checklist: green + ✓ once the perk has been unlocked in the Perk Tree.
+    if (perksList && typeof PERK_TREE !== 'undefined') {
         while (perksList.firstChild) perksList.removeChild(perksList.firstChild);
-        CHARACTER_LEVEL_PERKS.forEach(p => {
+        [...PERK_TREE].sort((a, b) => a.level - b.level).forEach(p => {
             let li = document.createElement('li');
-            let reached = character.level >= p.level;
-            li.style.color = reached ? '#2ecc71' : '#7f8c8d';
-            li.textContent = `Lv.${p.level}: ${p.text}`;
+            let unlocked = hasPerk(p.id);
+            li.style.color = unlocked ? '#2ecc71' : '#7f8c8d';
+            li.textContent = `${unlocked ? '✓ ' : ''}Lv.${p.level}: ${p.text}`;
             perksList.appendChild(li);
         });
     }
@@ -1407,6 +1414,208 @@ if (shopClose) {
 }
 if (shopTabBuy) shopTabBuy.addEventListener('click', () => { shopTab = 'buy'; renderShop(); });
 if (shopTabSell) shopTabSell.addEventListener('click', () => { shopTab = 'sell'; renderShop(); });
+
+// ------------------------------------------------------------
+// PERK TREE — opened from the MENU overlay (🌳 PERK TREE). A skill-tree screen built from
+// PERK_TREE in state.js: the root at the BOTTOM, three branches growing upward, the
+// player's unspent perk points at the very top, and a detail panel pinned underneath.
+// The tree area scrolls (like the pets codex) and is sized from the data, so adding
+// perks for levels past 50 is just adding rows to PERK_TREE. Tapping a node selects it;
+// the Unlock button in the detail panel is what actually spends the point.
+// (Perk points are deliberately shown ONLY on this screen.)
+// ------------------------------------------------------------
+const perkTreeOverlay = document.getElementById('perkTreeOverlay');
+const openPerkTreeBtn = document.getElementById('openPerkTreeBtn');
+const perkTreeClose = document.getElementById('perkTreeClose');
+const perkPointsValue = document.getElementById('perkPointsValue');
+const perkTreeScroll = document.getElementById('perkTreeScroll');
+const perkTreeCanvas = document.getElementById('perkTreeCanvas');
+const perkDetail = document.getElementById('perkDetail');
+
+const PERK_TREE_COLS = 3;        // max branches (columns)
+const PERK_ROW_HEIGHT = 118;     // px between tiers
+const PERK_CANVAS_PAD = 14;      // px above the top tier / below the root
+
+let perkTreeSelectedId = null;
+let perkTreeRenderedSignature = '';
+
+// Same reasoning as the shop: updateUI() runs every frame, so an open tree is only redrawn
+// when something it shows actually changed (points, level, or unlocked perks) — never
+// unconditionally, which would swallow taps by replacing buttons mid-press.
+function getPerkTreeSignature() {
+    return [character.perkPoints, character.level, character.perks.join(',')].join('|');
+}
+
+function refreshPerkTreeIfChanged() {
+    if (getPerkTreeSignature() !== perkTreeRenderedSignature) renderPerkTree();
+}
+
+function perkNodeX(col) { return ((col + 0.5) / PERK_TREE_COLS * 100) + '%'; }
+function perkNodeY(tier, maxTier) {
+    return PERK_CANVAS_PAD + (maxTier - tier) * PERK_ROW_HEIGHT + PERK_ROW_HEIGHT / 2;
+}
+
+// status (state.js getPerkStatus) -> the node's visual style
+const PERK_NODE_CLASS = {
+    unlocked: 'perkNodeUnlocked',
+    available: 'perkNodeAvailable',
+    needsLevel: 'perkNodeReachable',
+    needsPoints: 'perkNodeReachable',
+    locked: 'perkNodeLocked'
+};
+
+function renderPerkTree() {
+    if (!perkTreeCanvas || !perkTreeScroll) return;
+
+    const prevScroll = perkTreeScroll.scrollTop;
+    if (perkPointsValue) perkPointsValue.textContent = character.perkPoints;
+
+    const maxTier = Math.max(...PERK_TREE.map(p => p.tier));
+    const height = (maxTier + 1) * PERK_ROW_HEIGHT + PERK_CANVAS_PAD * 2;
+
+    while (perkTreeCanvas.firstChild) perkTreeCanvas.removeChild(perkTreeCanvas.firstChild);
+    perkTreeCanvas.style.height = height + 'px';
+
+    // Connector lines first (drawn beneath the nodes). Gold = both ends unlocked, light =
+    // the parent is unlocked so this branch is open, dotted = still out of reach.
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('class', 'perkLines');
+    svg.setAttribute('width', '100%');
+    svg.setAttribute('height', height);
+    PERK_TREE.forEach(child => {
+        child.requires.forEach(parentId => {
+            const parent = PERK_BY_ID[parentId];
+            if (!parent) return;
+            const line = document.createElementNS(svgNS, 'line');
+            line.setAttribute('x1', perkNodeX(parent.col));
+            line.setAttribute('y1', perkNodeY(parent.tier, maxTier));
+            line.setAttribute('x2', perkNodeX(child.col));
+            line.setAttribute('y2', perkNodeY(child.tier, maxTier));
+            let cls = 'perkLine';
+            if (hasPerk(parentId)) cls += hasPerk(child.id) ? ' perkLineActive' : ' perkLineOpen';
+            line.setAttribute('class', cls);
+            svg.appendChild(line);
+        });
+    });
+    perkTreeCanvas.appendChild(svg);
+
+    PERK_TREE.forEach(perk => {
+        const status = getPerkStatus(perk);
+        const node = document.createElement('button');
+        node.className = 'perkNode ' + PERK_NODE_CLASS[status] +
+            (perk.id === perkTreeSelectedId ? ' perkNodeSelected' : '');
+        node.style.left = perkNodeX(perk.col);
+        node.style.top = perkNodeY(perk.tier, maxTier) + 'px';
+        node.dataset.perkId = perk.id;
+        node.setAttribute('aria-label', `Level ${perk.level} perk: ${perk.text} (${status})`);
+
+        const icon = document.createElement('span');
+        icon.className = 'perkNodeIcon';
+        icon.textContent = perk.icon;
+        node.appendChild(icon);
+
+        const lvl = document.createElement('span');
+        lvl.className = 'perkNodeLevel';
+        lvl.textContent = `Lv.${perk.level}`;
+        node.appendChild(lvl);
+
+        if (status === 'unlocked' || status === 'locked') {
+            const badge = document.createElement('span');
+            badge.className = 'perkNodeBadge';
+            badge.textContent = status === 'unlocked' ? '✓' : '🔒';
+            node.appendChild(badge);
+        }
+
+        // `click` (not touchstart) so a finger that starts on a node can still scroll the tree.
+        node.addEventListener('click', () => {
+            perkTreeSelectedId = perk.id;
+            renderPerkTree();
+        });
+        perkTreeCanvas.appendChild(node);
+    });
+
+    perkTreeScroll.scrollTop = prevScroll;   // rebuilding must never jump the scroll position
+    renderPerkDetail();
+    perkTreeRenderedSignature = getPerkTreeSignature();
+}
+
+function renderPerkDetail() {
+    if (!perkDetail) return;
+    while (perkDetail.firstChild) perkDetail.removeChild(perkDetail.firstChild);
+
+    const perk = PERK_BY_ID[perkTreeSelectedId];
+    if (!perk) {
+        const hint = document.createElement('div');
+        hint.className = 'perkDetailHint';
+        hint.textContent = 'Tap a perk to see what it does.';
+        perkDetail.appendChild(hint);
+        return;
+    }
+
+    const status = getPerkStatus(perk);
+    let statusText;
+    if (status === 'unlocked') {
+        statusText = '✓ Unlocked';
+    } else if (status === 'locked') {
+        const missing = PERK_BY_ID[perk.requires.find(id => !hasPerk(id))];
+        statusText = `🔒 Unlock the Lv.${missing ? missing.level : '?'} perk first`;
+    } else if (status === 'needsLevel') {
+        statusText = `🔒 Reach character level ${perk.level} (you're level ${character.level})`;
+    } else if (status === 'needsPoints') {
+        statusText = 'Not enough perk points';
+    } else {
+        statusText = 'Ready to unlock';
+    }
+
+    const info = document.createElement('div');
+    info.className = 'perkDetailInfo';
+    const title = document.createElement('div');
+    title.className = 'perkDetailTitle';
+    title.textContent = `${perk.icon} Lv.${perk.level} perk`;
+    const text = document.createElement('div');
+    text.className = 'perkDetailText';
+    text.textContent = perk.text;
+    const st = document.createElement('div');
+    st.className = 'perkDetailStatus' + ((status === 'unlocked' || status === 'available') ? ' perkDetailStatusOk' : '');
+    st.textContent = statusText;
+    info.appendChild(title);
+    info.appendChild(text);
+    info.appendChild(st);
+    perkDetail.appendChild(info);
+
+    const label = status === 'unlocked' ? 'Unlocked' : `Unlock · ${perk.cost} pt`;
+    const btn = makeShopButton(label, status === 'unlocked' ? 'shopActionBtnActive' : '', status !== 'available', () => {
+        if (unlockPerk(perk.id)) {
+            renderPerkTree();
+            updateUI();   // Character screen / bonuses pick up the new perk
+        }
+    });
+    perkDetail.appendChild(btn);
+}
+
+const handleOpenPerkTree = (e) => {
+    if (e) e.preventDefault();
+    perkTreeSelectedId = null;
+    if (perkTreeOverlay) perkTreeOverlay.style.display = 'flex';
+    renderPerkTree();
+    // Start at the bottom of the tree: the root, where the player begins.
+    if (perkTreeScroll) perkTreeScroll.scrollTop = perkTreeScroll.scrollHeight;
+};
+
+const handleClosePerkTree = (e) => {
+    if (e) e.preventDefault();
+    if (perkTreeOverlay) perkTreeOverlay.style.display = 'none';
+};
+
+if (openPerkTreeBtn) {
+    openPerkTreeBtn.addEventListener('touchstart', handleOpenPerkTree, { passive: false });
+    openPerkTreeBtn.addEventListener('mousedown', handleOpenPerkTree);
+}
+if (perkTreeClose) {
+    perkTreeClose.addEventListener('touchstart', handleClosePerkTree, { passive: false });
+    perkTreeClose.addEventListener('mousedown', handleClosePerkTree);
+}
 
 const settingsBtn = document.getElementById('settingsBtn');
 const devPanel = document.getElementById('devPanel');

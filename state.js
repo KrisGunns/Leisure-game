@@ -92,7 +92,9 @@ const inventory = {
 let character = {
     name: 'Player',
     level: 1,
-    xp: 0
+    xp: 0,
+    perkPoints: 0,   // unspent points — +1 per level gained (see gainPlayerXP)
+    perks: []        // ids of unlocked PERK_TREE nodes
 };
 
 // Calculate exponential player XP progression thresholds (No level cap ceiling)
@@ -100,56 +102,113 @@ function getCharacterNextXP(currentLevel) {
     return Math.floor(100 * Math.pow(currentLevel, 0.6)); // Scaled curve scaling boundaries
 }
 
-// Character-level perk bonuses (stack cumulatively as milestones are reached):
-// Lv5/15/35/45: +30% food & water gained from pets. Lv10/30: +25% honey.
-// Lv20/40: +25% fish. Lv25/50: +25% coin. Plus the flat +10%/level manual gather bonus.
-// Single source of truth — entities.js (pet foraging) and world.js (manual pickup) both
-// call this instead of each keeping their own copy of the thresholds, and the Character
-// screen (ui.js) reads it too, so the displayed bonuses can never drift out of sync with
-// what's actually applied in gameplay.
-function getCharacterBonuses(level) {
-    let petFoodWater = 1.0;
-    if (level >= 5) petFoodWater += 0.30;
-    if (level >= 15) petFoodWater += 0.30;
-    if (level >= 35) petFoodWater += 0.30;
-    if (level >= 45) petFoodWater += 0.30;
+// ------------------------------------------------------------
+// PERK TREE — character perks the player chooses to unlock (MENU -> 🌳 PERK TREE).
+// ------------------------------------------------------------
+// The player earns 1 perk point per character level gained and spends `cost` points to
+// unlock a node. A node can be unlocked when ALL of these hold (see getPerkStatus):
+//   1. every perk in `requires` is already unlocked (the tree's branching),
+//   2. the character has reached the node's `level` (each node keeps the level milestone
+//      it used to unlock automatically at — the "Lv.N perk" naming), and
+//   3. there are enough perk points.
+// Layout is data-driven: `tier` = row (0 = bottom/root, growing upward) and `col` = which
+// of the three branches (0 left, 1 centre, 2 right). To add perks past Lv50, append rows
+// here with the next tier numbers — the tree screen (ui.js) sizes and scrolls itself.
+// NOTE: a node must be listed AFTER everything in its `requires` (normalizeCharacterPerks
+// relies on it), which sorting by tier already guarantees.
+// `stat` + `add` are the actual effect (read by getCharacterBonuses below).
+const PERK_TREE = [
+    // Tier 0 — the root, alone on its row. Everything else hangs off it.
+    { id: 'lv5',  level: 5,  cost: 1, tier: 0, col: 1, requires: [],        icon: '🍪💧', stat: 'petFoodWater', add: 0.30, text: '+30% food & water gained from pets' },
+    // Tier 1 — the three branch starters.
+    { id: 'lv10', level: 10, cost: 1, tier: 1, col: 0, requires: ['lv5'],   icon: '🍯',   stat: 'petHoney',     add: 0.25, text: '+25% honey gained from pets' },
+    { id: 'lv15', level: 15, cost: 1, tier: 1, col: 1, requires: ['lv5'],   icon: '🍪💧', stat: 'petFoodWater', add: 0.30, text: '+30% food & water gained from pets' },
+    { id: 'lv20', level: 20, cost: 1, tier: 1, col: 2, requires: ['lv5'],   icon: '🐟',   stat: 'petFish',      add: 0.25, text: '+25% fish gained from pets' },
+    // Tier 2 — continues each branch straight upward.
+    { id: 'lv25', level: 25, cost: 1, tier: 2, col: 0, requires: ['lv10'],  icon: '🪙',   stat: 'coin',         add: 0.25, text: '+25% coin gained' },
+    { id: 'lv30', level: 30, cost: 1, tier: 2, col: 1, requires: ['lv15'],  icon: '🍯',   stat: 'petHoney',     add: 0.25, text: '+25% honey gained from pets' },
+    { id: 'lv35', level: 35, cost: 1, tier: 2, col: 2, requires: ['lv20'],  icon: '🍪💧', stat: 'petFoodWater', add: 0.30, text: '+30% food & water gained from pets' },
+    // Tier 3
+    { id: 'lv40', level: 40, cost: 1, tier: 3, col: 0, requires: ['lv25'],  icon: '🐟',   stat: 'petFish',      add: 0.25, text: '+25% fish gained from pets' },
+    { id: 'lv45', level: 45, cost: 1, tier: 3, col: 1, requires: ['lv30'],  icon: '🍪💧', stat: 'petFoodWater', add: 0.30, text: '+30% food & water gained from pets' },
+    { id: 'lv50', level: 50, cost: 1, tier: 3, col: 2, requires: ['lv35'],  icon: '🪙',   stat: 'coin',         add: 0.25, text: '+25% coin gained' }
+];
 
-    let petHoney = 1.0;
-    if (level >= 10) petHoney += 0.25;
-    if (level >= 30) petHoney += 0.25;
+const PERK_BY_ID = {};
+PERK_TREE.forEach(p => { PERK_BY_ID[p.id] = p; });
 
-    let petFish = 1.0;
-    if (level >= 20) petFish += 0.25;
-    if (level >= 40) petFish += 0.25;
-
-    let coin = 1.0;
-    if (level >= 25) coin += 0.25;
-    if (level >= 50) coin += 0.25;
-
-    return {
-        petFoodWater: petFoodWater,
-        petHoney: petHoney,
-        petFish: petFish,
-        coin: coin,
-        manualGather: 1 + (level * 0.10)
-    };
+function hasPerk(id) {
+    return character.perks.indexOf(id) !== -1;
 }
 
-// Ordered milestone list backing the Character screen's perk checklist — kept as data
-// (rather than re-deriving from getCharacterBonuses' if-checks) so the screen can show
-// each individual unlock as its own line item instead of just the cumulative totals.
-const CHARACTER_LEVEL_PERKS = [
-    { level: 5,  text: '+30% food & water gained by pets' },
-    { level: 10, text: '+25% honey gained from pets' },
-    { level: 15, text: '+30% food & water gained from pets' },
-    { level: 20, text: '+25% fish gained from pets' },
-    { level: 25, text: '+25% coin gained' },
-    { level: 30, text: '+25% honey gained from pets' },
-    { level: 35, text: '+30% food & water gained from pets' },
-    { level: 40, text: '+25% fish gained from pets' },
-    { level: 45, text: '+30% food & water gained by pets' },
-    { level: 50, text: '+25% coin gained' }
-];
+// Why a perk can or can't be unlocked right now, in priority order:
+//   'unlocked'    already taken
+//   'locked'      a prerequisite perk hasn't been unlocked yet
+//   'needsLevel'  prerequisites are done but the character level is too low
+//   'needsPoints' everything else is fine but there aren't enough perk points
+//   'available'   can be unlocked right now
+function getPerkStatus(perk) {
+    if (hasPerk(perk.id)) return 'unlocked';
+    if (!perk.requires.every(hasPerk)) return 'locked';
+    if (character.level < perk.level) return 'needsLevel';
+    if (character.perkPoints < perk.cost) return 'needsPoints';
+    return 'available';
+}
+
+// Spends the points and unlocks the perk. Returns true on success. Re-validates
+// everything itself, so it's safe to call from anywhere (the UI's disabled button is a
+// convenience, not the actual rule).
+function unlockPerk(id) {
+    const perk = PERK_BY_ID[id];
+    if (!perk || getPerkStatus(perk) !== 'available') return false;
+    character.perkPoints -= perk.cost;
+    character.perks.push(perk.id);
+    saveGameProgress();
+    return true;
+}
+
+// Makes sure `character` has valid perk data — called after a save is loaded, because
+// loading replaces the whole `character` object with whatever was stored.
+//  - Saves from before the perk tree existed have no `perks` array. They get one point
+//    for every level already gained (level - 1) and NO perks unlocked: the old automatic
+//    level-milestone bonuses are gone, and the player now spends those points in the tree.
+//  - Otherwise the stored data is sanity-checked: unknown ids and duplicates are dropped,
+//    a perk whose prerequisite isn't unlocked is dropped, and bad point counts become 0.
+function normalizeCharacterPerks() {
+    if (!Array.isArray(character.perks)) {
+        character.perks = [];
+        character.perkPoints = Math.max(0, Math.floor(Number(character.level) || 1) - 1);
+        return;
+    }
+    const saved = new Set(character.perks);
+    const kept = [];
+    PERK_TREE.forEach(p => {
+        if (saved.has(p.id) && p.requires.every(r => kept.indexOf(r) !== -1)) kept.push(p.id);
+    });
+    character.perks = kept;
+
+    const pts = Math.floor(Number(character.perkPoints));
+    character.perkPoints = (isFinite(pts) && pts > 0) ? pts : 0;
+}
+
+// Character bonuses, as multipliers (1.0 = no bonus). The perk-driven ones are the sum of
+// every UNLOCKED perk in PERK_TREE; manual gathering is the one non-perk bonus (a flat
+// +10% per character level, always on).
+// Single source of truth — entities.js (pet foraging) and world.js (manual pickup) both
+// call this instead of each keeping their own copy, and the Character screen (ui.js)
+// reads it too, so the displayed bonuses can never drift out of sync with what's
+// actually applied in gameplay.
+function getCharacterBonuses(level) {
+    let bonuses = { petFoodWater: 1.0, petHoney: 1.0, petFish: 1.0, coin: 1.0 };
+
+    character.perks.forEach(id => {
+        const perk = PERK_BY_ID[id];
+        if (perk && bonuses[perk.stat] !== undefined) bonuses[perk.stat] += perk.add;
+    });
+
+    bonuses.manualGather = 1 + (level * 0.10);
+    return bonuses;
+}
 
 // ------------------------------------------------------------
 // SHOP — what's for sale, what's bought, and what selling pays.
@@ -257,6 +316,7 @@ function gainPlayerXP(amount) {
     while (character.xp >= nextNeeded) {
         character.xp -= nextNeeded;
         character.level++;
+        character.perkPoints++;   // 1 perk point per level gained (spent in the Perk Tree)
         nextNeeded = getCharacterNextXP(character.level);
         leveledUp = true;
     }
@@ -401,6 +461,7 @@ function loadGameProgress() {
         if (stateMatrix.characterData) {
             character = stateMatrix.characterData;
             if (!character.name) character.name = 'Player'; // older saves predate the name field
+            normalizeCharacterPerks();                       // older saves predate the perk tree
             
             const charLevel = document.getElementById('charLevel');
             const charXP = document.getElementById('charXP');

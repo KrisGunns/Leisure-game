@@ -332,7 +332,7 @@ body, html {
     padding-bottom: 10px;
     margin-bottom: 15px;
 }
-#bagClose, #codexClose, #characterClose, #shopClose {
+#bagClose, #codexClose, #characterClose, #shopClose, #perkTreeClose {
     position: absolute;
     top: 15px;
     right: 15px;
@@ -344,7 +344,7 @@ body, html {
     border-radius: 4px;
     cursor: pointer;
 }
-#bagClose:active, #codexClose:active, #characterClose:active, #shopClose:active {
+#bagClose:active, #codexClose:active, #characterClose:active, #shopClose:active, #perkTreeClose:active {
     background: #e74c3c;
 }
 
@@ -446,7 +446,7 @@ body, html {
 /* Same dark panel as the Bag/Codex/Character screens (and the same z-index, so it layers
    over the orange MENU overlay the way they do). Gold accent = the game's existing
    "coin/level" yellow; green = buy, amber = sell. */
-#shopOverlay {
+#shopOverlay, #perkTreeOverlay {
     display: none;
     position: absolute;
     top: 50px;
@@ -461,7 +461,7 @@ body, html {
     flex-direction: column;
     padding: 15px;
 }
-#shopHeader {
+#shopHeader, #perkTreeHeader {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -469,7 +469,7 @@ body, html {
     padding-bottom: 10px;
     margin-bottom: 12px;
 }
-#shopGoldRow {
+#shopGoldRow, #perkPointsRow {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -480,7 +480,7 @@ body, html {
     border-radius: 8px;
     font-size: 13px;
 }
-#shopGoldRow strong {
+#shopGoldRow strong, #perkPointsRow strong {
     color: #f1c40f;
     font-size: 16px;
 }
@@ -589,3 +589,178 @@ body, html {
     border: 1px solid #2ecc71;
     color: #2ecc71;
 }
+
+/* ---------------- PERK TREE ---------------- */
+/* Panel/header/points-row share the Shop's styles (grouped selectors above). The scroll
+   area works like the pets codex list (flex:1, own vertical scroll, momentum on iOS). */
+#perkTreeScroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #2c2c3a;
+    border-radius: 10px;
+    background:
+        radial-gradient(ellipse at 50% 100%, rgba(241, 196, 15, 0.14), transparent 65%),
+        linear-gradient(to top, #1b1a12, #12121c 55%, #0d0d16);
+}
+/* margin-top:auto pins the tree to the BOTTOM of the scroll area when it's shorter than
+   the area (root at the bottom, growing upward); once it's taller the auto margin is 0
+   and it simply scrolls. */
+#perkTreeCanvas {
+    position: relative;
+    flex-shrink: 0;
+    margin-top: auto;
+    width: 100%;
+}
+.perkLines {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    overflow: visible;
+}
+.perkLine {
+    stroke: #33333f;
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-dasharray: 1 9;
+}
+.perkLineOpen {
+    stroke: #8a8aa3;
+    stroke-dasharray: none;
+}
+.perkLineActive {
+    stroke: #f1c40f;
+    stroke-dasharray: none;
+    filter: drop-shadow(0 0 4px rgba(241, 196, 15, 0.75));
+}
+.perkNode {
+    position: absolute;
+    width: 76px;
+    height: 76px;
+    transform: translate(-50%, -50%);
+    border-radius: 20px;
+    border: 3px solid #33333f;
+    background: #191922;
+    color: #fff;
+    font-family: monospace;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.perkNode:active {
+    filter: brightness(1.25);
+}
+.perkNodeIcon {
+    font-size: 25px;
+    line-height: 1;
+    white-space: nowrap;
+}
+.perkNodeLevel {
+    position: absolute;
+    bottom: -11px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 1px 8px;
+    border-radius: 10px;
+    background: #0d0d16;
+    border: 1px solid #44445a;
+    color: #aaa;
+    font-size: 11px;
+    font-weight: bold;
+    white-space: nowrap;
+}
+.perkNodeBadge {
+    position: absolute;
+    top: -9px;
+    right: -9px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #0d0d16;
+    border: 1px solid #44445a;
+    font-size: 12px;
+    line-height: 20px;
+    text-align: center;
+}
+/* locked: a prerequisite perk isn't taken yet */
+.perkNodeLocked .perkNodeIcon { opacity: 0.3; filter: grayscale(1); }
+/* reachable: prerequisites done, but the level or the points aren't there yet */
+.perkNodeReachable {
+    background: #24242f;
+    border-color: #7a7a94;
+}
+.perkNodeReachable .perkNodeIcon { opacity: 0.75; }
+/* available: can be unlocked right now */
+.perkNodeAvailable {
+    background: #12301d;
+    border-color: #2ecc71;
+    box-shadow: 0 0 12px rgba(46, 204, 113, 0.55);
+    animation: perkPulse 1.6s ease-in-out infinite;
+}
+.perkNodeAvailable .perkNodeLevel { border-color: #2ecc71; color: #2ecc71; }
+/* unlocked: taken */
+.perkNodeUnlocked {
+    background: #3a2f0a;
+    border-color: #f1c40f;
+    box-shadow: 0 0 14px rgba(241, 196, 15, 0.6);
+}
+.perkNodeUnlocked .perkNodeLevel { border-color: #f1c40f; color: #f1c40f; }
+.perkNodeUnlocked .perkNodeBadge { background: #2ecc71; border-color: #2ecc71; color: #08210f; font-weight: bold; }
+.perkNodeSelected {
+    outline: 3px solid #fff;
+    outline-offset: 4px;
+}
+@keyframes perkPulse {
+    0%, 100% { box-shadow: 0 0 6px rgba(46, 204, 113, 0.35); }
+    50%      { box-shadow: 0 0 16px rgba(46, 204, 113, 0.85); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .perkNodeAvailable { animation: none; }
+}
+/* Detail panel pinned under the tree (doesn't scroll away). */
+#perkDetail {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+    padding: 10px 12px;
+    min-height: 104px;   /* fits the longest text so selecting a perk never resizes the tree above */
+    box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #444;
+    border-radius: 8px;
+    font-family: monospace;
+}
+.perkDetailHint {
+    flex: 1;
+    text-align: center;
+    font-size: 12px;
+    color: #95a5a6;
+}
+.perkDetailInfo {
+    flex: 1;
+    min-width: 0;
+}
+.perkDetailTitle {
+    font-size: 13px;
+    font-weight: bold;
+    color: #f1c40f;
+}
+.perkDetailText {
+    margin-top: 2px;
+    font-size: 12px;
+}
+.perkDetailStatus {
+    margin-top: 4px;
+    font-size: 11px;
+    color: #95a5a6;
+}
+.perkDetailStatusOk { color: #2ecc71; }
+

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Just a little leisure</title>
-    <link rel="stylesheet" href="style.css?v=1.2">
+    <link rel="stylesheet" href="style.css?v=1.3">
 </head>
 <body>
     <div id="gameContainer">
@@ -89,7 +89,7 @@
             </div>
 
             <div id="characterPerksSection" class="codexEntry" style="flex-direction: column; align-items: stretch; gap: 4px;">
-                <strong style="color: #f1c40f;">Level-Up Perks</strong>
+                <strong style="color: #f1c40f;">Perks <span style="color: #95a5a6; font-weight: normal; font-size: 11px;">(unlocked in the Perk Tree)</span></strong>
                 <ul id="characterPerksList" style="padding-left: 18px; margin: 4px 0 0 0; font-size: 12px; line-height: 1.6;"></ul>
             </div>
         </div>
@@ -109,6 +109,23 @@
             <button id="shopTabSell" class="shopTab">Sell</button>
         </div>
         <div id="shopContent"></div>
+    </div>
+
+    <div id="perkTreeOverlay" style="display: none;">
+        <div id="perkTreeHeader">
+            <h2>🌳 PERK TREE</h2>
+            <button id="perkTreeClose">X</button>
+        </div>
+        <div id="perkPointsRow">
+            <span>✨ Perk points</span>
+            <strong id="perkPointsValue">0</strong>
+        </div>
+        <!-- Scrolls like the pets codex. Tiers are drawn top-down in JS with the root at
+             the bottom; the view starts scrolled to the bottom (the root). -->
+        <div id="perkTreeScroll">
+            <div id="perkTreeCanvas"></div>
+        </div>
+        <div id="perkDetail"></div>
     </div>
 
     <div id="devPanel">
@@ -325,6 +342,7 @@
                 <button id="openBagBtn" class="menuBtn">🎒 BAG</button>
                 <button id="openCharacterBtn" class="menuBtn">🧑 CHAR</button>
                 <button id="openShopBtn" class="menuBtn">🛒 SHOP</button>
+                <button id="openPerkTreeBtn" class="menuBtn">🌳 PERK TREE</button>
             </div>
         </div>
     </div>

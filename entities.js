@@ -211,8 +211,9 @@ class Pet {
 
     update(dt, regionFoods, regionWaters, activeFlowers = []) {
 
-        // Character-level perk bonuses — see getCharacterBonuses() in state.js for the
-        // actual thresholds (also the single source of truth the Character screen reads).
+        // Character perk bonuses — from whichever perks the player has unlocked in the
+        // Perk Tree; see getCharacterBonuses() in state.js (also the single source of
+        // truth the Character screen reads).
         let charBonuses = getCharacterBonuses(character.level);
         let petFoodWaterBonus = charBonuses.petFoodWater;
         let petHoneyBonus = charBonuses.petHoney;
