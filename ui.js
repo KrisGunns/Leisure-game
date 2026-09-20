@@ -498,7 +498,7 @@ function updateUI() {
         refreshShopIfChanged();
     }
 
-    // ...and the Perk Tree (e.g. a level-up while it's open adds a point / unlocks a tier).
+    // ...and the Perk Tree (e.g. a level-up while it's open adds a perk point).
     const perkTreeOverlayEl = document.getElementById('perkTreeOverlay');
     if (perkTreeOverlayEl && perkTreeOverlayEl.style.display !== 'none' && typeof refreshPerkTreeIfChanged === 'function') {
         refreshPerkTreeIfChanged();
@@ -1187,6 +1187,7 @@ function updateCharacterScreen() {
             🍪💧 Pet food/water gain: <strong>+${pct(b.petFoodWater)}%</strong><br>
             🍯 Pet honey gain: <strong>+${pct(b.petHoney)}%</strong><br>
             🐟 Pet fish gain: <strong>+${pct(b.petFish)}%</strong><br>
+            🍌 Pet banana gain: <strong>+${pct(b.petBanana)}%</strong><br>
             🪙 Coin gain: <strong>+${pct(b.coin)}%</strong><br>
             🖐️ Manual gather (walking over food/water): <strong>+${pct(b.manualGather)}%</strong>
         `;
@@ -1195,11 +1196,12 @@ function updateCharacterScreen() {
     // Perk checklist: green + ✓ once the perk has been unlocked in the Perk Tree.
     if (perksList && typeof PERK_TREE !== 'undefined') {
         while (perksList.firstChild) perksList.removeChild(perksList.firstChild);
-        [...PERK_TREE].sort((a, b) => a.level - b.level).forEach(p => {
+        // Bottom-to-top, left-to-right — the same order the tree is read in.
+        [...PERK_TREE].sort((a, b) => (a.tier - b.tier) || (a.col - b.col)).forEach(p => {
             let li = document.createElement('li');
             let unlocked = hasPerk(p.id);
             li.style.color = unlocked ? '#2ecc71' : '#7f8c8d';
-            li.textContent = `${unlocked ? '✓ ' : ''}Lv.${p.level}: ${p.text}`;
+            li.textContent = `${unlocked ? '✓ ' : ''}${p.name}: ${p.text}`;
             perksList.appendChild(li);
         });
     }
@@ -1432,18 +1434,18 @@ const perkTreeScroll = document.getElementById('perkTreeScroll');
 const perkTreeCanvas = document.getElementById('perkTreeCanvas');
 const perkDetail = document.getElementById('perkDetail');
 
-const PERK_TREE_COLS = 3;        // max branches (columns)
-const PERK_ROW_HEIGHT = 118;     // px between tiers
+// (PERK_TREE_COLS — how many columns wide the tree is — lives in state.js with the data.)
+const PERK_ROW_HEIGHT = 100;     // px between tiers
 const PERK_CANVAS_PAD = 14;      // px above the top tier / below the root
 
 let perkTreeSelectedId = null;
 let perkTreeRenderedSignature = '';
 
 // Same reasoning as the shop: updateUI() runs every frame, so an open tree is only redrawn
-// when something it shows actually changed (points, level, or unlocked perks) — never
+// when something it shows actually changed (points or unlocked perks) — never
 // unconditionally, which would swallow taps by replacing buttons mid-press.
 function getPerkTreeSignature() {
-    return [character.perkPoints, character.level, character.perks.join(',')].join('|');
+    return [character.perkPoints, character.perks.join(',')].join('|');
 }
 
 function refreshPerkTreeIfChanged() {
@@ -1459,9 +1461,8 @@ function perkNodeY(tier, maxTier) {
 const PERK_NODE_CLASS = {
     unlocked: 'perkNodeUnlocked',
     available: 'perkNodeAvailable',
-    needsLevel: 'perkNodeReachable',
-    needsPoints: 'perkNodeReachable',
-    locked: 'perkNodeLocked'
+    needsPoints: 'perkNodeReachable',   // perk below is done, but not enough points yet
+    locked: 'perkNodeLocked'            // perk below isn't unlocked yet
 };
 
 function renderPerkTree() {
@@ -1475,6 +1476,8 @@ function renderPerkTree() {
 
     while (perkTreeCanvas.firstChild) perkTreeCanvas.removeChild(perkTreeCanvas.firstChild);
     perkTreeCanvas.style.height = height + 'px';
+    // Each node is a square one column wide (minus a gap), so any number of columns fits the panel.
+    perkTreeCanvas.style.setProperty('--perk-node-size', `calc(${100 / PERK_TREE_COLS}% - 8px)`);
 
     // Connector lines first (drawn beneath the nodes). Gold = both ends unlocked, light =
     // the parent is unlocked so this branch is open, dotted = still out of reach.
@@ -1508,17 +1511,13 @@ function renderPerkTree() {
         node.style.left = perkNodeX(perk.col);
         node.style.top = perkNodeY(perk.tier, maxTier) + 'px';
         node.dataset.perkId = perk.id;
-        node.setAttribute('aria-label', `Level ${perk.level} perk: ${perk.text} (${status})`);
+        node.setAttribute('aria-label', `${perk.name}: ${perk.text} (${status})`);
 
         const icon = document.createElement('span');
-        icon.className = 'perkNodeIcon';
+        // Two-emoji icons (🍪💧) are drawn smaller so they fit inside a narrow node.
+        icon.className = 'perkNodeIcon' + ([...perk.icon].length > 1 ? ' perkNodeIconPair' : '');
         icon.textContent = perk.icon;
         node.appendChild(icon);
-
-        const lvl = document.createElement('span');
-        lvl.className = 'perkNodeLevel';
-        lvl.textContent = `Lv.${perk.level}`;
-        node.appendChild(lvl);
 
         if (status === 'unlocked' || status === 'locked') {
             const badge = document.createElement('span');
@@ -1559,11 +1558,10 @@ function renderPerkDetail() {
         statusText = '✓ Unlocked';
     } else if (status === 'locked') {
         const missing = PERK_BY_ID[perk.requires.find(id => !hasPerk(id))];
-        statusText = `🔒 Unlock the Lv.${missing ? missing.level : '?'} perk first`;
-    } else if (status === 'needsLevel') {
-        statusText = `🔒 Reach character level ${perk.level} (you're level ${character.level})`;
+        statusText = `🔒 Unlock the ${missing ? missing.name : 'previous'} perk below it first`;
     } else if (status === 'needsPoints') {
-        statusText = 'Not enough perk points';
+        const short = perk.cost - character.perkPoints;
+        statusText = `Need ${short} more perk point${short === 1 ? '' : 's'}`;
     } else {
         statusText = 'Ready to unlock';
     }
@@ -1572,7 +1570,7 @@ function renderPerkDetail() {
     info.className = 'perkDetailInfo';
     const title = document.createElement('div');
     title.className = 'perkDetailTitle';
-    title.textContent = `${perk.icon} Lv.${perk.level} perk`;
+    title.textContent = `${perk.icon} ${perk.name}`;
     const text = document.createElement('div');
     text.className = 'perkDetailText';
     text.textContent = perk.text;
@@ -1584,7 +1582,7 @@ function renderPerkDetail() {
     info.appendChild(st);
     perkDetail.appendChild(info);
 
-    const label = status === 'unlocked' ? 'Unlocked' : `Unlock · ${perk.cost} pt`;
+    const label = status === 'unlocked' ? 'Unlocked' : `Unlock · ${perk.cost} pt${perk.cost === 1 ? '' : 's'}`;
     const btn = makeShopButton(label, status === 'unlocked' ? 'shopActionBtnActive' : '', status !== 'available', () => {
         if (unlockPerk(perk.id)) {
             renderPerkTree();

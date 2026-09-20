@@ -105,37 +105,80 @@ function getCharacterNextXP(currentLevel) {
 // ------------------------------------------------------------
 // PERK TREE — character perks the player chooses to unlock (MENU -> 🌳 PERK TREE).
 // ------------------------------------------------------------
-// The player earns 1 perk point per character level gained and spends `cost` points to
-// unlock a node. A node can be unlocked when ALL of these hold (see getPerkStatus):
-//   1. every perk in `requires` is already unlocked (the tree's branching),
-//   2. the character has reached the node's `level` (each node keeps the level milestone
-//      it used to unlock automatically at — the "Lv.N perk" naming), and
-//   3. there are enough perk points.
-// Layout is data-driven: `tier` = row (0 = bottom/root, growing upward) and `col` = which
-// of the three branches (0 left, 1 centre, 2 right). To add perks past Lv50, append rows
-// here with the next tier numbers — the tree screen (ui.js) sizes and scrolls itself.
-// NOTE: a node must be listed AFTER everything in its `requires` (normalizeCharacterPerks
-// relies on it), which sorting by tier already guarantees.
-// `stat` + `add` are the actual effect (read by getCharacterBonuses below).
-const PERK_TREE = [
-    // Tier 0 — the root, alone on its row. Everything else hangs off it.
-    { id: 'lv5',  level: 5,  cost: 1, tier: 0, col: 1, requires: [],        icon: '🍪💧', stat: 'petFoodWater', add: 0.30, text: '+30% food & water gained from pets' },
-    // Tier 1 — the three branch starters.
-    { id: 'lv10', level: 10, cost: 1, tier: 1, col: 0, requires: ['lv5'],   icon: '🍯',   stat: 'petHoney',     add: 0.25, text: '+25% honey gained from pets' },
-    { id: 'lv15', level: 15, cost: 1, tier: 1, col: 1, requires: ['lv5'],   icon: '🍪💧', stat: 'petFoodWater', add: 0.30, text: '+30% food & water gained from pets' },
-    { id: 'lv20', level: 20, cost: 1, tier: 1, col: 2, requires: ['lv5'],   icon: '🐟',   stat: 'petFish',      add: 0.25, text: '+25% fish gained from pets' },
-    // Tier 2 — continues each branch straight upward.
-    { id: 'lv25', level: 25, cost: 1, tier: 2, col: 0, requires: ['lv10'],  icon: '🪙',   stat: 'coin',         add: 0.25, text: '+25% coin gained' },
-    { id: 'lv30', level: 30, cost: 1, tier: 2, col: 1, requires: ['lv15'],  icon: '🍯',   stat: 'petHoney',     add: 0.25, text: '+25% honey gained from pets' },
-    { id: 'lv35', level: 35, cost: 1, tier: 2, col: 2, requires: ['lv20'],  icon: '🍪💧', stat: 'petFoodWater', add: 0.30, text: '+30% food & water gained from pets' },
+// The player earns 1 perk point per character level gained and spends points to unlock a
+// node. A node can be unlocked when BOTH hold (see getPerkStatus):
+//   1. every perk in `requires` (the connected node(s) below it) is already unlocked, and
+//   2. there are enough perk points for its `cost`.
+// There are NO character-level requirements: a perk is locked only by the perk beneath it.
+//
+// Two tables:
+//  - PERK_TYPES: what each named perk IS — name, icon, cost, and effect (`stat` + `add`).
+//    Change a perk's price or strength here and every node of that type follows.
+//  - PERK_TREE_LAYOUT: WHERE nodes sit. `tier` = row (0 = the bottom/root row, growing
+//    upward), `col` = column (0..PERK_TREE_COLS-1, left to right), `requires` = the id of
+//    the node it grows out of. A row can also override any type property (e.g. a different
+//    `cost` for one specific node). To add perks (e.g. for later levels), append rows with
+//    the next tier numbers — the tree screen (ui.js) sizes and scrolls itself.
+// A node must be listed AFTER everything in its `requires` (normalizeCharacterPerks relies
+// on it); sorting by tier already guarantees that.
+const PERK_TREE_COLS = 5;
+
+const PERK_TYPES = {
+    basicResource: { name: 'Basic Resource', icon: '🍪💧', cost: 5,  stat: 'petFoodWater', add: 0.30, text: '+30% food & water gained from pets' },
+    glazed:        { name: 'Glazed',         icon: '🍯',   cost: 10, stat: 'petHoney',     add: 0.25, text: '+25% honey gained from pets' },
+    fishyBusiness: { name: 'Fishy Business', icon: '🐟',   cost: 8,  stat: 'petFish',      add: 0.25, text: '+25% fish gained from pets' },
+    riches:        { name: 'Riches',         icon: '🪙',   cost: 20, stat: 'coin',         add: 0.25, text: '+25% coin gained' },
+    bananas:       { name: 'Bananas!',       icon: '🍌',   cost: 6,  stat: 'petBanana',    add: 0.20, text: '+20% bananas gained from pets' }
+};
+
+// Ids are `<type>_c<col>t<tier>` (by the node's ORIGINAL position). They're stored in
+// saves, so never reuse or rename one — add new nodes with new ids instead.
+const PERK_TREE_LAYOUT = [
+    // Tier 0 — the root, alone on its row. Everything else grows out of it.
+    { id: 'basicResource_c2t0', type: 'basicResource', tier: 0, col: 2, requires: [] },
+
+    // Tier 1 — five branch starters, all growing out of the root.
+    { id: 'basicResource_c0t1', type: 'basicResource', tier: 1, col: 0, requires: ['basicResource_c2t0'] },
+    { id: 'glazed_c1t1',        type: 'glazed',        tier: 1, col: 1, requires: ['basicResource_c2t0'] },
+    { id: 'basicResource_c2t1', type: 'basicResource', tier: 1, col: 2, requires: ['basicResource_c2t0'] },
+    { id: 'fishyBusiness_c3t1', type: 'fishyBusiness', tier: 1, col: 3, requires: ['basicResource_c2t0'] },
+    { id: 'basicResource_c4t1', type: 'basicResource', tier: 1, col: 4, requires: ['basicResource_c2t0'] },
+
+    // Tier 2 — each column continues straight upward.
+    { id: 'bananas_c0t2',       type: 'bananas',       tier: 2, col: 0, requires: ['basicResource_c0t1'] },
+    { id: 'riches_c1t2',        type: 'riches',        tier: 2, col: 1, requires: ['glazed_c1t1'] },
+    { id: 'glazed_c2t2',        type: 'glazed',        tier: 2, col: 2, requires: ['basicResource_c2t1'] },
+    { id: 'basicResource_c3t2', type: 'basicResource', tier: 2, col: 3, requires: ['fishyBusiness_c3t1'] },
+    { id: 'glazed_c4t2',        type: 'glazed',        tier: 2, col: 4, requires: ['basicResource_c4t1'] },
+
     // Tier 3
-    { id: 'lv40', level: 40, cost: 1, tier: 3, col: 0, requires: ['lv25'],  icon: '🐟',   stat: 'petFish',      add: 0.25, text: '+25% fish gained from pets' },
-    { id: 'lv45', level: 45, cost: 1, tier: 3, col: 1, requires: ['lv30'],  icon: '🍪💧', stat: 'petFoodWater', add: 0.30, text: '+30% food & water gained from pets' },
-    { id: 'lv50', level: 50, cost: 1, tier: 3, col: 2, requires: ['lv35'],  icon: '🪙',   stat: 'coin',         add: 0.25, text: '+25% coin gained' }
+    { id: 'riches_c0t3',        type: 'riches',        tier: 3, col: 0, requires: ['bananas_c0t2'] },
+    { id: 'fishyBusiness_c1t3', type: 'fishyBusiness', tier: 3, col: 1, requires: ['riches_c1t2'] },
+    { id: 'basicResource_c2t3', type: 'basicResource', tier: 3, col: 2, requires: ['glazed_c2t2'] },
+    { id: 'riches_c3t3',        type: 'riches',        tier: 3, col: 3, requires: ['basicResource_c3t2'] },
+    { id: 'bananas_c4t3',       type: 'bananas',       tier: 3, col: 4, requires: ['glazed_c4t2'] }
 ];
+
+// Flat list the rest of the game reads: each layout row merged over its type.
+const PERK_TREE = PERK_TREE_LAYOUT.map(row => Object.assign({}, PERK_TYPES[row.type], row));
 
 const PERK_BY_ID = {};
 PERK_TREE.forEach(p => { PERK_BY_ID[p.id] = p; });
+
+// Perk ids used by the first version of the tree, when perks were named by the character
+// level they used to unlock at. Saves may still contain them; they're renamed on load.
+const LEGACY_PERK_IDS = {
+    lv5:  'basicResource_c2t0',
+    lv10: 'glazed_c1t1',
+    lv15: 'basicResource_c2t1',
+    lv20: 'fishyBusiness_c3t1',
+    lv25: 'riches_c1t2',
+    lv30: 'glazed_c2t2',
+    lv35: 'basicResource_c3t2',
+    lv40: 'fishyBusiness_c1t3',
+    lv45: 'basicResource_c2t3',
+    lv50: 'riches_c3t3'
+};
 
 function hasPerk(id) {
     return character.perks.indexOf(id) !== -1;
@@ -143,14 +186,12 @@ function hasPerk(id) {
 
 // Why a perk can or can't be unlocked right now, in priority order:
 //   'unlocked'    already taken
-//   'locked'      a prerequisite perk hasn't been unlocked yet
-//   'needsLevel'  prerequisites are done but the character level is too low
-//   'needsPoints' everything else is fine but there aren't enough perk points
+//   'locked'      the perk it grows out of (below it) hasn't been unlocked yet
+//   'needsPoints' the perk below is unlocked but there aren't enough perk points
 //   'available'   can be unlocked right now
 function getPerkStatus(perk) {
     if (hasPerk(perk.id)) return 'unlocked';
     if (!perk.requires.every(hasPerk)) return 'locked';
-    if (character.level < perk.level) return 'needsLevel';
     if (character.perkPoints < perk.cost) return 'needsPoints';
     return 'available';
 }
@@ -172,15 +213,17 @@ function unlockPerk(id) {
 //  - Saves from before the perk tree existed have no `perks` array. They get one point
 //    for every level already gained (level - 1) and NO perks unlocked: the old automatic
 //    level-milestone bonuses are gone, and the player now spends those points in the tree.
-//  - Otherwise the stored data is sanity-checked: unknown ids and duplicates are dropped,
-//    a perk whose prerequisite isn't unlocked is dropped, and bad point counts become 0.
+//  - Otherwise the stored data is sanity-checked: legacy "lvN" ids are renamed (see
+//    LEGACY_PERK_IDS), unknown ids and duplicates are dropped, a perk whose prerequisite
+//    isn't unlocked is dropped, and bad point counts become 0. Perks and points that are
+//    already saved are kept as-is (unlocked perks aren't re-charged if prices change).
 function normalizeCharacterPerks() {
     if (!Array.isArray(character.perks)) {
         character.perks = [];
         character.perkPoints = Math.max(0, Math.floor(Number(character.level) || 1) - 1);
         return;
     }
-    const saved = new Set(character.perks);
+    const saved = new Set(character.perks.map(id => LEGACY_PERK_IDS[id] || id));
     const kept = [];
     PERK_TREE.forEach(p => {
         if (saved.has(p.id) && p.requires.every(r => kept.indexOf(r) !== -1)) kept.push(p.id);
@@ -199,7 +242,7 @@ function normalizeCharacterPerks() {
 // reads it too, so the displayed bonuses can never drift out of sync with what's
 // actually applied in gameplay.
 function getCharacterBonuses(level) {
-    let bonuses = { petFoodWater: 1.0, petHoney: 1.0, petFish: 1.0, coin: 1.0 };
+    let bonuses = { petFoodWater: 1.0, petHoney: 1.0, petFish: 1.0, petBanana: 1.0, coin: 1.0 };
 
     character.perks.forEach(id => {
         const perk = PERK_BY_ID[id];
@@ -208,6 +251,14 @@ function getCharacterBonuses(level) {
 
     bonuses.manualGather = 1 + (level * 0.10);
     return bonuses;
+}
+
+// Rounds x to a whole number so that the AVERAGE result equals x: 1.2 becomes 1, or 2 with a
+// 20% chance. Used for the Bananas! perk, because the monkey's forage yields are tiny
+// (1-6) and plain Math.round would make a +20% bonus do nothing at low yields.
+function roundStochastic(x) {
+    const whole = Math.floor(x);
+    return whole + (Math.random() < (x - whole) ? 1 : 0);
 }
 
 // ------------------------------------------------------------

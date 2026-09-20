@@ -218,6 +218,7 @@ class Pet {
         let petFoodWaterBonus = charBonuses.petFoodWater;
         let petHoneyBonus = charBonuses.petHoney;
         let petFishBonus = charBonuses.petFish;
+        let petBananaBonus = charBonuses.petBanana;
         let coinBonus = charBonuses.coin;
 
         // --- BEE AI SYSTEM MATRIX ---
@@ -909,6 +910,9 @@ class Pet {
                             // main.js, same plumbing every other forager uses).
                             let y = getForageYield('monkey', this.level);
                             inventory.bananas += Math.round(y.food * petFoodWaterBonus);
+                            // "Bananas!" perk: extra bananas on top of the food & water bonus above,
+                            // equal on average to +N% of the base yield (see roundStochastic()).
+                            inventory.bananas += roundStochastic(y.food * (petBananaBonus - 1));
 
                             // Level 20+: 5% chance per successful forage to swing from
                             // vine to vine around the region for 20s, paying out 5 coins

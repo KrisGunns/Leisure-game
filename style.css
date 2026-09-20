@@ -601,6 +601,8 @@ body, html {
     overscroll-behavior: contain;
     display: flex;
     flex-direction: column;
+    box-sizing: border-box;
+    padding: 0 8px;   /* room so the outer columns' selection ring and ✓/🔒 badges aren't clipped */
     border: 1px solid #2c2c3a;
     border-radius: 10px;
     background:
@@ -640,10 +642,12 @@ body, html {
 }
 .perkNode {
     position: absolute;
-    width: 76px;
-    height: 76px;
+    /* One column wide minus a gap (set in ui.js from PERK_TREE_COLS), always square. */
+    width: var(--perk-node-size, 54px);
+    aspect-ratio: 1 / 1;
+    box-sizing: border-box;
     transform: translate(-50%, -50%);
-    border-radius: 20px;
+    border-radius: 16px;
     border: 3px solid #33333f;
     background: #191922;
     color: #fff;
@@ -658,35 +662,24 @@ body, html {
     filter: brightness(1.25);
 }
 .perkNodeIcon {
-    font-size: 25px;
+    font-size: 24px;
     line-height: 1;
     white-space: nowrap;
 }
-.perkNodeLevel {
-    position: absolute;
-    bottom: -11px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 1px 8px;
-    border-radius: 10px;
-    background: #0d0d16;
-    border: 1px solid #44445a;
-    color: #aaa;
-    font-size: 11px;
-    font-weight: bold;
-    white-space: nowrap;
+.perkNodeIconPair {
+    font-size: 16px;
 }
 .perkNodeBadge {
     position: absolute;
-    top: -9px;
-    right: -9px;
-    width: 22px;
-    height: 22px;
+    top: -8px;
+    right: -8px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     background: #0d0d16;
     border: 1px solid #44445a;
-    font-size: 12px;
-    line-height: 20px;
+    font-size: 11px;
+    line-height: 18px;
     text-align: center;
 }
 /* locked: a prerequisite perk isn't taken yet */
@@ -704,14 +697,12 @@ body, html {
     box-shadow: 0 0 12px rgba(46, 204, 113, 0.55);
     animation: perkPulse 1.6s ease-in-out infinite;
 }
-.perkNodeAvailable .perkNodeLevel { border-color: #2ecc71; color: #2ecc71; }
 /* unlocked: taken */
 .perkNodeUnlocked {
     background: #3a2f0a;
     border-color: #f1c40f;
     box-shadow: 0 0 14px rgba(241, 196, 15, 0.6);
 }
-.perkNodeUnlocked .perkNodeLevel { border-color: #f1c40f; color: #f1c40f; }
 .perkNodeUnlocked .perkNodeBadge { background: #2ecc71; border-color: #2ecc71; color: #08210f; font-weight: bold; }
 .perkNodeSelected {
     outline: 3px solid #fff;
