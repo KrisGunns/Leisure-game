@@ -121,6 +121,36 @@ class Flower {
     }
 }
 
+// The elephant's head bow: two triangular loops plus a knot (same construction as the
+// monkey's and the female bear's), sat on top of the head. Takes the drawing context and
+// the elephant's top-left origin so ONE implementation serves both the in-world model
+// (Pet.draw, with ctx and this.x/this.y) and the codex portrait (renderMiniPet in ui.js,
+// with its own context and offset) — the codex keeps a separate copy of every model, and
+// this way the bow can't end up different between the two. The thin outline keeps a white
+// bow readable against the sandy Region 2 background.
+function drawElephantBow(c, x, y, color) {
+    const cx = x + 27;   // middle of the head (head spans x+22..x+32)
+    const cy = y + 1;    // just above the top of the head (y+2)
+    c.save();
+    c.fillStyle = color;
+    c.strokeStyle = '#7f8c8d';
+    c.lineWidth = 1;
+    c.lineJoin = 'round';
+    [-1, 1].forEach(side => {
+        c.beginPath();
+        c.moveTo(cx, cy);
+        c.lineTo(cx + side * 7, cy - 5);
+        c.lineTo(cx + side * 7, cy + 4);
+        c.closePath();
+        c.fill();
+        c.stroke();
+    });
+    c.fillStyle = '#b2bec3';   // knot, a shade darker than the loops
+    c.fillRect(cx - 2, cy - 3, 4, 4);
+    c.strokeRect(cx - 2, cy - 3, 4, 4);
+    c.restore();
+}
+
 class Pet {
     constructor(type, label, color) {
         this.type = type;
@@ -157,9 +187,9 @@ class Pet {
         // Pig-only field, same reasoning.
         this.mudParticles = [];
 
-        // Monkey-only field, same reasoning. Set once by createMonkey()'s `bowColor`
-        // option (world.js) — purely cosmetic, draws a small bow on its head in
-        // draw() below (same idea as the female bear's pink bow).
+        // Monkey/elephant field, same reasoning. Set once by createMonkey()'s or
+        // createElephant()'s `bowColor` option (world.js) — purely cosmetic, draws a small
+        // bow on its head in draw() below (same idea as the female bear's pink bow).
         this.bowColor = null;
 
         // Cat-only fields, same reasoning. schrodingerOutcome is the (pre-determined,
@@ -1102,6 +1132,7 @@ draw() {
             ctx.lineTo(this.x + 29, this.y + 12);
             ctx.closePath();
             ctx.fill();
+            if (this.bowColor) drawElephantBow(ctx, this.x, this.y, this.bowColor);
         } else if (this.type === 'squirrel') {
             ctx.fillStyle = this.color; 
             ctx.fillRect(this.x + 8, this.y + 14, 16, 12);  

@@ -441,12 +441,11 @@ function updateUI() {
 
     const interactBtn = document.getElementById('interactBtn');
     if (interactBtn) {
+        // Region 2 has two elephants, and either can start the tag game — check them all.
         let elephantPlaying = false;
-        if (typeof petsByRegion !== 'undefined' && petsByRegion && petsByRegion[2] && petsByRegion[2][0]) {
-            let elState = petsByRegion[2][0].state;
-            if (elState && (elState.startsWith('playing') || elState === 'playing_wait_for_move')) {
-                elephantPlaying = true;
-            }
+        if (typeof petsByRegion !== 'undefined' && petsByRegion && Array.isArray(petsByRegion[2])) {
+            elephantPlaying = petsByRegion[2].some(p => p.type === 'elephant' && p.state &&
+                (p.state.startsWith('playing') || p.state === 'playing_wait_for_move'));
         }
 
         // Cat's Schrödinger box: unlike the elephant check above (which doesn't care
@@ -647,6 +646,7 @@ function renderMiniPet(pet, elementId) {
             mctx.lineTo(ox + 29, oy + 12);
             mctx.closePath();
             mctx.fill();
+            if (pet.bowColor) drawElephantBow(mctx, ox, oy, pet.bowColor);
         } else if (pet.type === 'squirrel') {
             mctx.fillStyle = pet.color; 
             mctx.fillRect(ox + 8, oy + 14, 16, 12);  
@@ -867,7 +867,8 @@ function renderMiniPet(pet, elementId) {
 function updateCodexData() {
     const dog = petsByRegion[1][0];
     const cat = petsByRegion[1][1];
-    const elephant = petsByRegion[2][0];
+    const elephant1 = petsByRegion[2][0];
+    const elephant2 = petsByRegion[2][1];   // the Bow Elephant
     const squirrel = petsByRegion[3][0];
     const chicken = petsByRegion[3][1];
     const bird = (typeof birdPet !== 'undefined') ? birdPet : petsByRegion[3][2];
@@ -876,7 +877,6 @@ function updateCodexData() {
 
     renderMiniPet(dog, 'viewDog');
     renderMiniPet(cat, 'viewCat');
-    renderMiniPet(elephant, 'viewElephant');
     renderMiniPet(squirrel, 'viewSquirrel');
     renderMiniPet(chicken, 'viewChicken');
     renderMiniPet(bird, 'viewBird');
@@ -912,15 +912,25 @@ function updateCodexData() {
     document.getElementById('renameBoxBird').style.display = bird.level >= 2 ? 'block' : 'none';
 
 
-    let elReq = getLevelRequirement('elephant', elephant.level);
-    document.getElementById('infoElephant').innerHTML = `
-        <strong>${elephant.level >= 2 ? elephant.label : '???'}</strong><br>
-        Status: <span class="${elephant.level >= 2 ? 'codexTamed' : 'codexWild'}">${elephant.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
-        Level: ${elephant.level >= 2 ? elephant.level + '/20' : '?/20'}<br>
-        Next Req: ${elephant.level < 2 ? '???' : (elephant.level < 20 ? '🍪' + elReq.food + ' 💧' + elReq.water : 'MAX')}
-    `;
+    // Both elephants use the same requirement curve (getLevelRequirement is per type).
+    [ { pet: elephant1, viewId: 'viewElephant',  infoId: 'infoElephant',  renameId: 'renameBoxElephant' },
+      { pet: elephant2, viewId: 'viewElephant2', infoId: 'infoElephant2', renameId: 'renameBoxElephant2' }
+    ].forEach(slot => {
+        if (!slot.pet) return;
+        renderMiniPet(slot.pet, slot.viewId);
 
-    document.getElementById('renameBoxElephant').style.display = elephant.level >= 2 ? 'block' : 'none';
+        let elReq = getLevelRequirement('elephant', slot.pet.level);
+        let infoEl = document.getElementById(slot.infoId);
+        if (infoEl) infoEl.innerHTML = `
+            <strong>${slot.pet.level >= 2 ? slot.pet.label : '???'}</strong><br>
+            Status: <span class="${slot.pet.level >= 2 ? 'codexTamed' : 'codexWild'}">${slot.pet.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
+            Level: ${slot.pet.level >= 2 ? slot.pet.level + '/20' : '?/20'}<br>
+            Next Req: ${slot.pet.level < 2 ? '???' : (slot.pet.level < 20 ? '🍪' + elReq.food + ' 💧' + elReq.water : 'MAX')}
+        `;
+
+        let renameEl = document.getElementById(slot.renameId);
+        if (renameEl) renameEl.style.display = slot.pet.level >= 2 ? 'block' : 'none';
+    });
 
     let sqReq = getLevelRequirement('squirrel', squirrel.level);
     document.getElementById('infoSquirrel').innerHTML = `
@@ -1752,10 +1762,11 @@ function bindPetRename(btnId, inputId, regionIdx, petIdx) {
     }
 }
 
-// Bind all 8 pets securely to their exact 2D array coordinates mapping slots:
+// Bind every pet to its exact [region][slot] position in petsByRegion:
 bindPetRename('btnRenameDog', 'inputDog', 1, 0);       // Region 1, Dog
 bindPetRename('btnRenameCat', 'inputCat', 1, 1);       // Region 1, Cat
 bindPetRename('btnRenameElephant', 'inputElephant', 2, 0); // Region 2, Elephant
+bindPetRename('btnRenameElephant2', 'inputElephant2', 2, 1); // Region 2, Bow Elephant
 bindPetRename('btnRenameSquirrel', 'inputSquirrel', 3, 0); // Region 3, Squirrel
 bindPetRename('btnRenameChicken', 'inputChicken', 3, 1);   // Region 3, Chicken
 bindPetRename('btnRenameBee', 'inputBee', 4, 0);       // Region 4, Bee (Base)

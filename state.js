@@ -55,7 +55,9 @@ const FORAGE_TIERS = {
     bird:     [ [1, 1, 1], [5, 2, 1], [10, 2, 2], [15, 3, 2], [20, 4, 3] ],
     panda:    [ [1, 3, 2], [5, 4, 3], [10, 5, 4], [15, 6, 5], [20, 8, 6] ],
     pig:      [ [1, 2, 2], [5, 3, 2], [10, 4, 3], [15, 5, 4], [20, 7, 6] ],
-    elephant: [ [1, 1, 2], [5, 2, 3], [10, 3, 4], [20, 5, 7] ],
+    // Water yields: Lv5 +4, Lv10 +5, Lv15 +6, Lv20 +9 (both elephants — the tiers are per type).
+    // Food is unchanged; Lv15 is a new tier row, and keeps the food yield it already had there.
+    elephant: [ [1, 1, 2], [5, 2, 4], [10, 3, 5], [15, 3, 6], [20, 5, 9] ],
     squirrel: [ [1, 1, 0], [5, 3, 1], [10, 5, 1], [20, 8, 1] ],
     chicken:  [ [1, 1, 1], [5, 2, 1], [10, 3, 1], [20, 4, 2] ],
     // Single-resource forager (bananas only, Region 8 never spawns water) — the water
@@ -608,6 +610,21 @@ function loadGameProgress() {
             }
         }
         
+        // Never resume standing in a locked region: pets in a locked region are neither
+        // updated nor drawn (main.js), so the player would see an empty, frozen area. It can
+        // happen when a save was made in an unlocked region and a later update added a pet to
+        // Regions 1-3 (every unlock rule counts all pets there), which locks Regions 4-8 again
+        // until that pet is tamed. This has to run AFTER the pets above are restored, since
+        // the unlock rules depend on their levels. Regions 1-3 are always unlocked.
+        if (typeof isRegionUnlocked === 'function' && !isRegionUnlocked(currentRegion)) {
+            currentRegion = 1;
+            if (regionSelector) regionSelector.value = currentRegion;
+            foods = regionalItems[currentRegion].foods;
+            waters = regionalItems[currentRegion].waters;
+            flowers = regionalItems[currentRegion].flowers;
+            bananas = regionalItems[currentRegion].bananas;
+        }
+
         // Refresh display layers immediately after unpacking variables
         updateUI();
         if (typeof updateCodexData === 'function') updateCodexData();

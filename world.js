@@ -284,6 +284,26 @@ function createMonkey(label, x, y, options = {}) {
     return p;
 }
 
+// Same idea for elephants (Region 2). `options.bowColor` draws a bow on the head (the
+// Bow Elephant's white bow) — purely cosmetic, exactly like createMonkey's: everything
+// else (taming requirements, forage yields, the tag mini-game) is driven by
+// type === 'elephant' elsewhere, so both elephants share it and can never drift apart.
+// With no x/y it keeps the Pet constructor's default position, so the original elephant
+// starts exactly where it always did.
+function createElephant(label, x, y, options = {}) {
+    let p = new Pet('elephant', label, '#95a5a6');
+    if (typeof x === 'number') p.x = x;
+    if (typeof y === 'number') p.y = y;
+    // Untamed pets sit still; like the constructor does, park the wander target on the
+    // pet itself so nothing is set in motion until it's tamed.
+    p.targetX = p.x;
+    p.targetY = p.y;
+    if (options.bowColor) {
+        p.bowColor = options.bowColor;
+    }
+    return p;
+}
+
 const petsByRegion = {
     // Positioned well apart — untamed pets (level < 2) don't move at all (see the
     // `if (this.level < 2) return;` gate early in Pet.update()), so starting them
@@ -302,7 +322,13 @@ const petsByRegion = {
             return p;
         })()
     ],
-    2: [new Pet('elephant', 'Elephant', '#95a5a6')],
+    // Region 2's second elephant (white bow) is appended AFTER the original so the
+    // original stays at index 0 (the codex, renaming and older saves are all positional).
+    // It starts well away from the first (>160px) so feeding one never feeds both.
+    2: [
+        createElephant('Elephant'),
+        createElephant('Bow Elephant', 90, 320, { bowColor: '#ffffff' })
+    ],
     3: [
         (() => {
             let p = new Pet('squirrel', 'Squirrel', '#d35400');
