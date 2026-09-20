@@ -909,10 +909,11 @@ class Pet {
                             // picked up (fed in as this pet's regionFoods array by
                             // main.js, same plumbing every other forager uses).
                             let y = getForageYield('monkey', this.level);
-                            inventory.bananas += Math.round(y.food * petFoodWaterBonus);
-                            // "Bananas!" perk: extra bananas on top of the food & water bonus above,
-                            // equal on average to +N% of the base yield (see roundStochastic()).
-                            inventory.bananas += roundStochastic(y.food * (petBananaBonus - 1));
+                            // Bananas aren't "food & water", so the Basic Resource perk does NOT apply
+                            // here — the only bonus is the "Bananas!" perk. roundStochastic() makes the
+                            // average equal base x bonus even at these tiny yields (with no perk, the
+                            // bonus is 1.0, so the result is exactly the base yield).
+                            inventory.bananas += roundStochastic(y.food * petBananaBonus);
 
                             // Level 20+: 5% chance per successful forage to swing from
                             // vine to vine around the region for 20s, paying out 5 coins
