@@ -183,6 +183,16 @@ class Pet {
         this.bambooChoicePending = false;
     }
 
+    // Movement speed actually used by the AI in update(). `this.speed` stays the pet's raw
+    // base speed (set by the factories in world.js, and nudged directly by the bird's
+    // Lv20 bee-speed-boost perk) — the shop's Cake buff is layered on top here at read
+    // time instead of being written into `this.speed`, so the two effects can never
+    // overwrite/undo each other, and pets created later (bought bees, save/load
+    // reconstruction) pick the buff up automatically.
+    get effectiveSpeed() {
+        return this.speed * getPetSpeedMultiplier();
+    }
+
     pickNewWanderTarget() {
         let padding = 40;
         this.targetX = Math.random() * (canvas.width - this.size - padding * 2) + padding;
@@ -235,8 +245,8 @@ class Pet {
                     let dy = this.targetY - this.y;
                     let dist = Math.sqrt(dx * dx + dy * dy);
                     if (dist > 5) {
-                        this.x += (dx / dist) * this.speed * dt;
-                        this.y += (dy / dist) * this.speed * dt;
+                        this.x += (dx / dist) * this.effectiveSpeed * dt;
+                        this.y += (dy / dist) * this.effectiveSpeed * dt;
                     } else {
                         this.state = 'idle';
                         this.stateTimer = Math.random() * 3 + 1;
@@ -258,8 +268,8 @@ class Pet {
                 let dy = (this.targetFlower.y - this.size / 2) - this.y;
                 let dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist > 5) {
-                    this.x += (dx / dist) * (this.speed * 1.5) * dt;
-                    this.y += (dy / dist) * (this.speed * 1.5) * dt;
+                    this.x += (dx / dist) * (this.effectiveSpeed * 1.5) * dt;
+                    this.y += (dy / dist) * (this.effectiveSpeed * 1.5) * dt;
                 } else {
                     this.state = 'forage';
                     if (this.level >= 20) this.stateTimer = 3.0;
@@ -270,7 +280,8 @@ class Pet {
             }
 
             if (this.state === 'forage') {
-                this.stateTimer -= dt;
+                // Cake buff: the time spent gathering at a flower ticks down faster.
+                this.stateTimer -= dt * getPetForageMultiplier();
                 if (this.stateTimer <= 0) {
                     let idx = activeFlowers.indexOf(this.targetFlower);
                     if (idx > -1) {
@@ -300,8 +311,8 @@ class Pet {
                 let dy = (region4Hive.y - this.size / 2) - this.y;
                 let dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist > 5) {
-                    this.x += (dx / dist) * this.speed * 1.5 * dt;
-                    this.y += (dy / dist) * this.speed * 1.5 * dt;
+                    this.x += (dx / dist) * this.effectiveSpeed * 1.5 * dt;
+                    this.y += (dy / dist) * this.effectiveSpeed * 1.5 * dt;
                 } else {
                     let dropCount = this.honeyCarried;
                     if (this.level >= 20 && Math.random() < 0.10) {
@@ -337,8 +348,8 @@ class Pet {
                 let dy = player.y - this.y;
                 let dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist > 60) {
-                    this.x += (dx / dist) * this.speed * dt;
-                    this.y += (dy / dist) * this.speed * dt;
+                    this.x += (dx / dist) * this.effectiveSpeed * dt;
+                    this.y += (dy / dist) * this.effectiveSpeed * dt;
                 }
                 return;
             }
@@ -350,8 +361,8 @@ class Pet {
                 let dy = lakeTargetY - this.y;
                 let dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist > 5) {
-                    this.x += (dx / dist) * (this.speed * 1.2) * dt;
-                    this.y += (dy / dist) * (this.speed * 1.2) * dt;
+                    this.x += (dx / dist) * (this.effectiveSpeed * 1.2) * dt;
+                    this.y += (dy / dist) * (this.effectiveSpeed * 1.2) * dt;
                 } else {
                     this.state = 'fishing';
                     this.fishingActionTimer = 20.0;
@@ -360,7 +371,8 @@ class Pet {
             }
 
             if (this.state === 'fishing') {
-                this.fishingActionTimer -= dt;
+                // Cake buff: fishing is the bear's foraging, so it ticks down faster too.
+                this.fishingActionTimer -= dt * getPetForageMultiplier();
                 
                 // Continuous Splash Generation Loop: Fires while the bear is actively fishing
                 if (this.fishingActionTimer > 0) {
@@ -436,7 +448,7 @@ class Pet {
             // Fishing itself doesn't start until Level 5 — below that the bear is tame
             // (Level 2+) and wanders normally, but never queues up a fishing trip.
             if (this.level >= 5) {
-                this.fishingTimer -= dt;
+                this.fishingTimer -= dt * getPetForageMultiplier(); // Cake buff
                 if (this.fishingTimer <= 0) {
                     this.state = 'fishing_travel';
                     return;
@@ -451,8 +463,8 @@ class Pet {
                 let dy = this.targetY - this.y;
                 let dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist > 5) {
-                    this.x += (dx / dist) * this.speed * dt;
-                    this.y += (dy / dist) * this.speed * dt;
+                    this.x += (dx / dist) * this.effectiveSpeed * dt;
+                    this.y += (dy / dist) * this.effectiveSpeed * dt;
                 } else {
                     this.state = 'idle';
                     this.stateTimer = Math.random() * 3 + 1;
@@ -620,7 +632,7 @@ class Pet {
             fleeX /= fleeMag;
             fleeY /= fleeMag;
 
-            let fleeSpeed = this.speed * 1.3;
+            let fleeSpeed = this.effectiveSpeed * 1.3;
             this.x += fleeX * fleeSpeed * dt;
             this.y += fleeY * fleeSpeed * dt;
             this.x = Math.max(minX, Math.min(maxX, this.x));
@@ -713,8 +725,8 @@ class Pet {
             let dy = this.targetY - this.y;
             let dist = Math.sqrt(dx * dx + dy * dy);
             if (dist > 5) {
-                this.x += (dx / dist) * (this.speed * 1.6) * dt;
-                this.y += (dy / dist) * (this.speed * 1.6) * dt;
+                this.x += (dx / dist) * (this.effectiveSpeed * 1.6) * dt;
+                this.y += (dy / dist) * (this.effectiveSpeed * 1.6) * dt;
             } else {
                 this.pickNewWanderTarget();
             }
@@ -730,8 +742,8 @@ class Pet {
             // Step 1: Calm approach to wait for the user to initiate the game
             if (this.state === 'playing_approach') {
                 if (dist > 60) {
-                    this.x += (dx / dist) * this.speed * dt;
-                    this.y += (dy / dist) * this.speed * dt;
+                    this.x += (dx / dist) * this.effectiveSpeed * dt;
+                    this.y += (dy / dist) * this.effectiveSpeed * dt;
                 }
                 return;
             }
@@ -746,8 +758,8 @@ class Pet {
                 let rdist = Math.sqrt(rdx * rdx + rdy * rdy);
 
                 if (rdist > 10) {
-                    this.x += (rdx / rdist) * (this.speed * 1.5) * dt;
-                    this.y += (rdy / rdist) * (this.speed * 1.5) * dt;
+                    this.x += (rdx / rdist) * (this.effectiveSpeed * 1.5) * dt;
+                    this.y += (rdy / rdist) * (this.effectiveSpeed * 1.5) * dt;
                 } else {
                     // Backed up enough! Wait for user input movement to launch
                     this.state = 'playing_wait_for_move';
@@ -758,8 +770,8 @@ class Pet {
             // Step 3: Full high-speed tag sprint!
             if (this.state === 'playing_chase') {
                 if (dist > 15) {
-                    this.x += (dx / dist) * (this.speed * 1.6) * dt;
-                    this.y += (dy / dist) * (this.speed * 1.6) * dt;
+                    this.x += (dx / dist) * (this.effectiveSpeed * 1.6) * dt;
+                    this.y += (dy / dist) * (this.effectiveSpeed * 1.6) * dt;
                 } else {
                     // Caught you! Award coins and reset
                     let elephantCoinsEarned = 5;
@@ -789,8 +801,8 @@ class Pet {
             let dy = player.y - this.y;
             let dist = Math.sqrt(dx * dx + dy * dy);
             if (dist > 60) {
-                this.x += (dx / dist) * this.speed * dt;
-                this.y += (dy / dist) * this.speed * dt;
+                this.x += (dx / dist) * this.effectiveSpeed * dt;
+                this.y += (dy / dist) * this.effectiveSpeed * dt;
             }
             return;
         }
@@ -1014,7 +1026,8 @@ class Pet {
                         updateUI();
                     }
                     this.state = 'idle';
-                    this.stateTimer = Math.random() * 2 + 1; 
+                    // Cake buff: shorter breather between forages.
+                    this.stateTimer = (Math.random() * 2 + 1) / getPetForageMultiplier(); 
                     return;
                 }
             } else if (this.state === 'forage') {
@@ -1027,8 +1040,8 @@ class Pet {
             let dist = Math.sqrt(dx * dx + dy * dy);
 
             if (dist > 5) {
-                this.x += (dx / dist) * this.speed * dt;
-                this.y += (dy / dist) * this.speed * dt;
+                this.x += (dx / dist) * this.effectiveSpeed * dt;
+                this.y += (dy / dist) * this.effectiveSpeed * dt;
             } else if (this.state === 'wander') {
                 this.state = 'idle';
                 this.stateTimer = Math.random() * 3 + 1; 

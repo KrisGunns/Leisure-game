@@ -23,11 +23,11 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 | File | Responsibility | Depends on |
 |---|---|---|
-| `state.js` | `inventory`, `character` (level/xp), `gainPlayerXP()`, `showLevelUpToast()`, `getLevelRequirement()`, `getCharacterNextXP()`, `FORAGE_TIERS` + `getForageYield()` (pet forage yield table), `saveGameProgress()`, `loadGameProgress()`, core DOM label refs | none (loads first) |
+| `state.js` | `inventory`, `character` (level/xp), `gainPlayerXP()`, `showLevelUpToast()`, `getLevelRequirement()`, `getCharacterNextXP()`, `FORAGE_TIERS` + `getForageYield()` (pet forage yield table), `saveGameProgress()`, `loadGameProgress()`, core DOM label refs, **shop data** (`shopBuffs`, `SHOP_ITEMS`, `SELL_ITEMS`), `tickShopBuffs()`, buff multipliers (`getPetSpeedMultiplier()`/`getPetForageMultiplier()`/`getXPMultiplier()`) | none (loads first) |
 | `entities.js` | `Player`, `Item`, `Flower`, `Pet` classes (all pet AI/state-machine logic lives in `Pet.update()`) | `state.js` |
 | `world.js` | The `player` instance, `regionalItems` (food/water/flower/banana/egg pools per region), `petsByRegion` (pet roster per region), `region4Hive`, `createBee()`/`createBear()`/`createMonkey()` factories, `isJungleTierUnlocked()`/`areRegions1to3Tamed()`/`isRegionUnlocked()` (region-lock single source of truth), `spawnCoinPopup()`/`spawnRegionFX()` (floating visual effects), `resizeCanvas()`, `checkCollisions()`, `processSpawns()` | `state.js`, `entities.js` |
 | `input.js` | Virtual joystick, GIVE/PLAY interact button (hold-to-feed with ramping `feedHoldCounter`, pointer-capture for reliability), whistle button (single-tap toggle or multi-pet picker), region selector (+ region-lock check), keyboard controls, `executeContinuousFeed()` | `state.js`, `entities.js`, `world.js` |
-| `ui.js` | `updateUI()`, `renderMiniPet()`, pet Codex overlay, settings/dev panel, pet renaming, bag overlay, bee-purchase button, whistle-picker overlay (`showWhistlePicker()`/`hideWhistlePicker()`), consolidated MENU overlay (`handleOpenMenu()`/`handleCloseMenu()`) | `state.js`, `entities.js`, `world.js` |
+| `ui.js` | `updateUI()`, `renderMiniPet()`, pet Codex overlay, settings/dev panel, pet renaming, bag overlay, bee-purchase button, whistle-picker overlay (`showWhistlePicker()`/`hideWhistlePicker()`), consolidated MENU overlay (`handleOpenMenu()`/`handleCloseMenu()`), **Shop screen** (`renderShop()`, `buyShopItem()`, `sellShopItem()`) | `state.js`, `entities.js`, `world.js` |
 | `main.js` | `gameLoop()` (render + update loop), startup sequence (`loadGameProgress()`, initial item spawns, `requestAnimationFrame` kickoff) | all of the above (loads last) |
 
 **Why this order works:** each file's *immediately-executing* top-level code (variable declarations, `new Pet(...)`, event listener registration) only references things defined in earlier-loaded files. Anything referenced "out of order" — like `state.js`'s `gainPlayerXP()` calling `ui.js`'s `updateUI()` — is inside a function body, which isn't actually run until later gameplay, by which point every file has finished loading.
@@ -79,7 +79,8 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 - Whistle button: calls eligible pets (non-bee, level 2+) to the player. In a region with one eligible pet, one tap toggles Call/Return directly. In a region with more than one (currently Region 3: Squirrel + Chicken), tapping whistle opens a picker so you can call specific pets independently rather than all at once.
 - **MENU button** (☰, top-left — see 2026-09-18 (3)): a full-screen orange overlay consolidating the old separate PETS/BAG/CHAR buttons into one entry point. The game keeps simulating behind it (nothing is paused), it's just visually/interactively blocked while the menu is up. Tapping PETS/BAG/CHAR inside it opens that screen layered on top of the menu; closing that screen reveals the menu again underneath rather than dropping straight back to gameplay.
 - Pet Codex overlay: mini-canvas renders of each pet with their current stats. Clicking/tapping any revealed portrait opens a detail screen (name, level, current forage yield, full level-perk checklist with reached perks checked off).
-- Settings/dev panel: add 50 food/water, wipe save, insta-max a region's pets to level 20 (dev/testing tools).
+- Settings/dev panel: add 50 food/water, add 500 gold, wipe save, insta-max a region's pets to level 20 (dev/testing tools).
+- **Shop** (🛒 SHOP in the MENU overlay — see 2026-09-19 (6)): Buy tab (Cake 200🪙, Wisdom Potion 500🪙 — each a 3-minute timed buff) and Sell tab (eggs 1🪙 each, fish 2🪙 each, with Sell 1 / Sell all).
 - Pet renaming via text inputs bound per pet slot.
 - Bag overlay: shows "vault" resources (coins, eggs, honey, fish, bananas) separately from the pinned food/water HUD.
 - Auto-save every 10 seconds, plus on most state-changing events (level-ups, pet levels, purchases).
@@ -87,6 +88,29 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 ---
 
 ## Changelog
+
+### 2026-09-19 (6) — Shop (Buy/Sell), timed Cake + Wisdom Potion buffs, dev "+500 gold"
+
+**Added:**
+- **Dev panel: 🪙 +500 GOLD** (`devAddGold`) — adds 500 to `inventory.coins`, stacks per click.
+- **🛒 SHOP button** in the MENU overlay (below CHAR) opening a new `#shopOverlay` (same dark-panel style/z-index as Bag/Codex/Character, so it layers over the menu and closing it returns to the menu). Shows current gold and two tabs:
+    - **Buy**: `Cake` (200🪙) — all pets +50% movement speed **and** foraging speed. `Wisdom Potion` (500🪙) — character gains +50% XP. **Each lasts 3 minutes** (`duration: 180` in `SHOP_ITEMS`). While a buff is running its row shows a live "⏳ m:ss left" countdown and a green "Active" button; it **can't be re-bought until it expires** (no stacking/refreshing, so no accidental double-spend). When it ends a "<item> has worn off" toast appears (`showBuffExpiredToast()`) and the Buy button returns. Unaffordable items are disabled and show "need N more".
+    - **Sell**: eggs (1🪙) and fish (2🪙) from the bag, each with **Sell 1** / **Sell all**, disabled at 0 stock. Sale price is flat — the character's "+% coin gained" perk deliberately does *not* apply to sales.
+- Shop rows are built from data tables in `state.js` (`SHOP_ITEMS`, `SELL_ITEMS`), so a new item is one new row.
+- `shopBuffs` (seconds remaining per buff, 0 = inactive) is saved/loaded as `stateMatrix.shopBuffs`. Remaining time is preserved across reloads and does **not** drain while the app is closed. Older saves without the key (incl. an interim build that stored permanent `shopPurchases` booleans, now ignored) load as "nothing active"; stored values are validated and capped at the item's duration. Dev "Wipe save" also clears it.
+
+**How the buffs are applied (single source of truth = the three `get...Multiplier()` functions in `state.js`, which read the live timer so they switch off the instant a buff expires):**
+- **Pet speed:** `Pet` gained an `effectiveSpeed` getter (`speed * getPetSpeedMultiplier()`); every movement read inside `Pet.update()` now uses it. `this.speed` itself stays the raw base value on purpose — the factories in `world.js` assign it absolutely, and the bird's Lv20 perk does `bee.speed *= 1.20` / `/= 1.20`; baking the Cake into `speed` would have corrupted one or the other. New pets (bought bees, save/load reconstruction) pick the buff up automatically. The player's own speed is untouched.
+- **Foraging speed** (all sped up by 1.5x, so end-to-end gather throughput is +50% when combined with speed): bee time-at-flower ticks at `dt * 1.5`; land pets' rest pause after each forage is divided by 1.5; **bear fishing** (active-fishing timer and the cooldown between trips) ticks at `dt * 1.5`. Bear fishing was included because it's the bear's only gathering mechanic — flag if you'd rather it be excluded. Not affected: idle pauses unrelated to foraging, bird's 60s excursion, mini-game timers (mud-play, digging, Bamboo Fever, etc.).
+- **XP:** `gainPlayerXP()` multiplies by `getXPMultiplier()`. `character.xp` may now hold fractions (a "+1" grant becomes 1.5) because rounding per-grant would erase the bonus on the common 1-XP grants; every display (`state.js` x2, `ui.js` `updateUI()`) uses `Math.floor()`. The XP bar and level-up loop use the exact value.
+
+**Buff timer uses the wall clock, NOT the game loop's `dt` (important):** `tickShopBuffs()` (called once per frame from `gameLoop()` in `main.js`) measures its own `performance.now()` delta, clamped to 0.25s so a backgrounded/frozen app pauses the buff instead of draining it. Reason: **pre-existing quirk in `gameLoop()`** — it computes `dt` from the full elapsed time and then sets `lastTime = timestamp - (elapsed % frameInterval)`, which re-adds the leftover sub-frame remainder on the next frame, so game-time `dt` over-counts (measured 5.81s of summed `dt` in 3.0 real seconds in headless Chromium; a `lastTime = timestamp` variant measured 3.02s). Using that `dt` would have made "3 minutes" last well under 3 real minutes. The loop itself was intentionally **left unchanged** (fixing it would slow every pet timer/speed on affected devices); if you ever want it fixed, it's a one-line change plus a re-balance pass.
+
+**UI notes:** the countdown text is updated in place once per frame (`updateShopTimers()`); the shop's DOM is only rebuilt when something structural changes (gold/eggs/fish, or a buff starting/ending), because rebuilding buttons every second would swallow taps. In-list buttons use `click` (not touchstart) so scrolling from a button works. `style.css` cache-buster bumped to `?v=1.2`.
+
+**Verification:** `node --check` on all touched files, plus a Playwright (headless Chromium, phone viewport) end-to-end run against the real game: 72 assertions covering dev gold, menu -> shop navigation, buy/active-countdown/unaffordable/boundary (exactly 500)/no re-buy while active/expiry + toast/re-buy after expiry, real-time accuracy (4.00s real = 4.00s of buff) and freeze clamping, sell 1 / sell all / zero-stock, live refresh, XP (1->1.5, no rounding loss, fractional level-up carry, floored HUD), measured pet speed (80 -> 120 px/s), bee/bear timers, land-pet rest range, composition with the bird's speed boost, save/load round-trip of remaining time, legacy/corrupted save values, and menu layering. Zero JS errors. Caught and fixed during visual review: "Fishs" pluralization bug and menu text ghosting through the panel.
+
+---
 
 ### 2026-09-19 (5) — New region: Region 8 (Monkey jungle) + New pet: Monkey (×2) + New resource: Banana
 

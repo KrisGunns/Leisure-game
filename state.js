@@ -151,9 +151,103 @@ const CHARACTER_LEVEL_PERKS = [
     { level: 50, text: '+25% coin gained' }
 ];
 
+// ------------------------------------------------------------
+// SHOP — what's for sale, what's bought, and what selling pays.
+// ------------------------------------------------------------
+// Cake and Wisdom Potion are TIMED buffs: buying one starts a 3-minute countdown
+// (`item.duration`, in seconds). `shopBuffs[id]` is the time remaining — 0 means inactive.
+// It's ticked down once per frame by tickShopBuffs() from the game loop (main.js) using the
+// real wall clock, so "3 minutes" is 3 real minutes. It only counts frames that actually
+// render, so it pauses while the app is backgrounded/closed instead of draining.
+// The remaining time is saved (see saveGameProgress/loadGameProgress below).
+// A buff can't be re-bought while it's still active (the shop shows its countdown instead).
+const shopBuffs = {
+    cake: 0,
+    wisdomPotion: 0
+};
+
+// Data-driven so adding a new item later is one new row here — ui.js builds the Buy tab
+// straight from this list. `id` must match a key in `shopBuffs` above; `duration` is in seconds.
+const SHOP_ITEMS = [
+    { id: 'cake',         icon: '🍰', name: 'Cake',          cost: 200, duration: 180, desc: 'Increases all pets\' speed and foraging speed by 50%.' },
+    { id: 'wisdomPotion', icon: '🧪', name: 'Wisdom Potion', cost: 500, duration: 180, desc: 'Increases the exp the character gains by 50%.' }
+];
+
+// Gold paid per unit sold. Keys are `inventory` keys, so the Sell tab (ui.js) can read
+// the owned count and deduct straight from `inventory[key]`.
+const SELL_ITEMS = [
+    { key: 'eggs', icon: '🥚', name: 'Eggs', price: 1 },
+    { key: 'fish', icon: '🐟', name: 'Fish', price: 2 }
+];
+
+function isShopBuffActive(id) { return shopBuffs[id] > 0; }
+
+// Called once per frame from gameLoop(). Deliberately does NOT use the loop's own `dt`:
+// gameLoop()'s dt over-counts elapsed time (it re-adds the leftover sub-frame remainder
+// each frame, so game time can run noticeably faster than real time), which would make a
+// "3 minute" buff last less than 3 real minutes. A gap bigger than 0.25s means the app was
+// backgrounded/frozen, so it's clamped rather than allowed to drain the buff.
+let shopBuffLastTick = null;
+function tickShopBuffs() {
+    const now = performance.now();
+    let dt = (shopBuffLastTick === null) ? 0 : (now - shopBuffLastTick) / 1000;
+    shopBuffLastTick = now;
+    if (dt > 0.25) dt = 0.25;
+
+    SHOP_ITEMS.forEach(item => {
+        if (shopBuffs[item.id] > 0) {
+            shopBuffs[item.id] -= dt;
+            if (shopBuffs[item.id] <= 0) {
+                shopBuffs[item.id] = 0;
+                showBuffExpiredToast(item);
+            }
+        }
+    });
+}
+
+// 165.2 -> "2:46". Rounds up so the display never shows 0:00 while the buff is still on.
+function formatBuffTime(seconds) {
+    let s = Math.ceil(seconds);
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}
+
+// Non-blocking "it wore off" notice (same approach as showLevelUpToast below).
+function showBuffExpiredToast(item) {
+    let toast = document.getElementById('buffToast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'buffToast';
+        toast.style.cssText = `
+            position: fixed; top: 26%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.85); color: #fff; font-family: monospace;
+            font-weight: bold; font-size: 13px; padding: 9px 16px;
+            border: 2px solid #95a5a6; border-radius: 8px; z-index: 9999;
+            pointer-events: none; text-align: center;
+            transition: opacity 0.35s ease; opacity: 0;
+        `;
+        document.body.appendChild(toast);
+    }
+    toast.textContent = `${item.icon} ${item.name} has worn off`;
+    toast.style.opacity = '1';
+    clearTimeout(toast._hideTimer);
+    toast._hideTimer = setTimeout(() => { toast.style.opacity = '0'; }, 2200);
+}
+
+// Buff multipliers. Everything that needs to know whether a shop buff is active asks
+// one of these instead of reading `shopBuffs` directly, so the "+50%" numbers live
+// in exactly one place. (They read the timer live, so they switch off the instant it expires.)
+function getPetSpeedMultiplier()   { return isShopBuffActive('cake') ? 1.5 : 1; }
+function getPetForageMultiplier()  { return isShopBuffActive('cake') ? 1.5 : 1; }
+function getXPMultiplier()         { return isShopBuffActive('wisdomPotion') ? 1.5 : 1; }
+
 // Global Core XP Injection Engine Function
 function gainPlayerXP(amount) {
     if (typeof amount !== 'number' || isNaN(amount)) return;
+
+    // Wisdom Potion: +50% XP. character.xp is allowed to hold fractions (a 1-XP grant
+    // becomes 1.5) — rounding each grant instead would erase the bonus on the common
+    // "+1 per item" grants. Every place that *displays* xp floors it.
+    amount *= getXPMultiplier();
 
     character.xp += amount;
     let nextNeeded = getCharacterNextXP(character.level);
@@ -178,7 +272,7 @@ function gainPlayerXP(amount) {
         showLevelUpToast(character.level);
     } else {
         const charXP = document.getElementById('charXP');
-        if (charXP) charXP.textContent = character.xp;
+        if (charXP) charXP.textContent = Math.floor(character.xp);
     }
 }
 
@@ -271,6 +365,11 @@ function saveGameProgress() {
 
         stateMatrix.characterData = character;
 
+        stateMatrix.shopBuffs = {
+            cake: shopBuffs.cake,
+            wisdomPotion: shopBuffs.wisdomPotion
+        };
+
         localStorage.setItem('just_a_little_leisure_save_v2', JSON.stringify(stateMatrix));
     } catch (e) {
         console.error("Auto-save failed:", e);
@@ -308,8 +407,18 @@ function loadGameProgress() {
             const charNextXP = document.getElementById('charNextXP');
             
             if (charLevel) charLevel.textContent = character.level;
-            if (charXP) charXP.textContent = character.xp;
+            if (charXP) charXP.textContent = Math.floor(character.xp);
             if (charNextXP) charNextXP.textContent = getCharacterNextXP(character.level);
+        }
+
+        // Shop buff time remaining. Saves from before this existed (including the short-lived
+        // permanent-purchase `shopPurchases` format) simply don't have this key -> nothing
+        // active. Values are validated and capped at the item's duration.
+        if (stateMatrix.shopBuffs) {
+            SHOP_ITEMS.forEach(item => {
+                let remaining = Number(stateMatrix.shopBuffs[item.id]);
+                shopBuffs[item.id] = (isFinite(remaining) && remaining > 0) ? Math.min(remaining, item.duration) : 0;
+            });
         }
 
         if (stateMatrix.currentRegion) {

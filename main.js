@@ -18,6 +18,10 @@ function gameLoop(timestamp) {
         // This physically prevents browser alert freezes or lag spikes from accelerating your pet action loops.
         if (dt > 0.1) dt = 0.1;
 
+        // Shop buffs (Cake / Wisdom Potion) count down in real time (see tickShopBuffs in
+        // state.js for why this doesn't use `dt`).
+        tickShopBuffs();
+
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         // --- REGION GRID BACKGROUNDS RENDERING LAYER ---

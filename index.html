@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Just a little leisure</title>
-    <link rel="stylesheet" href="style.css?v=1.1">
+    <link rel="stylesheet" href="style.css?v=1.2">
 </head>
 <body>
     <div id="gameContainer">
@@ -95,6 +95,22 @@
         </div>
     </div>
 
+    <div id="shopOverlay" style="display: none;">
+        <div id="shopHeader">
+            <h2>🛒 SHOP</h2>
+            <button id="shopClose">X</button>
+        </div>
+        <div id="shopGoldRow">
+            <span>🪙 Your gold</span>
+            <strong id="shopGoldValue">0</strong>
+        </div>
+        <div id="shopTabs">
+            <button id="shopTabBuy" class="shopTab shopTabActive">Buy</button>
+            <button id="shopTabSell" class="shopTab">Sell</button>
+        </div>
+        <div id="shopContent"></div>
+    </div>
+
     <div id="devPanel">
         <div style="display: flex; justify-content: space-between; font-weight: bold; border-bottom: 1px solid #444; padding-bottom: 4px;">
             <span>🛠️ DEV CONSOLE</span>
@@ -104,6 +120,7 @@
             <button id="devAddFood" class="devBtn">+50 FOOD</button>
             <button id="devAddWater" class="devBtn">+50 WATER</button>
         </div>
+        <button id="devAddGold" class="devBtn" style="background: #d4a017;">🪙 +500 GOLD</button>
         <button id="devInstaTame" class="devBtn" style="background: #27ae60;">⭐ INSTA-TAME / LEVEL UP</button>
         <button id="devWipeSave" class="devBtn" style="background: #7f8c8d; margin-top: 5px;">⚠️ WIPE SAVE PROGRESS</button>
     </div>
@@ -307,6 +324,7 @@
                 <button id="openCodexBtn" class="menuBtn">🐾 PETS</button>
                 <button id="openBagBtn" class="menuBtn">🎒 BAG</button>
                 <button id="openCharacterBtn" class="menuBtn">🧑 CHAR</button>
+                <button id="openShopBtn" class="menuBtn">🛒 SHOP</button>
             </div>
         </div>
     </div>

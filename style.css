@@ -332,7 +332,7 @@ body, html {
     padding-bottom: 10px;
     margin-bottom: 15px;
 }
-#bagClose, #codexClose, #characterClose {
+#bagClose, #codexClose, #characterClose, #shopClose {
     position: absolute;
     top: 15px;
     right: 15px;
@@ -344,7 +344,7 @@ body, html {
     border-radius: 4px;
     cursor: pointer;
 }
-#bagClose:active, #codexClose:active, #characterClose:active {
+#bagClose:active, #codexClose:active, #characterClose:active, #shopClose:active {
     background: #e74c3c;
 }
 
@@ -440,4 +440,152 @@ body, html {
 .bagItemRow strong {
     color: #f1c40f;
     font-size: 16px;
+}
+
+/* ---------------- SHOP ---------------- */
+/* Same dark panel as the Bag/Codex/Character screens (and the same z-index, so it layers
+   over the orange MENU overlay the way they do). Gold accent = the game's existing
+   "coin/level" yellow; green = buy, amber = sell. */
+#shopOverlay {
+    display: none;
+    position: absolute;
+    top: 50px;
+    bottom: 50px;
+    left: 20px;
+    right: 20px;
+    background: #141414; /* fully opaque: the orange MENU underneath must not ghost through */
+    border: 3px solid #444;
+    border-radius: 12px;
+    color: #fff;
+    z-index: 10000;
+    flex-direction: column;
+    padding: 15px;
+}
+#shopHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #444;
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+}
+#shopGoldRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    background: rgba(241, 196, 15, 0.08);
+    border: 1px solid #6b5a10;
+    border-radius: 8px;
+    font-size: 13px;
+}
+#shopGoldRow strong {
+    color: #f1c40f;
+    font-size: 16px;
+}
+#shopTabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.shopTab {
+    flex: 1;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #444;
+    border-radius: 8px;
+    color: #aaa;
+    font-family: monospace;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+}
+.shopTabActive {
+    background: #f1c40f;
+    border-color: #f1c40f;
+    color: #222;
+}
+#shopContent {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-bottom: 10px;
+}
+.shopRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #444;
+    border-radius: 8px;
+    font-family: monospace;
+}
+.shopRowIcon {
+    font-size: 28px;
+    flex-shrink: 0;
+}
+.shopRowInfo {
+    flex: 1;
+    min-width: 0;
+}
+.shopRowName {
+    font-size: 14px;
+    font-weight: bold;
+}
+.shopRowDesc {
+    margin-top: 2px;
+    font-size: 11px;
+    line-height: 1.4;
+    color: #95a5a6;
+}
+.shopRowMeta {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #f1c40f;
+}
+.shopRowMetaActive {
+    color: #2ecc71;
+}
+.shopRowActions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.shopActionBtn {
+    min-width: 82px;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 6px;
+    background: #27ae60;
+    color: #fff;
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+}
+.shopActionBtn:active {
+    background: #2ecc71;
+}
+.shopActionBtnSell {
+    background: #d4a017;
+    color: #222;
+}
+.shopActionBtnSell:active {
+    background: #f1c40f;
+}
+.shopActionBtn:disabled {
+    background: #3a3a3a;
+    color: #808080;
+    cursor: default;
+}
+.shopActionBtnActive:disabled {
+    background: transparent;
+    border: 1px solid #2ecc71;
+    color: #2ecc71;
 }

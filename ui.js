@@ -474,7 +474,8 @@ function updateUI() {
     const charXPBarFill = document.getElementById('charXPBarFill');
 
     if (charLevel) charLevel.textContent = character.level;
-    if (charXP) charXP.textContent = character.xp;
+    // Floored: the Wisdom Potion's +50% can leave fractional XP (e.g. 1.5) internally.
+    if (charXP) charXP.textContent = Math.floor(character.xp);
     if (charNextXP) charNextXP.textContent = getCharacterNextXP(character.level);
     if (charXPBarFill) {
         let nextNeeded = getCharacterNextXP(character.level);
@@ -488,6 +489,13 @@ function updateUI() {
     const characterOverlayEl = document.getElementById('characterOverlay');
     if (characterOverlayEl && characterOverlayEl.style.display !== 'none' && typeof updateCharacterScreen === 'function') {
         updateCharacterScreen();
+    }
+
+    // Same idea for the Shop: if it's open and something it displays changed (gold,
+    // eggs, fish — e.g. a bear finishing a catch while the player is browsing), redraw it.
+    const shopOverlayEl = document.getElementById('shopOverlay');
+    if (shopOverlayEl && shopOverlayEl.style.display !== 'none' && typeof refreshShopIfChanged === 'function') {
+        refreshShopIfChanged();
     }
 }
 function renderMiniPet(pet, elementId) {
@@ -1228,6 +1236,178 @@ if (btnRenameCharacter && characterNameInput) {
     btnRenameCharacter.addEventListener('click', handleCharacterRename);
 }
 
+// ------------------------------------------------------------
+// SHOP — opened from the MENU overlay (🛒 SHOP). Two tabs: Buy (SHOP_ITEMS in state.js,
+// timed 3-minute buffs) and Sell (SELL_ITEMS in state.js: eggs and fish from the
+// bag). Rows are built from those data tables, so new items need no changes here.
+// ------------------------------------------------------------
+const shopOverlay = document.getElementById('shopOverlay');
+const openShopBtn = document.getElementById('openShopBtn');
+const shopClose = document.getElementById('shopClose');
+const shopContent = document.getElementById('shopContent');
+const shopGoldValue = document.getElementById('shopGoldValue');
+const shopTabBuy = document.getElementById('shopTabBuy');
+const shopTabSell = document.getElementById('shopTabSell');
+
+let shopTab = 'buy';
+let shopRenderedSignature = '';
+
+// Everything the shop currently displays, flattened to a string. updateUI() runs every
+// frame, so it must NOT rebuild the shop's DOM unconditionally — replacing a button
+// between a finger going down and coming up swallows the tap. Instead it compares this
+// signature and only redraws when something the shop shows actually changed.
+function getShopSignature() {
+    // Buff *active/inactive* is part of the signature, but not the seconds remaining —
+    // the countdown text is updated in place by updateShopTimers() so the buttons aren't
+    // rebuilt every second.
+    return [shopTab, inventory.coins, inventory.eggs, inventory.fish,
+            isShopBuffActive('cake'), isShopBuffActive('wisdomPotion')].join('|');
+}
+
+function refreshShopIfChanged() {
+    if (getShopSignature() !== shopRenderedSignature) renderShop();
+    else updateShopTimers();
+}
+
+// Updates the "⏳ 2:41 left" labels without touching the DOM structure.
+function updateShopTimers() {
+    if (!shopContent) return;
+    shopContent.querySelectorAll('[data-buff-id]').forEach(el => {
+        el.textContent = `⏳ ${formatBuffTime(shopBuffs[el.dataset.buffId])} left`;
+    });
+}
+
+function buyShopItem(item) {
+    if (isShopBuffActive(item.id)) return;         // still running — can't stack/refresh
+    if (inventory.coins < item.cost) return;       // can't afford (button is disabled anyway)
+    inventory.coins -= item.cost;
+    shopBuffs[item.id] = item.duration;
+    saveGameProgress();
+    renderShop();
+    updateUI();
+}
+
+// `amount` may be Infinity for "sell all" — clamped to what's actually owned.
+function sellShopItem(item, amount) {
+    let owned = inventory[item.key] || 0;
+    let count = Math.min(amount, owned);
+    if (count <= 0) return;
+    inventory[item.key] -= count;
+    inventory.coins += count * item.price;
+    saveGameProgress();
+    renderShop();
+    updateUI();
+}
+
+function makeShopButton(label, extraClass, disabled, onClick) {
+    let btn = document.createElement('button');
+    btn.className = 'shopActionBtn' + (extraClass ? ' ' + extraClass : '');
+    btn.textContent = label;
+    btn.disabled = disabled;
+    // `click` rather than touchstart/mousedown (which the overlay open/close buttons use):
+    // these sit in a scrollable list, and touchstart+preventDefault would block scrolling
+    // whenever a finger happens to start on a button.
+    if (onClick) btn.addEventListener('click', onClick);
+    return btn;
+}
+
+function makeShopRow(icon, name, desc, meta, buttons, metaBuffId) {
+    let row = document.createElement('div');
+    row.className = 'shopRow';
+
+    let iconEl = document.createElement('div');
+    iconEl.className = 'shopRowIcon';
+    iconEl.textContent = icon;
+    row.appendChild(iconEl);
+
+    let info = document.createElement('div');
+    info.className = 'shopRowInfo';
+    let nameEl = document.createElement('div');
+    nameEl.className = 'shopRowName';
+    nameEl.textContent = name;
+    info.appendChild(nameEl);
+    if (desc) {
+        let descEl = document.createElement('div');
+        descEl.className = 'shopRowDesc';
+        descEl.textContent = desc;
+        info.appendChild(descEl);
+    }
+    let metaEl = document.createElement('div');
+    metaEl.className = 'shopRowMeta';
+    metaEl.textContent = meta;
+    if (metaBuffId) {
+        // Live countdown label — kept fresh by updateShopTimers().
+        metaEl.dataset.buffId = metaBuffId;
+        metaEl.classList.add('shopRowMetaActive');
+    }
+    info.appendChild(metaEl);
+    row.appendChild(info);
+
+    let actions = document.createElement('div');
+    actions.className = 'shopRowActions';
+    buttons.forEach(b => actions.appendChild(b));
+    row.appendChild(actions);
+
+    return row;
+}
+
+function renderShop() {
+    if (!shopContent) return;
+
+    if (shopGoldValue) shopGoldValue.textContent = inventory.coins;
+    if (shopTabBuy) shopTabBuy.classList.toggle('shopTabActive', shopTab === 'buy');
+    if (shopTabSell) shopTabSell.classList.toggle('shopTabActive', shopTab === 'sell');
+
+    while (shopContent.firstChild) shopContent.removeChild(shopContent.firstChild);
+
+    if (shopTab === 'buy') {
+        SHOP_ITEMS.forEach(item => {
+            let active = isShopBuffActive(item.id);
+            let shortBy = item.cost - inventory.coins;
+            let meta = active ? `⏳ ${formatBuffTime(shopBuffs[item.id])} left`
+                : (shortBy > 0 ? `🪙 ${item.cost} (need ${shortBy} more)` : `🪙 ${item.cost}`);
+            let btn = active
+                ? makeShopButton('Active', 'shopActionBtnActive', true, null)
+                : makeShopButton('Buy', '', shortBy > 0, () => buyShopItem(item));
+            let desc = `${item.desc} Lasts ${Math.round(item.duration / 60)} minutes.`;
+            shopContent.appendChild(makeShopRow(item.icon, item.name, desc, meta, [btn], active ? item.id : null));
+        });
+    } else {
+        SELL_ITEMS.forEach(item => {
+            let owned = inventory[item.key] || 0;
+            let meta = `You have ${owned} · sells for 🪙 ${item.price} each`;
+            let sellOne = makeShopButton('Sell 1', 'shopActionBtnSell', owned < 1, () => sellShopItem(item, 1));
+            let sellAll = makeShopButton('Sell all', 'shopActionBtnSell', owned < 1, () => sellShopItem(item, Infinity));
+            shopContent.appendChild(makeShopRow(item.icon, item.name, null, meta, [sellOne, sellAll]));
+        });
+    }
+
+    shopRenderedSignature = getShopSignature();
+}
+
+const handleOpenShop = (e) => {
+    if (e) e.preventDefault();
+    shopTab = 'buy';
+    renderShop();
+    if (shopOverlay) shopOverlay.style.display = 'flex';
+};
+
+const handleCloseShop = (e) => {
+    if (e) e.preventDefault();
+    if (shopOverlay) shopOverlay.style.display = 'none';
+};
+
+if (openShopBtn) {
+    openShopBtn.addEventListener('touchstart', handleOpenShop, { passive: false });
+    openShopBtn.addEventListener('mousedown', handleOpenShop);
+}
+if (shopClose) {
+    shopClose.addEventListener('touchstart', handleCloseShop, { passive: false });
+    shopClose.addEventListener('mousedown', handleCloseShop);
+}
+if (shopTabBuy) shopTabBuy.addEventListener('click', () => { shopTab = 'buy'; renderShop(); });
+if (shopTabSell) shopTabSell.addEventListener('click', () => { shopTab = 'sell'; renderShop(); });
+
 const settingsBtn = document.getElementById('settingsBtn');
 const devPanel = document.getElementById('devPanel');
 const closeDev = document.getElementById('closeDev');
@@ -1255,6 +1435,7 @@ const btnAddFood = document.getElementById('devAddFood');
 const btnAddWater = document.getElementById('devAddWater');
 const btnWipeSave = document.getElementById('devWipeSave');
 const btnInstaTame = document.getElementById('devInstaTame');
+const btnAddGold = document.getElementById('devAddGold');
 
 if (btnAddFood) {
     btnAddFood.addEventListener('click', () => {
@@ -1266,6 +1447,13 @@ if (btnAddFood) {
 if (btnAddWater) {
     btnAddWater.addEventListener('click', () => {
         inventory.water += 50;
+        updateUI();
+    });
+}
+
+if (btnAddGold) {
+    btnAddGold.addEventListener('click', () => {
+        inventory.coins += 500;
         updateUI();
     });
 }
@@ -1284,6 +1472,8 @@ if (btnWipeSave) {
             inventory.coins = 0; 
             inventory.eggs = 0;
             inventory.bananas = 0;
+            shopBuffs.cake = 0;
+            shopBuffs.wisdomPotion = 0;
             if (typeof region4Hive !== 'undefined' && region4Hive) region4Hive.honey = 0;
             
             // 3. FIXED: Hard-reset all pet variables back to Level 1 wild status instantly
