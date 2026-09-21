@@ -1574,7 +1574,16 @@ function renderShop() {
             });
         }
     } else {
-        SELL_ITEMS.forEach(item => {
+        // Only things the player actually has show up here; with nothing to sell, a short
+        // note replaces the list so the tab doesn't look broken.
+        let sellable = SELL_ITEMS.filter(item => (inventory[item.key] || 0) > 0);
+        if (sellable.length === 0) {
+            let empty = document.createElement('div');
+            empty.className = 'shopEmptyNote';
+            empty.textContent = 'Nothing to sell yet — eggs and fish will show up here once you have some.';
+            shopContent.appendChild(empty);
+        }
+        sellable.forEach(item => {
             let owned = inventory[item.key] || 0;
             let meta = `You have ${owned} · sells for 🪙 ${item.price} each`;
             let sellOne = makeShopButton('Sell 1', 'shopActionBtnSell', owned < 1, () => sellShopItem(item, 1));

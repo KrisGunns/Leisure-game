@@ -91,6 +91,14 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Changelog
 
+### 2026-09-20 (4) — Shop Sell tab only lists eggs / fish you actually have
+
+**Changed:** the Sell tab used to always show Eggs and Fish, even at 0. `renderShop()` (`ui.js`) now filters `SELL_ITEMS` to the ones with an owned count above 0, so each row appears only while the player has some (and disappears when they sell the last one). With nothing to sell, a short note ("Nothing to sell yet — eggs and fish will show up here once you have some.", `.shopEmptyNote` in `style.css`) replaces the list so the tab doesn't look broken. The shop's redraw signature already included the egg/fish counts, so rows appear/vanish live without reopening the shop. New `SELL_ITEMS` rows get this behaviour automatically.
+
+**Verification:** Playwright: 0/0 → note only; eggs only → Eggs; both → both; fish only → Fish; selling all fish → note again (coins credited); Buy tab unchanged.
+
+---
+
 ### 2026-09-20 (3) — Chicken egg chance 5% → 10%
 
 **Changed:** a Lv20 chicken now lays an egg on **10%** of its forages (was 5%). One line in `Pet.update()` (`entities.js`, the chicken forage branch: `Math.random() < 0.10`), plus the matching perk text in the Pet Detail screen (`getPetPerkDescriptions`, `ui.js`). Nothing else uses this number (eggs still sell for 1 🪙 each).

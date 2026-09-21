@@ -619,6 +619,14 @@ body, html {
     color: #f1c40f;
     letter-spacing: 0.5px;
 }
+.shopEmptyNote {
+    padding: 16px 8px;
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #95a5a6;
+    text-align: center;
+}
 .shopRowSub {
     margin-left: 14px;
 }
