@@ -897,6 +897,15 @@ function checkCollisions() {
     let currentRItems = regionalItems[currentRegion];
     if (!currentRItems) return;
 
+    // Eggs are saved as raw pixel positions, so a save loaded on a smaller screen could leave one
+    // outside the playfield where the player can never reach it — pull any such egg back inside.
+    if (currentRegion === 3 && currentRItems.eggs) {
+        currentRItems.eggs.forEach(egg => {
+            egg.x = Math.max(20, Math.min(canvas.width - 20, egg.x));
+            egg.y = Math.max(20, Math.min(canvas.height - 20, egg.y));
+        });
+    }
+
     // MASTER SECURITY GATE: Ensure only ONE single item collision check can register per frame pass
     let hasCollectedThisFrame = false;
 

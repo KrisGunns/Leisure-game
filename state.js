@@ -609,6 +609,12 @@ function saveGameProgress() {
             };
         }
 
+        // Eggs lying on the Region 3 map (laid by a Lv20 chicken, waiting to be picked up). They
+        // used to be lost on every refresh; they now stay until the player collects them.
+        stateMatrix.eggsOnMap = (typeof regionalItems !== 'undefined' && regionalItems[3] && Array.isArray(regionalItems[3].eggs))
+            ? regionalItems[3].eggs.map(e => ({ x: e.x, y: e.y }))
+            : [];
+
         // Which regions / shop pets the player has bought (see UNLOCKABLES).
         stateMatrix.unlocks = Object.keys(unlockedIds).filter(id => unlockedIds[id]);
 
@@ -663,6 +669,14 @@ function loadGameProgress() {
 
         if (typeof region4Hive !== 'undefined' && region4Hive) {
             region4Hive.honey = stateMatrix.hiveHoney || 0;
+        }
+
+        // Eggs that were lying on the Region 3 map. Each entry is validated (a bad one is just
+        // skipped); saves from before this existed have no `eggsOnMap` and simply start with none.
+        if (Array.isArray(stateMatrix.eggsOnMap) && typeof regionalItems !== 'undefined' && regionalItems[3]) {
+            regionalItems[3].eggs = stateMatrix.eggsOnMap
+                .filter(e => e && isFinite(Number(e.x)) && isFinite(Number(e.y)))
+                .map(e => ({ x: Number(e.x), y: Number(e.y) }));
         }
 
         // FIXED: Fully restore and link Character Level and XP to the HUD on page load

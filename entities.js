@@ -1268,14 +1268,21 @@ class Pet {
 
                             // 10% chance per forage to lay an egg (Level 20+ only).
                             if (this.level >= 20 && Math.random() < 0.10) {
-                                let currentRItems = regionalItems[currentRegion];
-                                if (!currentRItems.eggs) currentRItems.eggs = [];
-                                
+                                // The egg goes into the chicken's OWN region (Region 3), not whichever
+                                // region the player happens to be looking at — pets keep foraging in the
+                                // background, and an egg laid while the player was elsewhere used to be
+                                // dropped into that other region's list, where nothing ever shows it.
+                                let eggRItems = regionalItems[this.homeRegion || 3];
+                                if (!eggRItems.eggs) eggRItems.eggs = [];
+
                                 // Spawns the egg coordinates cleanly right at the chicken's current location
-                                currentRItems.eggs.push({ 
+                                eggRItems.eggs.push({ 
                                     x: this.x + this.size / 2, 
                                     y: this.y + this.size / 2 
                                 });
+                                // Eggs on the map are part of the save (see eggsOnMap), so save now — a
+                                // refresh before the next 10s autosave shouldn't lose it.
+                                saveGameProgress();
                             }
                         } else if (this.type === 'pig') {
                             let y = getForageYield('pig', this.level);

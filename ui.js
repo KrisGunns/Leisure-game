@@ -1580,7 +1580,7 @@ function renderShop() {
         if (sellable.length === 0) {
             let empty = document.createElement('div');
             empty.className = 'shopEmptyNote';
-            empty.textContent = 'Nothing to sell yet — eggs and fish will show up here once you have some.';
+            empty.textContent = 'Nothing to sell yet.';
             shopContent.appendChild(empty);
         }
         sellable.forEach(item => {

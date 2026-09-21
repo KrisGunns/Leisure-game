@@ -91,9 +91,21 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Changelog
 
+### 2026-09-20 (5) — Eggs on the map now survive a page refresh
+
+**Fixed:** eggs laid by a Lv20 chicken lived only in memory (`regionalItems[3].eggs`), so every refresh wiped them. They are now part of the save and stay on the map until the player walks over them.
+- `saveGameProgress()` writes a new top-level **`eggsOnMap`** (array of `{x, y}`); `loadGameProgress()` restores it, skipping any malformed entry. Saves from before this have no `eggsOnMap` and just start with none. Picking an egg up already saved; laying one now saves immediately too, so a refresh before the next 10 s autosave can't lose it.
+- Positions are raw pixels, so `checkCollisions()` (`world.js`) pulls any egg outside the current canvas back inside while the player is in Region 3 — otherwise a save loaded on a smaller screen could leave an egg the player can never reach.
+
+**Also fixed (same symptom, different cause):** the egg was added to `regionalItems[currentRegion]` — the region the *player* was viewing — not the chicken's region. Pets keep foraging in the background, so an egg laid while the player was in any other region went into that region's list, where nothing ever draws or collects it (lost). It now always goes to the chicken's own region (`this.homeRegion`, Region 3).
+
+**Verification:** Playwright: eggs survive a reload at the same positions; picking one up removes it permanently (and keeps the inventory count) across a reload; an egg laid while the player is in Region 1 lands in Region 3 (none in Region 1) and survives an immediate reload; an old save with no `eggsOnMap` loads cleanly; corrupt entries are skipped and an out-of-bounds egg is pulled inside.
+
+---
+
 ### 2026-09-20 (4) — Shop Sell tab only lists eggs / fish you actually have
 
-**Changed:** the Sell tab used to always show Eggs and Fish, even at 0. `renderShop()` (`ui.js`) now filters `SELL_ITEMS` to the ones with an owned count above 0, so each row appears only while the player has some (and disappears when they sell the last one). With nothing to sell, a short note ("Nothing to sell yet — eggs and fish will show up here once you have some.", `.shopEmptyNote` in `style.css`) replaces the list so the tab doesn't look broken. The shop's redraw signature already included the egg/fish counts, so rows appear/vanish live without reopening the shop. New `SELL_ITEMS` rows get this behaviour automatically.
+**Changed:** the Sell tab used to always show Eggs and Fish, even at 0. `renderShop()` (`ui.js`) now filters `SELL_ITEMS` to the ones with an owned count above 0, so each row appears only while the player has some (and disappears when they sell the last one). With nothing to sell, a short note ("Nothing to sell yet.", `.shopEmptyNote` in `style.css`) replaces the list so the tab doesn't look broken. The shop's redraw signature already included the egg/fish counts, so rows appear/vanish live without reopening the shop. New `SELL_ITEMS` rows get this behaviour automatically.
 
 **Verification:** Playwright: 0/0 → note only; eggs only → Eggs; both → both; fish only → Fish; selling all fish → note again (coins credited); Buy tab unchanged.
 
