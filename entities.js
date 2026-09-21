@@ -4,12 +4,238 @@
 // getLevelRequirement, saveGameProgress). Load AFTER state.js.
 // ============================================================
 
+// ------------------------------------------------------------------
+// THE PLAYER'S SPRITE — a chibi girl in a white sundress (long black hair, blue hair clips,
+// pink cheeks, tan sandals), drawn from small pixel maps so the art lives in code like everything
+// else. Each frame is 16 columns x 24 rows of palette letters ('.' = transparent); Player.draw()
+// paints them at PLAYER_SPRITE_SCALE (2 => a 32 x 48 px character; the hitbox stays 32 x 32).
+//   idle: front-facing, eyes closed in a happy smile, waving (2 frames, the hand bobs)
+//   walk: 3/4 view facing RIGHT, 4-frame cycle (stride / pass / stride / pass); drawn mirrored
+//         when walking left. Near leg/foot are the light skin tone, the far one the shaded tone.
+// To tweak the look, edit a letter below (see PLAYER_PALETTE) — nothing else needs to change.
+// ------------------------------------------------------------------
+const PLAYER_SPRITE_SCALE = 2;
+const PLAYER_SPRITE_COLS = 16;
+const PLAYER_SPRITE_ROWS = 24;
+const PLAYER_STEP_PIXELS = 18;   // distance walked per walk-cycle frame (feet stay in step with the ground)
+const PLAYER_WAVE_SECONDS = 0.45; // how long each idle waving pose lasts
+
+const PLAYER_PALETTE = {
+    K: '#141418',   // hair
+    h: '#40404e',   // hair shine
+    S: '#f9cfae',   // skin
+    s: '#e3a684',   // skin, shaded (far arm/leg)
+    B: '#f19696',   // blush
+    M: '#d6404f',   // mouth
+    E: '#141418',   // eyes
+    W: '#ffffff',   // dress
+    w: '#dde4ef',   // dress shading
+    o: '#aab6cc',   // dress outline (keeps the white dress readable on light ground)
+    C: '#4b6fd6',   // hair clips
+    T: '#cf9760',   // sandals
+    t: '#8f5c35'    // sandal soles
+};
+
+const PLAYER_FRAMES = {
+    idle: [
+        [
+            '.....KKKKKK.....',
+            '...KKKKKKKKKK...',
+            '..KKKhhKKKKhKK..',
+            '..KKKKKKKKKKKC..',
+            '..KKKKKKKKKKKK..',
+            '..KKKKSSSSKKKC..',
+            '..KKKSSSSSSKKK..',
+            '..KKSESSSSESKK..',
+            '..KKESESSESEKK..',
+            '..KKSBSMMSBSKSS.',
+            '...KKSSSSSSKKSS.',
+            '...KKKKSSKKKSS..',
+            '..KKSSSSSSSSSK..',
+            '..KKSWSSSSWSKK..',
+            '..KKSWWWWWWKKK..',
+            '..KKSWWWWWWKKK..',
+            '..KKSSWWWWWWKK..',
+            '..KoWWWWwWWWoK..',
+            '..oWWWwWWwWWWo..',
+            '.owwwwwwwwwwwwo.',
+            '.....SS..SS.....',
+            '.....SS..SS.....',
+            '....TTT..TTT....',
+            '....ttt..ttt....',
+        ],
+        [
+            '.....KKKKKK.....',
+            '...KKKKKKKKKK...',
+            '..KKKhhKKKKhKK..',
+            '..KKKKKKKKKKKC..',
+            '..KKKKKKKKKKKK..',
+            '..KKKKSSSSKKKC..',
+            '..KKKSSSSSSKKK..',
+            '..KKSESSSSESKK..',
+            '..KKESESSESEKK..',
+            '..KKSBSMMSBSKK..',
+            '...KKSSSSSSKKSS.',
+            '...KKKKSSKKKKSS.',
+            '..KKSSSSSSSSSK..',
+            '..KKSWSSSSWSKK..',
+            '..KKSWWWWWWKKK..',
+            '..KKSWWWWWWKKK..',
+            '..KKSSWWWWWWKK..',
+            '..KoWWWWwWWWoK..',
+            '..oWWWwWWwWWWo..',
+            '.owwwwwwwwwwwwo.',
+            '.....SS..SS.....',
+            '.....SS..SS.....',
+            '....TTT..TTT....',
+            '....ttt..ttt....',
+        ],
+    ],
+    walk: [
+        [
+            '.....KKKKKK.....',
+            '...KKKKKKKKKK...',
+            '..KKKhhKKKKhKK..',
+            '..KKKKKKKKKKKK..',
+            '..KKKKKKKKKKKC..',
+            '..KKKKKKKSSSKC..',
+            '..KKKKKKSSSSSK..',
+            '..KKKKKSSESESK..',
+            '..KKKKKSBSSSMK..',
+            '..KKKKKKSSSSSK..',
+            '..KKKKKKKSSSK...',
+            '..KKKKKKKKSSKK..',
+            '..KKSSSSSSSSKK..',
+            '..KKSWSSSSWSKK..',
+            '..KSKWWWWWWKSK..',
+            '..KSKWWWWWWKSK..',
+            '..KSKWWWWWWKSK..',
+            '..KoWWWWwWWWoK..',
+            '..oWWWwWWwWWWo..',
+            '.owwwwwwwwwwwwo.',
+            '....ss....SS....',
+            '....ss....SS....',
+            '...TTT....TTT...',
+            '...ttt....ttt...',
+        ],
+        [
+            '.....KKKKKK.....',
+            '...KKKKKKKKKK...',
+            '..KKKhhKKKKhKK..',
+            '..KKKKKKKKKKKK..',
+            '..KKKKKKKKKKKC..',
+            '..KKKKKKKSSSKC..',
+            '..KKKKKKSSSSSK..',
+            '..KKKKKSSESESK..',
+            '..KKKKKSBSSSMK..',
+            '..KKKKKKSSSSSK..',
+            '..KKKKKKKSSSK...',
+            '..KKKKKKKKSSKK..',
+            '..KKSSSSSSSSKK..',
+            '..KKSWSSSSWSKK..',
+            '..KKSWWWWWWSKK..',
+            '..KKSWWWWWWSKK..',
+            '..KKSWWWWWWSKK..',
+            '..KoWWWWwWWWoK..',
+            '..oWWWwWWwWWWo..',
+            '.owwwwwwwwwwwwo.',
+            '......ssSS......',
+            '......ssSS......',
+            '.....TTTTTT.....',
+            '.....tttttt.....',
+        ],
+        [
+            '.....KKKKKK.....',
+            '...KKKKKKKKKK...',
+            '..KKKhhKKKKhKK..',
+            '..KKKKKKKKKKKK..',
+            '..KKKKKKKKKKKC..',
+            '..KKKKKKKSSSKC..',
+            '..KKKKKKSSSSSK..',
+            '..KKKKKSSESESK..',
+            '..KKKKKSBSSSMK..',
+            '..KKKKKKSSSSSK..',
+            '..KKKKKKKSSSK...',
+            '..KKKKKKKKSSKK..',
+            '..KKSSSSSSSSKK..',
+            '..KKSWSSSSWSKK..',
+            '..KKKSWWWWSKKK..',
+            '..KKKSWWWWSKKK..',
+            '..KKKSWWWWSKKK..',
+            '..KoWWWWwWWWoK..',
+            '..oWWWwWWwWWWo..',
+            '.owwwwwwwwwwwwo.',
+            '....SS....ss....',
+            '....SS....ss....',
+            '...TTT....TTT...',
+            '...ttt....ttt...',
+        ],
+        [
+            '.....KKKKKK.....',
+            '...KKKKKKKKKK...',
+            '..KKKhhKKKKhKK..',
+            '..KKKKKKKKKKKK..',
+            '..KKKKKKKKKKKC..',
+            '..KKKKKKKSSSKC..',
+            '..KKKKKKSSSSSK..',
+            '..KKKKKSSESESK..',
+            '..KKKKKSBSSSMK..',
+            '..KKKKKKSSSSSK..',
+            '..KKKKKKKSSSK...',
+            '..KKKKKKKKSSKK..',
+            '..KKSSSSSSSSKK..',
+            '..KKSWSSSSWSKK..',
+            '..KKSWWWWWWSKK..',
+            '..KKSWWWWWWSKK..',
+            '..KKSWWWWWWSKK..',
+            '..KoWWWWwWWWoK..',
+            '..oWWWwWWwWWWo..',
+            '.owwwwwwwwwwwwo.',
+            '......ssSS......',
+            '......ssSS......',
+            '.....TTTTTT.....',
+            '.....tttttt.....',
+        ],
+    ],
+};
+
+// Each frame is rendered once into its own small offscreen canvas (built on first use), so drawing
+// the player is a single drawImage() per frame instead of ~400 fillRects.
+const playerSpriteCache = {};
+function getPlayerSprite(kind, index) {
+    const key = kind + index;
+    if (playerSpriteCache[key]) return playerSpriteCache[key];
+    const rows = PLAYER_FRAMES[kind][index];
+    const c = document.createElement('canvas');
+    c.width = PLAYER_SPRITE_COLS * PLAYER_SPRITE_SCALE;
+    c.height = PLAYER_SPRITE_ROWS * PLAYER_SPRITE_SCALE;
+    const cx = c.getContext('2d');
+    for (let y = 0; y < rows.length; y++) {
+        for (let x = 0; x < rows[y].length; x++) {
+            const color = PLAYER_PALETTE[rows[y][x]];
+            if (!color) continue;
+            cx.fillStyle = color;
+            cx.fillRect(x * PLAYER_SPRITE_SCALE, y * PLAYER_SPRITE_SCALE, PLAYER_SPRITE_SCALE, PLAYER_SPRITE_SCALE);
+        }
+    }
+    playerSpriteCache[key] = c;
+    return c;
+}
+
 class Player {
     constructor(x, y) {
         this.x = x;
         this.y = y;
+        // The hitbox (pickups, feeding range, hive distance...) stays 32 x 32 exactly as before;
+        // the sprite is drawn taller than that (see draw()) so the character is easier to see.
         this.size = 32;
         this.speed = 150;
+
+        // Animation state (see draw()). facing: 1 = right, -1 = left (last horizontal direction).
+        this.facing = 1;
+        this.moving = false;
+        this.stepDistance = 0;   // total distance walked, drives the walk cycle
+        this.idleTime = 0;       // seconds standing still, drives the idle wave
     }
 
     update(dt) {
@@ -27,6 +253,9 @@ class Player {
             moveY /= length;
         }
 
+        const startX = this.x;
+        const startY = this.y;
+
         this.x += moveX * this.speed * dt;
         this.y += moveY * this.speed * dt;
 
@@ -35,18 +264,71 @@ class Player {
         if (this.y < padding) this.y = padding;
         if (this.x + this.size > canvas.width - padding) this.x = canvas.width - padding - this.size;
         if (this.y + this.size > canvas.height - padding) this.y = canvas.height - padding - this.size;
+
+        // Animation bookkeeping. Based on how far the player ACTUALLY moved (after the edge clamping
+        // above), so pushing against a wall doesn't make the feet run on the spot.
+        const movedX = this.x - startX;
+        const movedY = this.y - startY;
+        const moved = Math.sqrt(movedX * movedX + movedY * movedY);
+        this.moving = moved > 0.01;
+        if (moveX > 0) this.facing = 1;
+        else if (moveX < 0) this.facing = -1;
+        if (this.moving) {
+            this.stepDistance += moved;
+            this.idleTime = 0;
+        } else {
+            this.idleTime += dt;
+        }
+    }
+
+    // Top-left of where a carried sugar glider is drawn — on the side the player is facing, at
+    // shoulder height. Shared by drawHeldGlider() and dropGlider() (world.js).
+    getHeldGliderPosition() {
+        return {
+            x: this.x + (this.facing > 0 ? 22 : -26),
+            y: this.y - 2
+        };
     }
 
     draw() {
-        ctx.fillStyle = '#3e2723';
-        ctx.fillRect(this.x + 4, this.y, 24, 12);
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(this.x + 2, this.y + 12, 28, 20);
-        ctx.fillStyle = '#ffcc80';
-        ctx.fillRect(this.x + 8, this.y + 4, 16, 10);
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(this.x + 12, this.y + 7, 2, 2);
-        ctx.fillRect(this.x + 18, this.y + 7, 2, 2);
+        const w = PLAYER_SPRITE_COLS * PLAYER_SPRITE_SCALE;
+        const h = PLAYER_SPRITE_ROWS * PLAYER_SPRITE_SCALE;
+
+        let sprite;
+        let bob = 0;
+        if (this.moving) {
+            // 4-frame walk cycle advanced by distance; the two "passing" frames also lift the body a pixel.
+            const step = Math.floor(this.stepDistance / PLAYER_STEP_PIXELS) % 4;
+            sprite = getPlayerSprite('walk', step);
+            if (step % 2 === 1) bob = -PLAYER_SPRITE_SCALE;
+        } else {
+            sprite = getPlayerSprite('idle', Math.floor(this.idleTime / PLAYER_WAVE_SECONDS) % 2);
+        }
+
+        // The sprite is centred on the 32 x 32 hitbox (so it stands 8px taller above and 8px below it),
+        // snapped to whole pixels to keep the pixel art crisp.
+        const dx = Math.round(this.x + this.size / 2 - w / 2);
+        const dy = Math.round(this.y + this.size / 2 - h / 2) + bob;
+
+        // Soft ground shadow under the feet — helps the white dress stand out on light ground.
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+        ctx.beginPath();
+        ctx.ellipse(dx + w / 2, Math.round(this.y + this.size / 2 - h / 2) + h - 1, 12, 3.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        const smoothing = ctx.imageSmoothingEnabled;
+        ctx.imageSmoothingEnabled = false;
+        if (this.moving && this.facing < 0) {
+            // The walk frames face right; mirror them for walking left.
+            ctx.save();
+            ctx.translate(dx + w, dy);
+            ctx.scale(-1, 1);
+            ctx.drawImage(sprite, 0, 0);
+            ctx.restore();
+        } else {
+            ctx.drawImage(sprite, dx, dy);
+        }
+        ctx.imageSmoothingEnabled = smoothing;
     }
 }
 class Item {

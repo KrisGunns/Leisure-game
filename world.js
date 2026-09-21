@@ -624,8 +624,9 @@ function dropGlider() {
     const pad = 24;
     g.held = false;
     g.regionNow = currentRegion;
-    g.x = Math.max(pad, Math.min(canvas.width - g.size - pad, player.x + 22));
-    g.y = Math.max(pad, Math.min(canvas.height - g.size - pad - 14, player.y - 10));
+    const hand = player.getHeldGliderPosition();
+    g.x = Math.max(pad, Math.min(canvas.width - g.size - pad, hand.x));
+    g.y = Math.max(pad, Math.min(canvas.height - g.size - pad - 14, hand.y));
     g.state = 'idle';
     g.stateTimer = 0.4;
     g.staminaDrainTimer = 0;
@@ -636,13 +637,14 @@ function dropGlider() {
     updateUI();
 }
 
-// Draws the carried glider riding on the player's shoulder (called after player.draw()).
+// Draws the carried glider beside the player, on the side they're facing (called after player.draw()).
 // Its x/y are kept in sync so feeding it (distance check) works while it's carried.
 function drawHeldGlider() {
     const g = getHeldGlider();
     if (!g) return;
-    g.x = player.x + 22;
-    g.y = player.y - 10;
+    const hand = player.getHeldGliderPosition();
+    g.x = hand.x;
+    g.y = hand.y;
     g.draw();
 }
 

@@ -91,6 +91,19 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Changelog
 
+### 2026-09-20 (9) — New player character: chibi girl in a white sundress (from the reference sprite sheet)
+
+**Changed:** the player is no longer a plain rectangle; it is a pixel-art girl modelled on the uploaded sheet — long black hair with side bangs, two blue hair clips, pink cheeks, a happy face, a white sleeveless sundress with a flared skirt, and tan sandals. Colours follow the sheet's palette (white / black / peach / blue / brown).
+- **Sprite data lives in code** (`entities.js`, just above `class Player`): `PLAYER_FRAMES` (16 × 24 letter maps), `PLAYER_PALETTE` (letter → colour) and `getPlayerSprite()` (renders each frame once into an offscreen canvas, so drawing is one `drawImage`). To retouch the art, edit a letter or a palette colour — nothing else needs to change. No new files or images.
+- **Animations:** *idle* = front-facing, eyes closed in a smile, waving (2 poses, `PLAYER_WAVE_SECONDS`); *walk* = 3/4 view, 4-frame cycle (stride / pass / stride / pass, with a 1-pixel body bob on the passing frames), **mirrored when walking left**. The walk cycle advances by distance walked (`PLAYER_STEP_PIXELS`), so the feet stay in step with the ground and stop when the player is held against a wall (animation uses the position after edge-clamping). Player gained `facing`, `moving`, `stepDistance`, `idleTime`.
+- **Size:** drawn at 2× pixel scale = **32 × 48 px** (was a 32 × 32 block), centred on the hitbox with a soft ground shadow so the white dress reads on light ground (checked on grass, Region 2 sand and the Region 9 bed). **The hitbox is unchanged** (`player.size = 32`), so pickup range, feeding range, the hive and every other distance check behave exactly as before.
+- **Carried sugar glider** now rides beside the player on the side they face (`Player.getHeldGliderPosition()`, used by `drawHeldGlider()` and `dropGlider()`), instead of the old fixed offset that would have covered the face.
+- The sheet's **Jump** and **Dance** poses are not used (nothing in the game triggers them yet); they'd slot in as extra `PLAYER_FRAMES` entries.
+
+**Verification:** Playwright: idle wave, walk-right and walk-left frames captured in-game and inspected; hitbox size unchanged; held glider positioned on both sides and dropped next to the player; character checked in Regions 1, 2 and 9; no console errors. **Not tested:** a real phone screen.
+
+---
+
 ### 2026-09-20 (8) — Squirrel speed boost: 5 real seconds, and it can no longer be chained
 
 **Changed:** `SQUIRREL_BOOST_SECONDS` (`state.js`) is now **5** (was 30), still real-clock seconds. And `startRegionSpeedBoost()` (`world.js`) now **ignores a proc while a boost is already running** — before, a re-proc refreshed the timer, which let a squirrel keep a region boosted continuously. Now every boost ends before another can start (the squirrel's next successful proc after it expires begins a new one). The Pet Detail guide text reads the constant, so it says "for 5s" automatically. Superseded: the 30 s / "re-procs refresh the timer" wording in 2026-09-20 (7).
