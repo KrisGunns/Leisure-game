@@ -670,25 +670,8 @@ function renderMiniPet(pet, elementId) {
     let oy = 17;
 
         if (pet.type === 'dog') {
-            mctx.fillStyle = '#f1c40f'; 
-            mctx.fillRect(ox + 4, oy + 10, 26, 16); 
-            mctx.fillRect(ox + 18, oy + 2, 10, 10); 
-            mctx.fillStyle = '#f39c12'; 
-            mctx.fillRect(ox + 16, oy + 4, 4, 8);  
-            mctx.fillStyle = '#000000'; 
-            mctx.fillRect(ox + 25, oy + 4, 2, 2);   
-            mctx.fillRect(ox + 27, oy + 6, 2, 2);   
-            mctx.fillStyle = '#d35400'; 
-            mctx.fillRect(ox + 6, oy + 26, 4, 6);   
-            mctx.fillRect(ox + 22, oy + 26, 4, 6);
-            mctx.fillStyle = '#f1c40f';
-            mctx.beginPath();
-            mctx.moveTo(ox + 4, oy + 12);
-            mctx.quadraticCurveTo(ox - 6, oy + 4, ox - 4, oy);
-            mctx.lineTo(ox - 1, oy + 1);
-            mctx.quadraticCurveTo(ox - 3, oy + 6, ox + 6, oy + 14);
-            mctx.closePath();
-            mctx.fill();
+            // Same sprite as in the world (front-facing sitting pose makes the best portrait).
+            drawPetSprite(mctx, 'dog', 'sit', 0, ox, oy, 1);
         } else if (pet.type === 'elephant') {
             mctx.fillStyle = '#95a5a6'; 
             mctx.fillRect(ox + 6, oy + 8, 24, 18);  
@@ -859,29 +842,7 @@ function renderMiniPet(pet, elementId) {
                 mctx.fillRect(ox + 16.5, oy - 3, 3, 3);
             }
         } else if (pet.type === 'cat') {
-            mctx.fillStyle = pet.color;
-            mctx.fillRect(ox + 4, oy + 12, 26, 16);
-            mctx.fillRect(ox + 18, oy + 2, 12, 12);
-            mctx.beginPath();
-            mctx.moveTo(ox + 18, oy + 2);
-            mctx.lineTo(ox + 20, oy - 5);
-            mctx.lineTo(ox + 23, oy + 2);
-            mctx.closePath();
-            mctx.fill();
-            mctx.beginPath();
-            mctx.moveTo(ox + 26, oy + 2);
-            mctx.lineTo(ox + 29, oy - 5);
-            mctx.lineTo(ox + 31, oy + 2);
-            mctx.closePath();
-            mctx.fill();
-            mctx.fillStyle = '#7a3d10';
-            mctx.fillRect(ox + 8, oy + 12, 3, 16);
-            mctx.fillRect(ox + 15, oy + 12, 3, 16);
-            mctx.fillRect(ox + 21, oy + 4, 2, 8);
-            mctx.fillRect(ox + 27, oy + 4, 2, 8);
-            mctx.fillStyle = '#000000';
-            mctx.fillRect(ox + 21, oy + 6, 2, 2);
-            mctx.fillRect(ox + 27, oy + 6, 2, 2);
+            drawPetSprite(mctx, 'cat', 'walk', 1, ox, oy, 1);
         } else if (pet.type === 'bird') {
             mctx.fillStyle = pet.color;
             mctx.beginPath();

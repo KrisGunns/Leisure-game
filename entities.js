@@ -222,6 +222,371 @@ function getPlayerSprite(kind, index) {
     return c;
 }
 
+// ------------------------------------------------------------------
+// PET SPRITES — the same pixel-art approach as the player above: small letter maps (one letter
+// per pixel, '.' = transparent) painted at PET_SPRITE_SCALE and cached as offscreen canvases.
+// Every frame FACES RIGHT and is mirrored for left-moving pets. Each type has a few named
+// animations; frames can be different sizes (the sprite is anchored by its bottom-centre).
+//   dog: walk (4 frames), sit (front-facing, tail wags, 2 frames — also the Codex portrait),
+//        dig (2 frames: scratching with a front paw, used with the dirt particles)
+//   cat: walk (4 frames), sleep (curled loaf + zzz, 2 frames — what it does whenever it's
+//        standing still, so a wild cat that isn't moving yet is asleep)
+// To add another pet: add a palette letter if needed, add its frames to PET_SPRITES, and draw it
+// with drawPetSprite() from Pet.draw() / renderMiniPet() the way the dog and cat do.
+// ------------------------------------------------------------------
+const PET_SPRITE_SCALE = 2;
+const PET_SPRITE_BOTTOM = 34;      // where the feet sit inside a pet's 36px box (px below the box top)
+const PET_STEP_PIXELS = 10;        // distance walked per walk-cycle frame
+
+const PET_SPRITE_PALETTE = {
+    g: '#e8b55c',   // dog fur
+    l: '#f6dc9d',   // dog cream (chest, paws, muzzle)
+    d: '#b87b3c',   // dog fur shade (ear, far legs)
+    D: '#8c5828',   // dog paw shade
+    b: '#5478cf',   // collar / bow
+    n: '#1e1a1c',   // nose / mouth
+    p: '#ee7884',   // tongue
+    e: '#1e1a1c',   // eyes
+    w: '#ffffff',   // white
+    o: '#e98c2c',   // cat orange
+    r: '#c4611c',   // cat stripes
+    c: '#fadaa0',   // cat cream
+    i: '#e796a0',   // cat pink (ears, nose)
+    k: '#8a4a1f',   // cat far legs
+    z: '#786054'   // zzz
+};
+
+const PET_SPRITES = {
+    dog: {
+        walk: [
+            [
+                '........................',
+                '..llg...................',
+                '..ggl............ggg....',
+                '..gg............ddgggg..',
+                '..gg...........gddgegg..',
+                '..gg..........ggddgggggn',
+                '..ggg..gggggggggddgggggn',
+                '...gggggggggggggdgggglll',
+                '....gggggggggggggggg..p.',
+                '....ggggggggllgbbg....p.',
+                '.....gggggllllgbbb......',
+                '.....ggggddlddllggb.....',
+                '.....gg.lddldd..gg......',
+                '.....gg..dd.dd..gg......',
+                '.....gg..dd.dd..gg......',
+                '.....gg..DD.dd..ll......',
+                '.....ll.....DD..........',
+            ],
+            [
+                '........................',
+                '..llg...................',
+                '..ggl............ggg....',
+                '..gg............ddgggg..',
+                '..gg...........gddgegg..',
+                '..gg..........ggddgggggn',
+                '..ggg..gggggggggddgggggn',
+                '...gggggggggggggdgggglll',
+                '....gggggggggggggggg..p.',
+                '....ggggggggllgbbg....p.',
+                '.....gggggllllgbbb......',
+                '......gggddlllggbbb.....',
+                '.......ggddll.gg........',
+                '.......ggdd...gg........',
+                '.......ggdd...gg........',
+                '.......ggdd...gg........',
+                '.......llDD...ll........',
+            ],
+            [
+                '........................',
+                '..llg...................',
+                '..ggl............ggg....',
+                '..gg............ddgggg..',
+                '..gg...........gddgegg..',
+                '..gg..........ggddgggggn',
+                '..ggg..gggggggggddgggggn',
+                '...gggggggggggggdgggglll',
+                '....gggggggggggggggg..p.',
+                '....ggggggggllgbbg....p.',
+                '.....gggggllllgbbb......',
+                '.....ddgggglggllddb.....',
+                '.....dd.lgglgg..dd......',
+                '.....dd..gg.gg..dd......',
+                '.....dd..gg.gg..dd......',
+                '.....dd..ll.gg..DD......',
+                '.....DD.....ll..........',
+            ],
+            [
+                '........................',
+                '..llg...................',
+                '..ggl............ggg....',
+                '..gg............ddgggg..',
+                '..gg...........gddgegg..',
+                '..gg..........ggddgggggn',
+                '..ggg..gggggggggddgggggn',
+                '...gggggggggggggdgggglll',
+                '....gggggggggggggggg..p.',
+                '....ggggggggllgbbg....p.',
+                '.....gggggllllgbbb......',
+                '......gggddlllggbbb.....',
+                '.......ggddll.gg........',
+                '.......ggdd...gg........',
+                '.......ggdd...gg........',
+                '.......ggdd...gg........',
+                '.......llDD...ll........',
+            ],
+        ],
+        sit: [
+            [
+                '.................',
+                '......ggggg......',
+                '..dd.ggggggg..dd.',
+                '..ddggggggggg.dd.',
+                '..ddggeggggeg.dd.',
+                '..ddgggglgggg.dd.',
+                '..ddggllnnlgg.dd.',
+                '..ddgglllllgg.dd.',
+                '..dd.glnnnng..dd.',
+                '......ggppg....ll',
+                '....bbbbbbbbbb.gg',
+                '....gglllllbbbbgg',
+                '...gggllllbbbbbgg',
+                '...ggggllllggg.gg',
+                '...ggggllllgggggg',
+                '....ggggggggggggg',
+                '..ggggggggggggg..',
+                '.ggggllggggllgg..',
+                '.....llggg.ll....',
+            ],
+            [
+                '.................',
+                '......ggggg......',
+                '..dd.ggggggg..dd.',
+                '..ddggggggggg.dd.',
+                '..ddggeggggeg.dd.',
+                '..ddgggglgggg.dd.',
+                '..ddggllnnlgg.dd.',
+                '..ddgglllllgg.dd.',
+                '..dd.glnnnng..dd.',
+                '......ggppg......',
+                '....bbbbbbbbbb...',
+                '....gglllllbbbbll',
+                '...gggllllbbbbbgg',
+                '...ggggllllggg.gg',
+                '...ggggllllggg.gg',
+                '....ggggggggggggg',
+                '..ggggggggggggggg',
+                '.ggggllggggllgg..',
+                '.....llggg.ll....',
+            ],
+        ],
+        dig: [
+            [
+                '........................',
+                '..llg...................',
+                '..ggl............ggg....',
+                '..gg............ddgggg..',
+                '..gg...........gddgegg..',
+                '..gg..........ggddgggggn',
+                '..ggg..gggggggggddgggggn',
+                '...gggggggggggggdgggglll',
+                '....gggggggggggggggg..p.',
+                '....ggggggggllgbbg....p.',
+                '.....gggggllllgbbb......',
+                '......gggddlllggbbb.....',
+                '.......ggddll...gg......',
+                '.......ggdd.....ggl.....',
+                '.......ggdd......ll.....',
+                '.......ggdd.............',
+                '.......llDD.............',
+            ],
+            [
+                '........................',
+                '..llg...................',
+                '..ggl............ggg....',
+                '..gg............ddgggg..',
+                '..gg...........gddgegg..',
+                '..gg..........ggddgggggn',
+                '..ggg..gggggggggddgggggn',
+                '...gggggggggggggdgggglll',
+                '....gggggggggggggggg..p.',
+                '....ggggggggllgbbg....p.',
+                '.....gggggllllgbbb......',
+                '......gggddlllggbbb.....',
+                '.......ggddll.gg........',
+                '.......ggdd...gg........',
+                '.......ggdd...gg........',
+                '.......ggdd...gg........',
+                '.......llDD...ll........',
+            ],
+        ],
+    },
+    cat: {
+        walk: [
+            [
+                '........................',
+                '.occ..............o.o...',
+                '.roo.............oi.io..',
+                '.oo..............ooroo..',
+                '.oo..............ooooo..',
+                '.ro.............ooooeoe.',
+                '.oo....rorororoooooooo..',
+                '.oroooororororooooroccci',
+                '..oooooooorooorooorocccc',
+                '....oooooooooooccco.....',
+                '.....ooooooooooccc......',
+                '.....ooockkckkccoo......',
+                '.....oo..kk.kk..oo......',
+                '.....oo..kk.kk..oo......',
+                '.....oo..kk.kk..oo......',
+                '.....oo..kk.kk..cc......',
+                '.....cc.....kk..........',
+            ],
+            [
+                '........................',
+                '.occ..............o.o...',
+                '.roo.............oi.io..',
+                '.oo..............ooroo..',
+                '.oo..............ooooo..',
+                '.ro.............ooooeoe.',
+                '.oo....rorororoooooooo..',
+                '.oroooororororooooroccci',
+                '..oooooooorooorooorocccc',
+                '....oooooooooooccco.....',
+                '.....ooooooooooccc......',
+                '.......ookkcccoo........',
+                '.......ookk...oo........',
+                '.......ookk...oo........',
+                '.......ookk...oo........',
+                '.......ookk...oo........',
+                '.......cckk...cc........',
+            ],
+            [
+                '........................',
+                '.occ..............o.o...',
+                '.roo.............oi.io..',
+                '.oo..............ooroo..',
+                '.oo..............ooooo..',
+                '.ro.............ooooeoe.',
+                '.oo....rorororoooooooo..',
+                '.oroooororororooooroccci',
+                '..oooooooorooorooorocccc',
+                '....oooooooooooccco.....',
+                '.....ooooooooooccc......',
+                '.....kkocoocoocckk......',
+                '.....kk..oo.oo..kk......',
+                '.....kk..oo.oo..kk......',
+                '.....kk..oo.oo..kk......',
+                '.....kk..cc.oo..kk......',
+                '.....kk.....cc..........',
+            ],
+            [
+                '........................',
+                '.occ..............o.o...',
+                '.roo.............oi.io..',
+                '.oo..............ooroo..',
+                '.oo..............ooooo..',
+                '.ro.............ooooeoe.',
+                '.oo....rorororoooooooo..',
+                '.oroooororororooooroccci',
+                '..oooooooorooorooorocccc',
+                '....oooooooooooccco.....',
+                '.....ooooooooooccc......',
+                '.......ookkcccoo........',
+                '.......ookk...oo........',
+                '.......ookk...oo........',
+                '.......ookk...oo........',
+                '.......ookk...oo........',
+                '.......cckk...cc........',
+            ],
+        ],
+        sleep: [
+            [
+                '......................',
+                '...................zz.',
+                '....................z.',
+                '...................zz.',
+                '...............o..o...',
+                '.....ooooooooooi..io..',
+                '...orororororoooor.o..',
+                '..oorororororooooooo..',
+                '..oooooooooooooooeeo..',
+                '..oooooooooooooooooci.',
+                '...oooooooooooooroocc.',
+                '...oooooooooooooccccc.',
+                '...oooooooooooooo.....',
+                '......................',
+            ],
+            [
+                '..................zzz.',
+                '...................z..',
+                '..................zzz.',
+                '......................',
+                '...............o..o...',
+                '.....ooooooooooi..io..',
+                '...orororororoooor.o..',
+                '..oorororororooooooo..',
+                '..oooooooooooooooeeo..',
+                '..oooooooooooooooooci.',
+                '...oooooooooooooroocc.',
+                '...oooooooooooooccccc.',
+                '...oooooooooooooo.....',
+                '......................',
+            ],
+        ],
+    },
+};
+
+const petSpriteCache = {};
+function getPetSprite(type, anim, index) {
+    const key = type + ':' + anim + ':' + index;
+    if (petSpriteCache[key]) return petSpriteCache[key];
+    const rows = PET_SPRITES[type][anim][index];
+    const c = document.createElement('canvas');
+    c.width = rows[0].length * PET_SPRITE_SCALE;
+    c.height = rows.length * PET_SPRITE_SCALE;
+    const cx = c.getContext('2d');
+    for (let y = 0; y < rows.length; y++) {
+        for (let x = 0; x < rows[y].length; x++) {
+            const color = PET_SPRITE_PALETTE[rows[y][x]];
+            if (!color) continue;
+            cx.fillStyle = color;
+            cx.fillRect(x * PET_SPRITE_SCALE, y * PET_SPRITE_SCALE, PET_SPRITE_SCALE, PET_SPRITE_SCALE);
+        }
+    }
+    petSpriteCache[key] = c;
+    return c;
+}
+
+// Draws one frame of a pet's sprite into the 36 x 36 box whose top-left is (boxX, boxY), on any
+// 2D context (the game canvas, or the Codex portrait canvas). facing: 1 = right, -1 = left.
+function drawPetSprite(c, type, anim, index, boxX, boxY, facing) {
+    const sprite = getPetSprite(type, anim, index);
+    const w = sprite.width;
+    const h = sprite.height;
+    const dx = Math.round(boxX + 18 - w / 2);
+    const dy = Math.round(boxY + PET_SPRITE_BOTTOM - h);
+
+    // soft ground shadow, like the player's
+    c.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    c.beginPath();
+    c.ellipse(boxX + 18, boxY + PET_SPRITE_BOTTOM, Math.min(16, w * 0.36), 3.2, 0, 0, Math.PI * 2);
+    c.fill();
+
+    const smoothing = c.imageSmoothingEnabled;
+    c.imageSmoothingEnabled = false;
+    if (facing < 0) {
+        c.save();
+        c.translate(dx + w, dy);
+        c.scale(-1, 1);
+        c.drawImage(sprite, 0, 0);
+        c.restore();
+    } else {
+        c.drawImage(sprite, dx, dy);
+    }
+    c.imageSmoothingEnabled = smoothing;
+}
+
 class Player {
     constructor(x, y) {
         this.x = x;
@@ -1759,7 +2124,27 @@ class Pet {
 
 
 
-draw() {
+// Works out, from how far the pet has moved since it was last DRAWN, whether it is walking, which
+    // way it faces and how far along its walk cycle it is — so the sprite animation needs nothing from
+    // the AI code. A jump bigger than a few pixels (the pet moved while its region wasn't on screen)
+    // is ignored rather than treated as a sprint.
+    trackSpriteMotion() {
+        if (this._spriteX === undefined) { this._spriteX = this.x; this._spriteY = this.y; }
+        const dx = this.x - this._spriteX;
+        const dy = this.y - this._spriteY;
+        const moved = Math.sqrt(dx * dx + dy * dy);
+        this._spriteX = this.x;
+        this._spriteY = this.y;
+        const now = Date.now();
+        if (moved > 0.05 && moved < 20) {
+            this._spriteMovingUntil = now + 150;   // short hold so a 1-frame pause doesn't flicker
+            this._spriteStep = (this._spriteStep || 0) + moved;
+            if (Math.abs(dx) > 0.05) this.facing = dx > 0 ? 1 : -1;
+        }
+        return now < (this._spriteMovingUntil || 0);
+    }
+
+    draw() {
         // A pet sold in the shop that hasn't been bought yet isn't in the world (see isPetAvailable()).
         if (!isPetAvailable(this)) return;
         if (this._justTeleported) {
@@ -1767,25 +2152,16 @@ draw() {
             return;
         }
         if (this.type === 'dog') {
-            ctx.fillStyle = '#f1c40f'; 
-            ctx.fillRect(this.x + 4, this.y + 10, 26, 16); 
-            ctx.fillRect(this.x + 18, this.y + 2, 10, 10); 
-            ctx.fillStyle = '#f39c12'; 
-            ctx.fillRect(this.x + 16, this.y + 4, 4, 8);  
-            ctx.fillStyle = '#000000'; 
-            ctx.fillRect(this.x + 25, this.y + 4, 2, 2);   
-            ctx.fillRect(this.x + 27, this.y + 6, 2, 2);   
-            ctx.fillStyle = '#d35400'; 
-            ctx.fillRect(this.x + 6, this.y + 26, 4, 6);   
-            ctx.fillRect(this.x + 22, this.y + 26, 4, 6);
-            ctx.fillStyle = '#f1c40f';
-            ctx.beginPath();
-            ctx.moveTo(this.x + 4, this.y + 12);
-            ctx.quadraticCurveTo(this.x - 6, this.y + 4, this.x - 4, this.y);
-            ctx.lineTo(this.x - 1, this.y + 1);
-            ctx.quadraticCurveTo(this.x - 3, this.y + 6, this.x + 6, this.y + 14);
-            ctx.closePath();
-            ctx.fill();
+            // Sprite animation (see PET_SPRITES): digging = scratching, walking = 4-frame walk cycle
+            // driven by distance, otherwise sitting with a wagging tail.
+            const walking = this.trackSpriteMotion();
+            if (this.state === 'digging') {
+                drawPetSprite(ctx, 'dog', 'dig', Math.floor(Date.now() / 250) % 2, this.x, this.y, this.facing || 1);
+            } else if (walking) {
+                drawPetSprite(ctx, 'dog', 'walk', Math.floor((this._spriteStep || 0) / PET_STEP_PIXELS) % 4, this.x, this.y, this.facing || 1);
+            } else {
+                drawPetSprite(ctx, 'dog', 'sit', Math.floor(Date.now() / 400) % 2, this.x, this.y, 1);
+            }
         } else if (this.type === 'elephant') {
             ctx.fillStyle = '#95a5a6'; 
             ctx.fillRect(this.x + 6, this.y + 8, 24, 18);  
@@ -2018,35 +2394,16 @@ draw() {
                 ctx.rotate(Math.PI);
                 ctx.translate(-cx, -cy);
             }
-            ctx.fillStyle = this.color;               // body
-            ctx.fillRect(this.x + 4, this.y + 12, 26, 16);
-            ctx.fillRect(this.x + 18, this.y + 2, 12, 12); // head
-            ctx.beginPath();                            // ears
-            ctx.moveTo(this.x + 18, this.y + 2);
-            ctx.lineTo(this.x + 20, this.y - 5);
-            ctx.lineTo(this.x + 23, this.y + 2);
-            ctx.closePath();
-            ctx.fill();
-            ctx.beginPath();
-            ctx.moveTo(this.x + 26, this.y + 2);
-            ctx.lineTo(this.x + 29, this.y - 5);
-            ctx.lineTo(this.x + 31, this.y + 2);
-            ctx.closePath();
-            ctx.fill();
-            ctx.fillStyle = '#7a3d10';                  // stripes
-            ctx.fillRect(this.x + 8, this.y + 12, 3, 16);
-            ctx.fillRect(this.x + 15, this.y + 12, 3, 16);
-            ctx.fillRect(this.x + 21, this.y + 4, 2, 8);
-            ctx.fillRect(this.x + 27, this.y + 4, 2, 8);
-            ctx.fillStyle = '#000000';                   // eyes
-            ctx.fillRect(this.x + 21, this.y + 6, 2, 2);
-            ctx.fillRect(this.x + 27, this.y + 6, 2, 2);
-            ctx.strokeStyle = this.color;                // tail
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.moveTo(this.x + 4, this.y + 20);
-            ctx.quadraticCurveTo(this.x - 8, this.y + 16, this.x - 6, this.y + 6);
-            ctx.stroke();
+            // Sprite animation: walking = 4-frame walk cycle, standing still = curled up asleep (with
+            // zzz). Frozen in the Schrodinger box it just stands (the flip above turns it upside down).
+            const walking = this.trackSpriteMotion();
+            if (boxed) {
+                drawPetSprite(ctx, 'cat', 'walk', 1, this.x, this.y, this.facing || 1);
+            } else if (walking) {
+                drawPetSprite(ctx, 'cat', 'walk', Math.floor((this._spriteStep || 0) / PET_STEP_PIXELS) % 4, this.x, this.y, this.facing || 1);
+            } else {
+                drawPetSprite(ctx, 'cat', 'sleep', Math.floor(Date.now() / 700) % 2, this.x, this.y, this.facing || 1);
+            }
             ctx.restore();
 
             if (boxed) {

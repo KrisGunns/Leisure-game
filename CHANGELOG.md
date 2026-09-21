@@ -91,6 +91,19 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Changelog
 
+### 2026-09-20 (11) — Dog and Cat redrawn as pixel-art sprites (same style as the player)
+
+**Changed:** the Region 1 **Dog (golden retriever)** and **Cat (orange tabby)** are no longer built from rectangles; they use the same letter-map pixel art as the player, modelled on the two reference sheets (golden coat with a cream chest and floppy ear, blue collar + bow, pink tongue; orange tabby with darker stripes, cream muzzle/belly, pink ears and a long striped tail).
+- **Where it lives:** `entities.js`, above `class Player`: `PET_SPRITE_PALETTE`, `PET_SPRITES` (frames per type/animation), `getPetSprite()` (offscreen-canvas cache), `drawPetSprite(ctx, type, anim, frame, boxX, boxY, facing)` (works on any 2D context; anchors the sprite by its bottom-centre inside the pet's 36 px box, adds a soft ground shadow, mirrors for `facing < 0`). This is deliberately generic: the remaining pets will be added the same way (frames + a `drawPetSprite` call).
+- **Animations:** *Dog* — 4-frame **walk**, **sit** (front-facing with a wagging tail, 2 frames; also the Codex portrait), **dig** (scratching with a front paw, 2 frames; the existing dirt particles are unchanged). *Cat* — 4-frame **walk**; whenever it is standing still it is **asleep** (curled loaf, closed eyes, "zzz", 2 frames — so a wild cat that isn't moving yet naps); while frozen in the Schrödinger box it stands (the existing upside-down flip and purple ring are unchanged).
+- **Motion needs nothing from the AI code:** `Pet.trackSpriteMotion()` derives "walking", the facing direction and the walk-cycle position from how far the pet moved since it was last drawn (jumps over 20 px — the pet moved while its region was off screen — are ignored; a 150 ms hold stops one-frame pauses flickering). Pets now face the way they walk (they always faced right before). The sprites are slightly larger than the old blocks (48 × 34 px walking, 34 × 38 sitting, 44 × 28 asleep), still inside/around the same 36 px box, so nothing that uses the box (feeding range, labels, pickups) changed.
+- **Codex:** `renderMiniPet()` (`ui.js`) uses the same sprites (dog sitting, cat standing).
+- Not used from the sheets: the run, jump/attack, wag-while-standing and trick poses (no matching behaviour in the game yet).
+
+**Verification:** Playwright: dog sit/walk-right/walk-left/dig, cat sleep/walk-right/walk-left, the Schrödinger cat and both Codex portraits captured and inspected; facing flips when moving left; no console errors; earlier suites re-run. **Not tested:** a physical phone screen.
+
+---
+
 ### 2026-09-20 (10) — Relaxed player face; bird trip 30 s; squirrel boost 10 s
 
 **Player face (fix to 2026-09-20 (9)):** the closed-eye arcs sat right against the hair with heavy bangs directly above them, which read as angry brows. The forehead is now open (the fringe is one row, with two rows of skin under it), the face is one pixel wider on each side so the soft ∩ eyes sit clear of the hair, and the eye colour is a gentler dark brown (`PLAYER_PALETTE.E`). The walk frames got the same open forehead. Same file/place as before (`PLAYER_FRAMES`, `entities.js`).
