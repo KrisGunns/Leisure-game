@@ -38,7 +38,7 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Current Features
 
-**Regions:** 9 total, selected via a dropdown. **Regions 4–9 (and Cat / Bow Elephant / Bird / Bow Bear / Mud Pig / Bow Monkey / Miss Glider) are bought with gold in Shop → Unlockables — see 2026-09-20 (2); the per-region "locked behind…" notes below describe the OLD level-based rules and are superseded.**
+**Pet max level is 30 (see 2026-09-20 (7)); the older "Lv20" perk notes below describe the first tier of each perk.** **Regions:** 9 total, selected via a dropdown. **Regions 4–9 (and Cat / Bow Elephant / Bird / Bow Bear / Mud Pig / Bow Monkey / Miss Glider) are bought with gold in Shop → Unlockables — see 2026-09-20 (2); the per-region "locked behind…" notes below describe the OLD level-based rules and are superseded.**
 - Regions 1–3: starter pets (dog + cat, two elephants, squirrel + chicken + bird), food/water item spawns.
 - Region 3 also spawns collectible eggs (from chickens reaching level 20).
 - Region 4: bee hive — locked until every pet in Regions 1–3 is level 2+. Bees forage flowers, carry honey back to the hive, and cost 10 coins to spawn (max 3 bees).
@@ -90,6 +90,37 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 ---
 
 ## Changelog
+
+### 2026-09-20 (8) — Squirrel speed boost: 5 real seconds, and it can no longer be chained
+
+**Changed:** `SQUIRREL_BOOST_SECONDS` (`state.js`) is now **5** (was 30), still real-clock seconds. And `startRegionSpeedBoost()` (`world.js`) now **ignores a proc while a boost is already running** — before, a re-proc refreshed the timer, which let a squirrel keep a region boosted continuously. Now every boost ends before another can start (the squirrel's next successful proc after it expires begins a new one). The Pet Detail guide text reads the constant, so it says "for 5s" automatically. Superseded: the 30 s / "re-procs refresh the timer" wording in 2026-09-20 (7).
+
+**Verification:** Playwright: a boost lasts 5.05 real seconds; a proc 2 s into a boost leaves the timer untouched (3.00 → 3.00); a Lv30 squirrel (15%) over 60 real seconds started 3 boosts and the region was boosted about 19% of the time.
+
+---
+
+### 2026-09-20 (7) — Bird fixes, max pet level 30 (+ new Lv25/Lv30 perks), crisp pet labels, "Bow Monkey"
+
+**Bird excursion fixes** (from the review): (1) the hive's bee cap/naming/Buy-Bee button counted the visiting bird as a bee — new `countHiveBees()` (`world.js`) is used by the cap check, the worker number and the button visibility; (2) the bird no longer gives *itself* the +20% bee-speed boost (the boost/revert loops now only touch `type === 'bee'`); (3) the excursion's +20% forage bonus uses `roundStochastic`, so it averages exactly +20% (a plain round made Lv20's 4/3 into 5/4 = +25%/+33%; at home the yield is unchanged); (4) the 60 s trip and Region 5's once-a-second fish rolls run on the real clock (`gliderRealDt`) instead of the over-counting loop `dt`; (5) the bird's Region 5 fish now get the Fishy Business pet-fish perk like the bears' (`roundStochastic(petFishBonus)`).
+
+**Max pet level is now 30.** `MAX_PET_LEVEL` (`state.js`) replaces every hard-coded 20 (feeding stops, progress bars, Codex "x/30", dev insta-max, glider save validation). The `Level^1.2` requirement curve is unchanged. The **`[MAX]` tag next to a maxed pet's name is gone** (over the head and in Pet Detail); the Codex still says "Next Req: MAX".
+
+**New tiers (all data-driven):** `FORAGE_TIERS` gained Lv25/Lv30 rows (and the changed Lv10/15/20 values) for dog, cat, elephant (both), squirrel, chicken, bird, pig, panda, monkey and glider exactly as specified; `GLIDER_STAMINA_TIERS` adds 75 (Lv25) and 85 (Lv30); `BEE_TIERS` (capacity / seconds per flower, replaces the inline `if` ladders) is 1/5.0, 2/4.5, 3/4.0, **4/4.0 (Lv15)**, **5/3.5 (Lv20, was 3.0)**, 6/3.5, 7/3.0; `BEAR_FISH_TIERS` is Lv5 1, **Lv10 2**, Lv20 3, Lv25 3, Lv30 3. **`PERK_CHANCES` + `getPerkChance(key, level)`** holds every special-perk chance by level (dog dig 10→15%, cat double 10→12% at Lv25, cat Schrödinger 3→4%, elephant play 10%, squirrel boost 10→15%, chicken egg 10%, bird fly 5→8%, pig mud 5→8%, panda fever 5→8%, monkey swing 5→8%, bee double honey 10→12%, bee double flower exp 10% at Lv30, bear double fish 10→15%). The code that rolls a perk and the Pet Detail level guide both read these tables, so the guide text is generated and can't drift from the game; the guide now also lists the squirrel's perks (it had none).
+
+**New mechanics:**
+- **Squirrel Lv20+ speed boost:** each forage rolls `squirrelBoost`; on a hit every pet *currently in the squirrel's region* moves +50% faster (`SQUIRREL_BOOST_MULT`) for 30 real seconds (`SQUIRREL_BOOST_SECONDS`). Re-procs refresh the timer (no stacking). `regionSpeedBoosts` / `getRegionSpeedBoost()` in `world.js`; `main.js` stamps each pet's `_regionSpeedMult` before updating it and `Pet.effectiveSpeed` multiplies it in (so the visiting bird follows the region it is IN, and gliders dropped in Region 3 are boosted). Boosted pets show a ⚡ after their label. Not saved.
+- **Chicken Lv30 "chain egg":** base egg chance stays 10%. After a forage lays an egg, the *next* forage has +5% (15%); every further egg in a row adds another +5% (cap +50%, i.e. 60% total); a forage with no egg resets the bonus to 0 (`chainEggBonus`, constants `CHAIN_EGG_*`). Not saved.
+- Bee Lv30 double flower exp: a flower counts as 2 toward the next level (an overshoot carries into the next level instead of being lost).
+
+**Crisp pet text.** The name/level/state label (and the glider's stamina number) is no longer drawn on the game canvas, which the browser stretches to the screen's pixel density and whose pet positions are fractional — both blurred the glyphs. `Pet.draw()` now queues it (`drawPetText`, `world.js`) and `main.js` flushes the queue onto `#labelCanvas`, a transparent overlay backed at the device pixel ratio (max 3×), each string snapped to a whole device pixel with a dark outline. `index.html` (+`#labelCanvas`), `style.css?v=1.8`. Everything else is unchanged.
+
+**Rename:** the second monkey's default name "Coco" → **"Bow Monkey"**; saves that still carry the old default name are migrated on load (a name the player chose is left alone).
+
+**Behaviour notes / assumptions to confirm:** the squirrel boost length (30 s) wasn't specified; the chain-egg wording was ambiguous, so it is implemented as above (no separate "additional egg" beyond the boosted chance); bear **Lv10 drops from 3 to 2 fish** per cycle (as written) and Lv25 (3) equals Lv20; existing pets above their old cap keep their levels.
+
+**Verification:** Playwright: every tier row against the spec (all levels listed), every perk chance at Lv29/30 by sampling 20 000 forages, bee capacity/forage time/double honey/double exp, bear fish per cycle incl. double catch, feeding stops at Lv30, chain-egg progression/cap/reset deterministically, squirrel boost scope/expiry/label/bird/glider handling, all five bird fixes (hive cap with the bird visiting, no self-boost, +20% average, ~1.00× real-time timer), rename migration, old-save migration and earlier suites re-run; label sharpness compared before/after at 3× pixel density. **Not tested:** a real Android WebView / physical high-DPI screen.
+
+---
 
 ### 2026-09-20 (6) — Floating joystick: appears wherever the player touches and holds
 

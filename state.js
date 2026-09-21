@@ -16,7 +16,12 @@ const bagBananas = document.getElementById('bagBananas');
 const regionSelector = document.getElementById('regionSelector');
 const whistleBtn = document.getElementById('whistleBtn');
 
-// New Core Dynamic Math Formula Engine (Max Level 20 scaling factor)
+// The highest level any pet can reach. Everything that used to hard-code 20 (feeding stops,
+// progress bars, the Codex's "x/20", the dev insta-max, save validation...) reads this instead.
+const MAX_PET_LEVEL = 30;
+
+// New Core Dynamic Math Formula Engine (scaling factor is Level ^ 1.2, so it keeps working
+// unchanged up to MAX_PET_LEVEL)
 function getLevelRequirement(type, currentLevel) {
     const baseMap = { dog: 20, elephant: 35, squirrel: 10, chicken: 15, bee: 8, bear: 15, pig: 80, cat: 40, bird: 50, panda: 120, monkey: 50 };
     let base = baseMap[type] || 20;
@@ -64,28 +69,92 @@ function getLevelRequirement(type, currentLevel) {
 // non-numeric perks (dog digging, chicken egg-laying, pig mud-play, etc.) stay as their own
 // `if (this.level >= X)` checks in Pet.update() since they're more than a food/water number.
 const FORAGE_TIERS = {
-    dog:      [ [1, 1, 1], [5, 2, 2], [10, 3, 3], [20, 5, 5] ],
-    cat:      [ [1, 1, 1], [5, 2, 2], [10, 3, 3], [15, 4, 4], [20, 5, 5] ],
-    bird:     [ [1, 1, 1], [5, 2, 1], [10, 2, 2], [15, 3, 2], [20, 4, 3] ],
-    panda:    [ [1, 3, 2], [5, 4, 3], [10, 5, 4], [15, 6, 5], [20, 8, 6] ],
-    pig:      [ [1, 2, 2], [5, 3, 2], [10, 4, 3], [15, 5, 4], [20, 7, 6] ],
-    // Water yields: Lv5 +4, Lv10 +5, Lv15 +6, Lv20 +9 (both elephants — the tiers are per type).
-    // Food is unchanged; Lv15 is a new tier row, and keeps the food yield it already had there.
-    elephant: [ [1, 1, 2], [5, 2, 4], [10, 3, 5], [15, 3, 6], [20, 5, 9] ],
-    squirrel: [ [1, 1, 0], [5, 3, 1], [10, 5, 1], [20, 8, 1] ],
-    chicken:  [ [1, 1, 1], [5, 2, 1], [10, 3, 1], [20, 4, 2] ],
-    // Single-resource forager (bananas only, Region 8 never spawns water) — the water
+    dog:      [ [1, 1, 1], [5, 2, 2], [10, 3, 3], [15, 4, 4], [20, 6, 6], [25, 7, 7], [30, 9, 9] ],
+    cat:      [ [1, 1, 1], [5, 2, 2], [10, 3, 3], [15, 4, 4], [20, 5, 5], [25, 6, 6], [30, 7, 7] ],
+    bird:     [ [1, 1, 1], [5, 2, 1], [10, 2, 2], [15, 3, 2], [20, 4, 3], [25, 5, 4], [30, 7, 6] ],
+    panda:    [ [1, 3, 2], [5, 4, 3], [10, 5, 4], [15, 6, 5], [20, 8, 6], [25, 9, 8], [30, 10, 9] ],
+    pig:      [ [1, 2, 2], [5, 3, 2], [10, 4, 3], [15, 5, 4], [20, 7, 6], [25, 7, 7], [30, 8, 9] ],
+    // Both elephants share this row (the tiers are per type). Water is always the bigger number.
+    elephant: [ [1, 1, 2], [5, 2, 4], [10, 3, 5], [15, 3, 6], [20, 5, 9], [25, 6, 10], [30, 8, 13] ],
+    squirrel: [ [1, 1, 0], [5, 3, 1], [10, 5, 2], [15, 7, 2], [20, 9, 3], [25, 11, 3], [30, 13, 4] ],
+    chicken:  [ [1, 1, 1], [5, 2, 1], [10, 3, 2], [15, 4, 2], [20, 5, 3], [25, 6, 3], [30, 8, 5] ],
+    // Single-resource forager (bananas only, Region 8 never spawns water) -- the water
     // slot is always 0 and unused, kept only for shape consistency with getForageYield().
-    monkey:   [ [1, 1, 0], [5, 2, 0], [10, 3, 0], [15, 4, 0], [20, 6, 0] ],
-    // Sugar gliders (Region 9): +2/+2 base, then +3/+4/+5/+7 at Lv5/10/15/20 — food and water
-    // are always equal. Only used while a glider is dropped in a food/water region (1, 2, 3,
-    // 6, 7) with stamina left — see GLIDER_FORAGE_REGIONS in world.js.
-    glider:   [ [1, 2, 2], [5, 3, 3], [10, 4, 4], [15, 5, 5], [20, 7, 7] ]
+    monkey:   [ [1, 1, 0], [5, 2, 0], [10, 3, 0], [15, 4, 0], [20, 6, 0], [25, 7, 0], [30, 9, 0] ],
+    // Sugar gliders (Region 9): food and water are always equal. Only used while a glider is
+    // dropped in a food/water region (1, 2, 3, 6, 7) with stamina left -- see
+    // GLIDER_FORAGE_REGIONS in world.js.
+    glider:   [ [1, 2, 2], [5, 3, 3], [10, 4, 4], [15, 5, 5], [20, 7, 7], [25, 8, 8], [30, 10, 10] ]
 };
+
+// Special-perk chances, by pet perk and level: [minLevel, chance]. Same "highest tier the level
+// qualifies for" lookup as FORAGE_TIERS (see getPerkChance). The code that rolls a perk and the
+// Pet Detail text that describes it both read this, so a number can't drift between them.
+const PERK_CHANCES = {
+    dogDig:         [ [20, 0.10], [30, 0.15] ],   // dog: dig for a bonus coin
+    catDouble:      [ [15, 0.10], [25, 0.12] ],   // cat: double the food/water gained
+    catSchrodinger: [ [20, 0.03], [30, 0.04] ],   // cat: enter Schrodinger's box
+    elephantPlay:   [ [20, 0.10] ],               // elephants: "catch me" minigame
+    squirrelBoost:  [ [20, 0.10], [30, 0.15] ],   // squirrel: speed boost for the whole region
+    chickenEgg:     [ [20, 0.10] ],               // chicken: base chance to lay an egg (chain eggs add to this at Lv30)
+    birdFly:        [ [20, 0.05], [30, 0.08] ],   // bird: fly off to another region
+    pigMud:         [ [20, 0.05], [30, 0.08] ],   // pig: play in the mud
+    pandaFever:     [ [20, 0.05], [30, 0.08] ],   // panda: Bamboo Fever
+    monkeySwing:    [ [20, 0.05], [30, 0.08] ],   // monkey: swing on the vines
+    beeDoubleHoney: [ [20, 0.10], [30, 0.12] ],   // bee: double honey when dropping off
+    beeDoubleExp:   [ [30, 0.10] ],               // bee: double flower exp
+    bearDoubleFish: [ [20, 0.10], [30, 0.15] ]    // bear: double catch
+};
+
+// The chance for one of the perks above at `level` (0 below its first tier).
+function getPerkChance(key, level) {
+    const tiers = PERK_CHANCES[key];
+    if (!tiers) return 0;
+    let chance = 0;
+    for (let i = 0; i < tiers.length; i++) {
+        if (level >= tiers[i][0]) chance = tiers[i][1];
+    }
+    return chance;
+}
+
+// Squirrel's speed boost: how long it lasts (real seconds) and how much faster every pet in the
+// region moves. See getRegionSpeedBoost() in world.js. Deliberately short, and a proc while a
+// boost is already running is ignored (it does NOT extend it), so the region can never be kept
+// boosted continuously — every boost ends before another can begin.
+const SQUIRREL_BOOST_SECONDS = 5;
+const SQUIRREL_BOOST_MULT = 1.5;
+
+// Chicken "chain egg" (Lv30): after a forage lays an egg, the NEXT forage gets this much extra
+// egg chance on top of the base; every further egg in a row adds it again, up to the cap. A
+// forage that lays no egg resets it. See the chicken branch of Pet.update().
+const CHAIN_EGG_STEP = 0.05;
+const CHAIN_EGG_MAX = 0.50;
+const CHAIN_EGG_MIN_LEVEL = 30;
+
+// Bee tiers: [minLevel, honeyCapacity, secondsToForageAFlower].
+const BEE_TIERS = [ [1, 1, 5.0], [5, 2, 4.5], [10, 3, 4.0], [15, 4, 4.0], [20, 5, 3.5], [25, 6, 3.5], [30, 7, 3.0] ];
+function getBeeTier(level) {
+    let best = BEE_TIERS[0];
+    for (let i = 0; i < BEE_TIERS.length; i++) {
+        if (level >= BEE_TIERS[i][0]) best = BEE_TIERS[i];
+    }
+    return { capacity: best[1], forageSeconds: best[2] };
+}
+
+// Bear tiers: [minLevel, fishPerCycle] (before the double-catch chance / Fishy Business perk).
+// Bears don't fish at all below Lv5.
+const BEAR_FISH_TIERS = [ [5, 1], [10, 2], [20, 3], [25, 3], [30, 3] ];
+function getBearFishPerCycle(level) {
+    let fish = 0;
+    for (let i = 0; i < BEAR_FISH_TIERS.length; i++) {
+        if (level >= BEAR_FISH_TIERS[i][0]) fish = BEAR_FISH_TIERS[i][1];
+    }
+    return fish;
+}
 
 // Sugar glider max stamina by level: [minLevel, maxStamina]. Same lookup idea as
 // FORAGE_TIERS — add/edit a row to retune, order doesn't matter.
-const GLIDER_STAMINA_TIERS = [ [1, 40], [5, 45], [10, 50], [15, 55], [20, 70] ];
+const GLIDER_STAMINA_TIERS = [ [1, 40], [5, 45], [10, 50], [15, 55], [20, 70], [25, 75], [30, 85] ];
 
 function getGliderMaxStamina(level) {
     let best = GLIDER_STAMINA_TIERS[0];
@@ -738,6 +807,10 @@ function loadGameProgress() {
 
                     pet.level = savedPet.level || 1;
                     pet.label = savedPet.label || pet.label;
+                    // The second monkey used to be called "Coco"; its default name is now "Bow Monkey".
+                    // Saves still carrying the old default name are moved over (a name the player
+                    // chose themselves is left alone).
+                    if (pet.type === 'monkey' && pet.label === 'Coco') pet.label = 'Bow Monkey';
                     pet.foodEaten = savedPet.foodEaten || 0;
                     pet.waterEaten = savedPet.waterEaten || 0;
                     pet.honeyCarried = savedPet.honeyCarried || 0;
@@ -782,7 +855,7 @@ function loadGameProgress() {
         // Sugar gliders. Saves from before Region 9 have no gliderData, in which case both
         // gliders simply keep their defaults (Lv1, full stamina, resting place in Region 9).
         // Every value is validated: a hand-edited/corrupt save can't produce a glider with
-        // NaN stamina, a level outside 1-20 or a region that doesn't exist.
+        // NaN stamina, a level outside 1-MAX_PET_LEVEL or a region that doesn't exist.
         if (Array.isArray(stateMatrix.gliderData) && typeof gliderPets !== 'undefined') {
             let alreadyHolding = false;
             stateMatrix.gliderData.forEach((saved, i) => {
@@ -790,7 +863,7 @@ function loadGameProgress() {
                 if (!g || !saved || typeof saved !== 'object') return;
 
                 let lvl = Math.floor(Number(saved.level));
-                g.level = (isFinite(lvl) && lvl >= 1) ? Math.min(lvl, 20) : 1;
+                g.level = (isFinite(lvl) && lvl >= 1) ? Math.min(lvl, MAX_PET_LEVEL) : 1;
                 if (typeof saved.label === 'string' && saved.label.trim()) g.label = saved.label;
                 g.honeyEaten = Math.max(0, Math.floor(Number(saved.honeyEaten)) || 0);
                 g.bananaEaten = Math.max(0, Math.floor(Number(saved.bananaEaten)) || 0);

@@ -89,6 +89,17 @@ body, html {
     width: 100%;
     height: 100%;
 }
+/* Full-resolution overlay for pet name/level/state text (see world.js). Sits just above the game
+   canvas, below every button, and never takes a touch. */
+#labelCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 2;
+}
 /* FLOATING joystick: hidden until a finger goes down on the game field, then input.js shows it
    centred under that finger (setting left/top) and hides it again on release. pointer-events:
    none so it can never swallow a touch meant for something underneath it. */

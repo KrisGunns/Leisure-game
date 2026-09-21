@@ -294,31 +294,53 @@ function getPetPerkDescriptions(type) {
         });
     }
 
+    // Adds one line per tier of a PERK_CHANCES entry (state.js): the first tier describes the perk,
+    // later tiers say the chance went up. The numbers come straight from the table the game logic
+    // rolls against, so this text can't disagree with what actually happens.
+    const addChance = (key, firstText, raisedText) => {
+        (PERK_CHANCES[key] || []).forEach((tier, i) => {
+            let [lvl, chance] = tier;
+            let pct = Math.round(chance * 100) + '%';
+            perks.push({ level: lvl, text: i === 0 ? firstText(pct) : raisedText(pct) });
+        });
+    };
+
     if (type === 'dog') {
-        perks.push({ level: 20, text: '10% chance per forage to dig for a bonus coin' });
+        addChance('dogDig', c => `${c} chance per forage to dig for a bonus coin`, c => `Digging chance increases to ${c}`);
     } else if (type === 'chicken') {
-        perks.push({ level: 20, text: '10% chance per forage to lay a collectible egg' });
+        addChance('chickenEgg', c => `${c} chance per forage to lay a collectible egg`, c => `Egg chance increases to ${c}`);
+        perks.push({ level: CHAIN_EGG_MIN_LEVEL, text: `Chain egg: after laying an egg, the next forage gets +${Math.round(CHAIN_EGG_STEP * 100)}% egg chance, growing another +${Math.round(CHAIN_EGG_STEP * 100)}% with each egg in a row (up to +${Math.round(CHAIN_EGG_MAX * 100)}%). A forage with no egg resets it` });
     } else if (type === 'elephant') {
-        perks.push({ level: 20, text: '10% chance to start a "catch me" play minigame (+5 coins)' });
+        addChance('elephantPlay', c => `${c} chance to start a "catch me" play minigame (+5 coins)`, c => `Play chance increases to ${c}`);
+    } else if (type === 'squirrel') {
+        addChance('squirrelBoost', c => `${c} chance per forage to make every pet in this region ${Math.round((SQUIRREL_BOOST_MULT - 1) * 100)}% faster for ${SQUIRREL_BOOST_SECONDS}s`, c => `Speed-boost chance increases to ${c}`);
     } else if (type === 'pig') {
-        perks.push({ level: 20, text: '5% chance per forage to play in mud +2 coins' });
+        addChance('pigMud', c => `${c} chance per forage to play in mud +2 coins`, c => `Mud-play chance increases to ${c}`);
     } else if (type === 'cat') {
-        perks.push({ level: 15, text: '10% chance per forage to double the food/water gained' });
-        perks.push({ level: 20, text: "3% chance per forage to enter Schrödinger's state" });
+        addChance('catDouble', c => `${c} chance per forage to double the food/water gained`, c => `Double-forage chance increases to ${c}`);
+        addChance('catSchrodinger', c => `${c} chance per forage to enter Schr\u00F6dinger's state`, c => `Schr\u00F6dinger's state chance increases to ${c}`);
     } else if (type === 'bird') {
-        perks.push({ level: 20, text: '5% chance per forage to fly off to a random region' });
+        addChance('birdFly', c => `${c} chance per forage to fly off to a random region`, c => `Chance to fly off increases to ${c}`);
     } else if (type === 'panda') {
-        perks.push({ level: 20, text: '5% chance per forage (while you\'re in Region 7) to start "Bamboo Fever" — choose Play to collect bamboo for coins while it naps, or Starve and it flees you for 30s' });
+        addChance('pandaFever', c => `${c} chance per forage (while you're in Region 7) to start "Bamboo Fever" -- choose Play to collect bamboo for coins while it naps, or Starve and it flees you for 30s`, c => `Bamboo Fever chance increases to ${c}`);
     } else if (type === 'bee') {
         perks.push({ level: 1, text: 'Carries 1 honey load before returning to the hive' });
-        perks.push({ level: 5, text: 'Honey capacity increases to 2, and time to forage a flower decreases to 4.5s' });
-        perks.push({ level: 10, text: 'Honey capacity increases to 3, and time to forage a flower decreases to 4.0s' });
-        perks.push({ level: 20, text: 'Honey capacity increases to 5, time to forage a flower decreases to 3.0s, plus a 10% chance of double honey' });
+        BEE_TIERS.forEach((tier, i) => {
+            if (i === 0) return;
+            let prev = BEE_TIERS[i - 1];
+            let text = `Honey capacity increases to ${tier[1]}`;
+            if (tier[2] !== prev[2]) text += `, and time to forage a flower decreases to ${tier[2].toFixed(1)}s`;
+            perks.push({ level: tier[0], text: text });
+        });
+        addChance('beeDoubleHoney', c => `${c} chance of double honey`, c => `Double-honey chance increases to ${c}`);
+        addChance('beeDoubleExp', c => `${c} chance for a flower to give double exp`, c => `Double-exp chance increases to ${c}`);
     } else if (type === 'bear') {
-        perks.push({ level: 5, text: 'Starts fishing at the lake, catching 1 fish per cycle' });
-        perks.push({ level: 10, text: 'Fishing cycle speeds up, and catch increases to 3 fish per cycle' });
+        perks.push({ level: 5, text: `Starts fishing at the lake, catching ${getBearFishPerCycle(5)} fish per cycle` });
+        perks.push({ level: 10, text: `Fishing cycle speeds up, and catch increases to ${getBearFishPerCycle(10)} fish per cycle` });
         perks.push({ level: 15, text: 'Fishing cycle speeds up further' });
-        perks.push({ level: 20, text: '10% chance of a double catch (up to 6 fish)' });
+        perks.push({ level: 20, text: `Catch is ${getBearFishPerCycle(20)} fish per cycle` });
+        perks.push({ level: 25, text: `Catch is ${getBearFishPerCycle(25)} fish per cycle` });
+        addChance('bearDoubleFish', c => `${c} chance of a double catch`, c => `Double-catch chance increases to ${c}`);
     } else if (type === 'monkey') {
         if (typeof FORAGE_TIERS !== 'undefined' && FORAGE_TIERS.monkey) {
             FORAGE_TIERS.monkey.forEach(tier => {
@@ -327,7 +349,7 @@ function getPetPerkDescriptions(type) {
                 perks.push({ level: lvl, text: `Forage yield increases to +${bananas} banana${bananas === 1 ? '' : 's'} per forage` });
             });
         }
-        perks.push({ level: 20, text: '5% chance per forage to swing on the vines for 20s, then +5 coins' });
+        addChance('monkeySwing', c => `${c} chance per forage to swing on the vines for 20s, then +5 coins`, c => `Vine-swing chance increases to ${c}`);
     } else if (type === 'glider') {
         // What it does depends on the region it's dropped in — all of it needs stamina above 0.
         perks.push({ level: 1, text: 'Dropped in Regions 1, 2, 3, 6 or 7: forages food & water (1 stamina per object picked up)' });
@@ -388,7 +410,7 @@ function showPetDetail(pet) {
 
     let title = document.createElement('h2');
     title.style.cssText = 'color:#f1c40f; margin: 0 0 4px 0; clear: both; font-size: 18px;';
-    title.textContent = `${pet.label} — Lv.${pet.level}${pet.level >= 20 ? ' [MAX]' : ''}`;
+    title.textContent = `${pet.label} — Lv.${pet.level}`;
     card.appendChild(title);
 
     let typeLine = document.createElement('div');
@@ -409,11 +431,12 @@ function showPetDetail(pet) {
         let y = getForageYield(pet.type, pet.level);
         yieldSection.innerHTML = `<strong>Current Forage Yield</strong><br>🍪 +${y.food} food &nbsp; 💧 +${y.water} water`;
     } else if (pet.type === 'bee') {
-        let cap = pet.level >= 20 ? 5 : pet.level >= 10 ? 3 : pet.level >= 5 ? 2 : 1;
+        let cap = getBeeTier(pet.level).capacity;
         yieldSection.innerHTML = `<strong>Honey Capacity</strong><br>🍯 carries up to ${cap} before returning to the hive`;
     } else if (pet.type === 'bear') {
-        let fishPerCycle = pet.level >= 10 ? 3 : 1;
-        yieldSection.innerHTML = `<strong>Fishing</strong><br>🐟 catches ${fishPerCycle} fish per cycle (starts at Lv.5, cycle speeds up at Lv.10 and Lv.15${pet.level >= 20 ? ', 10% chance of a double catch' : ''})`;
+        let fishPerCycle = Math.max(1, getBearFishPerCycle(pet.level));
+        let doubleChance = getPerkChance('bearDoubleFish', pet.level);
+        yieldSection.innerHTML = `<strong>Fishing</strong><br>\u2022 catches ${fishPerCycle} fish per cycle (starts at Lv.5, cycle speeds up at Lv.10 and Lv.15${doubleChance > 0 ? ', ' + Math.round(doubleChance * 100) + '% chance of a double catch' : ''})`;
     }
     if (pet.type === 'glider') {
         // The generic food/water line above is what it forages in Regions 1, 2, 3, 6 and 7;
@@ -929,8 +952,8 @@ function updateCodexData() {
     document.getElementById('infoDog').innerHTML = `
         <strong>${dog.level >= 2 ? dog.label : '???'}</strong><br>
         Status: <span class="${dog.level >= 2 ? 'codexTamed' : 'codexWild'}">${dog.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
-        Level: ${dog.level >= 2 ? dog.level + '/20' : '?/20'}<br>
-        Next Req: ${dog.level < 2 ? '???' : (dog.level < 20 ? '🍪' + dogReq.food + ' 💧' + dogReq.water : 'MAX')}
+        Level: ${dog.level >= 2 ? dog.level + '/' + MAX_PET_LEVEL : '?/' + MAX_PET_LEVEL}<br>
+        Next Req: ${dog.level < 2 ? '???' : (dog.level < MAX_PET_LEVEL ? '🍪' + dogReq.food + ' 💧' + dogReq.water : 'MAX')}
     `;
 
     document.getElementById('renameBoxDog').style.display = dog.level >= 2 ? 'block' : 'none';
@@ -939,8 +962,8 @@ function updateCodexData() {
     document.getElementById('infoCat').innerHTML = `
         <strong>${cat.level >= 2 ? cat.label : '???'}</strong><br>
         Status: <span class="${cat.level >= 2 ? 'codexTamed' : 'codexWild'}">${cat.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
-        Level: ${cat.level >= 2 ? cat.level + '/20' : '?/20'}<br>
-        Next Req: ${cat.level < 2 ? '???' : (cat.level < 20 ? '🍪' + catReq.food + ' 💧' + catReq.water : 'MAX')}
+        Level: ${cat.level >= 2 ? cat.level + '/' + MAX_PET_LEVEL : '?/' + MAX_PET_LEVEL}<br>
+        Next Req: ${cat.level < 2 ? '???' : (cat.level < MAX_PET_LEVEL ? '🍪' + catReq.food + ' 💧' + catReq.water : 'MAX')}
     `;
 
     document.getElementById('renameBoxCat').style.display = cat.level >= 2 ? 'block' : 'none';
@@ -949,8 +972,8 @@ function updateCodexData() {
     document.getElementById('infoBird').innerHTML = `
         <strong>${bird.level >= 2 ? bird.label : '???'}</strong><br>
         Status: <span class="${bird.level >= 2 ? 'codexTamed' : 'codexWild'}">${bird.level >= 2 ? 'TAMED' : 'WILD'}${bird.excursionActive ? ' (away)' : ''}</span><br>
-        Level: ${bird.level >= 2 ? bird.level + '/20' : '?/20'}<br>
-        Next Req: ${bird.level < 2 ? '???' : (bird.level < 20 ? '🍪' + birdReq.food + ' 💧' + birdReq.water : 'MAX')}
+        Level: ${bird.level >= 2 ? bird.level + '/' + MAX_PET_LEVEL : '?/' + MAX_PET_LEVEL}<br>
+        Next Req: ${bird.level < 2 ? '???' : (bird.level < MAX_PET_LEVEL ? '🍪' + birdReq.food + ' 💧' + birdReq.water : 'MAX')}
     `;
 
     document.getElementById('renameBoxBird').style.display = bird.level >= 2 ? 'block' : 'none';
@@ -968,8 +991,8 @@ function updateCodexData() {
         if (infoEl) infoEl.innerHTML = `
             <strong>${slot.pet.level >= 2 ? slot.pet.label : '???'}</strong><br>
             Status: <span class="${slot.pet.level >= 2 ? 'codexTamed' : 'codexWild'}">${slot.pet.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
-            Level: ${slot.pet.level >= 2 ? slot.pet.level + '/20' : '?/20'}<br>
-            Next Req: ${slot.pet.level < 2 ? '???' : (slot.pet.level < 20 ? '🍪' + elReq.food + ' 💧' + elReq.water : 'MAX')}
+            Level: ${slot.pet.level >= 2 ? slot.pet.level + '/' + MAX_PET_LEVEL : '?/' + MAX_PET_LEVEL}<br>
+            Next Req: ${slot.pet.level < 2 ? '???' : (slot.pet.level < MAX_PET_LEVEL ? '🍪' + elReq.food + ' 💧' + elReq.water : 'MAX')}
         `;
 
         let renameEl = document.getElementById(slot.renameId);
@@ -980,8 +1003,8 @@ function updateCodexData() {
     document.getElementById('infoSquirrel').innerHTML = `
         <strong>${squirrel.level >= 2 ? squirrel.label : '???'}</strong><br>
         Status: <span class="${squirrel.level >= 2 ? 'codexTamed' : 'codexWild'}">${squirrel.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
-        Level: ${squirrel.level >= 2 ? squirrel.level + '/20' : '?/20'}<br>
-        Next Req: ${squirrel.level < 2 ? '???' : (squirrel.level < 20 ? '🍪' + sqReq.food + ' 💧' + sqReq.water : 'MAX')}
+        Level: ${squirrel.level >= 2 ? squirrel.level + '/' + MAX_PET_LEVEL : '?/' + MAX_PET_LEVEL}<br>
+        Next Req: ${squirrel.level < 2 ? '???' : (squirrel.level < MAX_PET_LEVEL ? '🍪' + sqReq.food + ' 💧' + sqReq.water : 'MAX')}
     `;
 
     document.getElementById('renameBoxSquirrel').style.display = squirrel.level >= 2 ? 'block' : 'none';
@@ -990,8 +1013,8 @@ function updateCodexData() {
     document.getElementById('infoChicken').innerHTML = `
         <strong>${chicken.level >= 2 ? chicken.label : '???'}</strong><br>
         Status: <span class="${chicken.level >= 2 ? 'codexTamed' : 'codexWild'}">${chicken.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
-        Level: ${chicken.level >= 2 ? chicken.level + '/20' : '?/20'}<br>
-        Next Req: ${chicken.level < 2 ? '???' : (chicken.level < 20 ? '🍪' + chReq.food + ' 💧' + chReq.water : 'MAX')}
+        Level: ${chicken.level >= 2 ? chicken.level + '/' + MAX_PET_LEVEL : '?/' + MAX_PET_LEVEL}<br>
+        Next Req: ${chicken.level < 2 ? '???' : (chicken.level < MAX_PET_LEVEL ? '🍪' + chReq.food + ' 💧' + chReq.water : 'MAX')}
     `;
 
     document.getElementById('renameBoxChicken').style.display = chicken.level >= 2 ? 'block' : 'none';
@@ -1015,7 +1038,7 @@ function updateCodexData() {
         document.getElementById('infoBee').innerHTML = `
             <strong>???</strong><br>
             Status: <span class="codexWild">LOCKED</span><br>
-            Level: ?/20<br>
+            Level: ?/${MAX_PET_LEVEL}<br>
             Next Req: ???
         `;
     } else {
@@ -1026,8 +1049,8 @@ function updateCodexData() {
         document.getElementById('infoBee').innerHTML = `
             <strong>${bee.level >= 1 ? bee.label : '???'}</strong><br>
             Status: <span class="${bee.level >= 1 ? 'codexTamed' : 'codexWild'}">${bee.level >= 1 ? 'TAMED' : 'WILD'}</span><br>
-            Level: ${bee.level}/20<br>
-            Next Req: ${bee.level < 20 ? '🌸 ' + beeReq + ' Flowers' : 'MAX'}
+            Level: ${bee.level}/${MAX_PET_LEVEL}<br>
+            Next Req: ${bee.level < MAX_PET_LEVEL ? '🌸 ' + beeReq + ' Flowers' : 'MAX'}
         `;
     }
     document.getElementById('renameBoxBee').style.display = (region4Unlocked && bee.level >= 1) ? 'block' : 'none';
@@ -1050,7 +1073,7 @@ function updateCodexData() {
             if (infoEl) infoEl.innerHTML = `
                 <strong>???</strong><br>
                 Status: <span class="codexWild">LOCKED</span><br>
-                Level: ?/20<br>
+                Level: ?/${MAX_PET_LEVEL}<br>
                 Next Req: ???
             `;
         } else {
@@ -1062,8 +1085,8 @@ function updateCodexData() {
             if (infoEl) infoEl.innerHTML = `
                 <strong>${slot.bear.level >= 2 ? slot.bear.label : '???'}</strong><br>
                 Status: <span class="${slot.bear.level >= 2 ? 'codexTamed' : 'codexWild'}">${slot.bear.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
-                Level: ${slot.bear.level}/20<br>
-                Next Req: ${slot.bear.level < 20 ? '🍯 ' + bearReq + ' Honey' : 'MAX'}
+                Level: ${slot.bear.level}/${MAX_PET_LEVEL}<br>
+                Next Req: ${slot.bear.level < MAX_PET_LEVEL ? '🍯 ' + bearReq + ' Honey' : 'MAX'}
             `;
         }
         let renameEl = document.getElementById(slot.renameId);
@@ -1088,7 +1111,7 @@ function updateCodexData() {
             if (infoEl) infoEl.innerHTML = `
                 <strong>???</strong><br>
                 Status: <span class="codexWild">LOCKED</span><br>
-                Level: ?/20<br>
+                Level: ?/${MAX_PET_LEVEL}<br>
                 Next Req: ???
             `;
         } else {
@@ -1098,8 +1121,8 @@ function updateCodexData() {
             if (infoEl) infoEl.innerHTML = `
                 <strong>${slot.pig.level >= 2 ? slot.pig.label : '???'}</strong><br>
                 Status: <span class="${slot.pig.level >= 2 ? 'codexTamed' : 'codexWild'}">${slot.pig.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
-                Level: ${slot.pig.level}/20<br>
-                Next Req: ${slot.pig.level < 20 ? '🍪' + pigReq.food + ' 💧' + pigReq.water : 'MAX'}
+                Level: ${slot.pig.level}/${MAX_PET_LEVEL}<br>
+                Next Req: ${slot.pig.level < MAX_PET_LEVEL ? '🍪' + pigReq.food + ' 💧' + pigReq.water : 'MAX'}
             `;
         }
         let renameEl = document.getElementById(slot.renameId);
@@ -1114,7 +1137,7 @@ function updateCodexData() {
             document.getElementById('infoPanda').innerHTML = `
                 <strong>???</strong><br>
                 Status: <span class="codexWild">LOCKED</span><br>
-                Level: ?/20<br>
+                Level: ?/${MAX_PET_LEVEL}<br>
                 Next Req: ???
             `;
         } else {
@@ -1123,8 +1146,8 @@ function updateCodexData() {
             document.getElementById('infoPanda').innerHTML = `
                 <strong>${panda.level >= 2 ? panda.label : '???'}</strong><br>
                 Status: <span class="${panda.level >= 2 ? 'codexTamed' : 'codexWild'}">${panda.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
-                Level: ${panda.level}/20<br>
-                Next Req: ${panda.level < 20 ? '🍪' + pandaReq.food + ' 💧' + pandaReq.water : 'MAX'}
+                Level: ${panda.level}/${MAX_PET_LEVEL}<br>
+                Next Req: ${panda.level < MAX_PET_LEVEL ? '🍪' + pandaReq.food + ' 💧' + pandaReq.water : 'MAX'}
             `;
         }
         document.getElementById('renameBoxPanda').style.display = (region7Unlocked && panda.level >= 2) ? 'block' : 'none';
@@ -1146,7 +1169,7 @@ function updateCodexData() {
             if (infoEl) infoEl.innerHTML = `
                 <strong>???</strong><br>
                 Status: <span class="codexWild">LOCKED</span><br>
-                Level: ?/20<br>
+                Level: ?/${MAX_PET_LEVEL}<br>
                 Next Req: ???
             `;
         } else {
@@ -1156,8 +1179,8 @@ function updateCodexData() {
             if (infoEl) infoEl.innerHTML = `
                 <strong>${slot.monkey.level >= 2 ? slot.monkey.label : '???'}</strong><br>
                 Status: <span class="${slot.monkey.level >= 2 ? 'codexTamed' : 'codexWild'}">${slot.monkey.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
-                Level: ${slot.monkey.level}/20<br>
-                Next Req: ${slot.monkey.level < 20 ? '🍌 ' + monkeyReq + ' Bananas' : 'MAX'}
+                Level: ${slot.monkey.level}/${MAX_PET_LEVEL}<br>
+                Next Req: ${slot.monkey.level < MAX_PET_LEVEL ? '🍌 ' + monkeyReq + ' Bananas' : 'MAX'}
             `;
         }
         let renameEl = document.getElementById(slot.renameId);
@@ -1180,7 +1203,7 @@ function updateCodexData() {
                 if (infoEl) infoEl.innerHTML = `
                     <strong>???</strong><br>
                     Status: <span class="codexWild">LOCKED</span><br>
-                    Level: ?/20<br>
+                    Level: ?/${MAX_PET_LEVEL}<br>
                     Next Req: ???
                 `;
             } else {
@@ -1190,8 +1213,8 @@ function updateCodexData() {
                 if (infoEl) infoEl.innerHTML = `
                     <strong>${slot.glider.label}</strong><br>
                     Status: <span class="codexTamed">TAMED</span><br>
-                    Level: ${slot.glider.level}/20<br>
-                    Next Req: ${slot.glider.level < 20 ? '🍯' + gliderReq.honey + ' 🍌' + gliderReq.bananas + ' 💧' + gliderReq.water : 'MAX'}<br>
+                    Level: ${slot.glider.level}/${MAX_PET_LEVEL}<br>
+                    Next Req: ${slot.glider.level < MAX_PET_LEVEL ? '🍯' + gliderReq.honey + ' 🍌' + gliderReq.bananas + ' 💧' + gliderReq.water : 'MAX'}<br>
                     ⚡ Stamina: ${Math.floor(slot.glider.stamina)}/${getGliderMaxStamina(slot.glider.level)}
                 `;
             }
@@ -1220,7 +1243,7 @@ function updateCodexData() {
         if (infoEl) infoEl.innerHTML = `
             <strong>???</strong><br>
             Status: <span class="codexWild">LOCKED</span><br>
-            Level: ?/20<br>
+            Level: ?/${MAX_PET_LEVEL}<br>
             🛒 In the Shop${u ? ': 🪙' + u.cost : ''}
         `;
         let renameEl = document.getElementById(slot.rename);
@@ -1252,7 +1275,7 @@ function updateCodexData() {
         if (infoEl) infoEl.innerHTML = `
             <strong>???</strong><br>
             Status: <span class="codexWild">LOCKED</span><br>
-            Level: ?/20<br>
+            Level: ?/${MAX_PET_LEVEL}<br>
             ${shopLine}
         `;
         let renameEl = document.getElementById(slot.rename);
@@ -1930,8 +1953,8 @@ if (btnInstaTame) {
         if (Array.isArray(activePets)) {
             activePets.forEach(pet => {
                 if (!isPetAvailable(pet)) return; // not bought yet
-                // FIXED: Pushes your pets straight to your new maximum Level 20 cap!
-                pet.level = 20; 
+                // FIXED: Pushes your pets straight to your new maximum level (MAX_PET_LEVEL)!
+                pet.level = MAX_PET_LEVEL; 
                 pet.foodEaten = 0;
                 pet.waterEaten = 0;
                 pet.pickNewWanderTarget();
@@ -1944,7 +1967,7 @@ if (btnInstaTame) {
             if (typeof gliderPets !== 'undefined') {
                 gliderPets.forEach(g => {
                     if (isPetAvailable(g) && (g.held || g.regionNow === currentRegion)) {
-                        g.level = 20;
+                        g.level = MAX_PET_LEVEL;
                         g.honeyEaten = 0;
                         g.bananaEaten = 0;
                         g.waterEaten = 0;
@@ -1994,7 +2017,7 @@ bindPetRename('btnRenameBee', 'inputBee', 4, 0);       // Region 4, Bee (Base)
 bindPetRename('btnRenameBear1', 'inputBear1', 5, 0);   // Region 5, Bear
 bindPetRename('btnRenameBear2', 'inputBear2', 5, 1);   // Region 5, Bow Bear (female)
 bindPetRename('btnRenameMonkey1', 'inputMonkey1', 8, 0); // Region 8, Monkey
-bindPetRename('btnRenameMonkey2', 'inputMonkey2', 8, 1); // Region 8, Coco
+bindPetRename('btnRenameMonkey2', 'inputMonkey2', 8, 1); // Region 8, Bow Monkey
 bindPetRename('btnRenamePig1', 'inputPig1', 6, 0);     // Region 6, Pig (pink)
 bindPetRename('btnRenamePig2', 'inputPig2', 6, 1);     // Region 6, Mud Pig (grey)
 bindPetRename('btnRenamePanda', 'inputPanda', 7, 0);   // Region 7, Panda
@@ -2072,7 +2095,7 @@ if (spawnBeeBtn) {
         if (!petsByRegion[4]) petsByRegion[4] = [];
         
         // 2. Strict Capacity Threshold Lock
-        if (petsByRegion[4].length >= 3) {
+        if (countHiveBees() >= 3) {
             alert("🍯 The Hive structure has reached its maximum capacity of 3 total bees!");
             spawnBeeBtn.style.display = 'none';
             return;
@@ -2089,7 +2112,7 @@ if (spawnBeeBtn) {
         updateUI();
 
         // 5. Extract Base Name Continuity Parameters
-        let workerNumber = petsByRegion[4].length; 
+        let workerNumber = countHiveBees(); 
         let cleanLabelName = `Worker Bee ${workerNumber}`;
 
         // 6. Create the new bee via the shared factory (same setup the starter bee
@@ -2103,7 +2126,7 @@ if (spawnBeeBtn) {
         saveGameProgress();
         
         // Auto-hide the button immediately if this purchase hits the maximum capacity ceiling limit
-        if (petsByRegion[4].length >= 3) {
+        if (countHiveBees() >= 3) {
             spawnBeeBtn.style.display = 'none';
         }
     };

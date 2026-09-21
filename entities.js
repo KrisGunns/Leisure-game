@@ -343,6 +343,8 @@ class Pet {
         //   bowColor (shared with monkey/elephant) draws Miss Glider's red bow.
         this.honeyEaten = 0;
         this.bananaEaten = 0;
+        // Chicken-only (Lv30 "chain egg"): the extra egg chance built up by consecutive eggs.
+        this.chainEggBonus = 0;
         this.stamina = getGliderMaxStamina(1);
         this.regionNow = 9;
         this.held = false;
@@ -357,8 +359,10 @@ class Pet {
     // time instead of being written into `this.speed`, so the two effects can never
     // overwrite/undo each other, and pets created later (bought bees, save/load
     // reconstruction) pick the buff up automatically.
+    // Also multiplied by the squirrel's regional speed boost when one is running in the region this
+    // pet is in (`_regionSpeedMult`, stamped by main.js every frame; 1 when there is none).
     get effectiveSpeed() {
-        return this.speed * getPetSpeedMultiplier();
+        return this.speed * getPetSpeedMultiplier() * (this._regionSpeedMult || 1);
     }
 
     pickNewWanderTarget() {
@@ -603,10 +607,9 @@ class Pet {
         if (this.type === 'bee') {
             if (this.state === 'whistled') this.state = 'wander';
 
-            let maxCapacity = 1;
-            if (this.level >= 20) maxCapacity = 5;
-            else if (this.level >= 10) maxCapacity = 3;
-            else if (this.level >= 5) maxCapacity = 2;
+            // Capacity and time-per-flower by level: BEE_TIERS in state.js.
+            const beeTier = getBeeTier(this.level);
+            let maxCapacity = beeTier.capacity;
 
             if (this.state === 'wander') {
                 if (this.honeyCarried >= maxCapacity) {
@@ -652,10 +655,7 @@ class Pet {
                     this.y += (dy / dist) * (this.effectiveSpeed * 1.5) * dt;
                 } else {
                     this.state = 'forage';
-                    if (this.level >= 20) this.stateTimer = 3.0;
-                    else if (this.level >= 10) this.stateTimer = 4.0;
-                    else if (this.level >= 5) this.stateTimer = 4.5;
-                    else this.stateTimer = 5.0;
+                    this.stateTimer = getBeeTier(this.level).forageSeconds;
                 }
             }
 
@@ -673,12 +673,13 @@ class Pet {
                     }
                     this.targetFlower = null;
                     this.honeyCarried++;
-                    this.foodEaten++; 
+                    // Lv30: a chance for a flower to count double toward the next level.
+                    this.foodEaten += (Math.random() < getPerkChance('beeDoubleExp', this.level)) ? 2 : 1;
 
                     let reqFlowers = getLevelRequirement('bee', this.level);
-                    if (this.level < 20 && this.foodEaten >= reqFlowers) {
+                    if (this.level < MAX_PET_LEVEL && this.foodEaten >= reqFlowers) {
                         this.level++;
-                        this.foodEaten = 0;
+                        this.foodEaten = Math.max(0, this.foodEaten - reqFlowers); // keeps a double-exp overshoot
                         saveGameProgress();
                     }
                     this.state = 'wander';
@@ -695,7 +696,7 @@ class Pet {
                     this.y += (dy / dist) * this.effectiveSpeed * 1.5 * dt;
                 } else {
                     let dropCount = this.honeyCarried;
-                    if (this.level >= 20 && Math.random() < 0.10) {
+                    if (Math.random() < getPerkChance('beeDoubleHoney', this.level)) {
                         dropCount *= 2; 
                     }
                     // Deposits into the hive's own stored pool now, not straight into the
@@ -815,13 +816,10 @@ class Pet {
                 }
 
                 if (this.fishingActionTimer <= 0 && (!this.splashParticles || this.splashParticles.length === 0)) {
-                    let fishCaught = 1;
-                    if (this.level >= 20) {
-                        fishCaught = 3;
-                        if (Math.random() < 0.10) fishCaught *= 2; 
-                    } else if (this.level >= 10) {
-                        fishCaught = 3;
-                    }
+                    // Fish per cycle by level (BEAR_FISH_TIERS) and the double-catch chance
+                    // (PERK_CHANCES.bearDoubleFish), both in state.js.
+                    let fishCaught = Math.max(1, getBearFishPerCycle(this.level));
+                    if (Math.random() < getPerkChance('bearDoubleFish', this.level)) fishCaught *= 2;
                     inventory.fish += Math.round(fishCaught * petFishBonus);
                     updateUI();
                     saveGameProgress();
@@ -915,14 +913,19 @@ class Pet {
         // no special-case needed here — falls through to the normal wander/forage
         // pipeline below, which already grants a +20% excursion bonus (see that branch). ---
         if (this.type === 'bird' && this.excursionActive) {
-            this.excursionTimer -= dt;
+            // The trip's 60 seconds (and Region 5's once-a-second fish rolls) run on the REAL clock,
+            // not the game loop's `dt` — that over-counts on some devices (see tickShopBuffs in
+            // state.js), which used to make a "60 second" trip last about half that.
+            this.excursionTimer -= gliderRealDt;
 
             if (this.excursionRegion === 5) {
-                this.excursionFishTimer += dt;
+                this.excursionFishTimer += gliderRealDt;
                 while (this.excursionFishTimer >= 1.0) {
                     this.excursionFishTimer -= 1.0;
                     if (Math.random() < 0.10) {
-                        inventory.fish += 1;
+                        // Same "Fishy Business" pet-fish perk the bears' fish get; roundStochastic so
+                        // the +25% shows up on average even though a catch is a single fish.
+                        inventory.fish += roundStochastic(petFishBonus);
                         updateUI();
                     }
                 }
@@ -932,7 +935,7 @@ class Pet {
                 // Revert the bee speed boost if this trip was to the hive.
                 if (this.excursionRegion === 4 && petsByRegion[4]) {
                     petsByRegion[4].forEach(bee => {
-                        if (bee._birdBoosted) {
+                        if (bee.type === 'bee' && bee._birdBoosted) {
                             bee.speed /= 1.20;
                             bee._birdBoosted = false;
                         }
@@ -1201,7 +1204,7 @@ class Pet {
                 this.pickNewWanderTarget();
                 
                 // FIXED: Sets the exact matching sub-state string name 'playing_approach'
-                if (this.type === 'elephant' && this.level >= 20 && currentRegion === 2 && Math.random() < 0.10) {
+                if (this.type === 'elephant' && currentRegion === 2 && Math.random() < getPerkChance('elephantPlay', this.level)) {
                     this.state = 'playing_approach';
                     updateUI();
                 }
@@ -1248,7 +1251,7 @@ class Pet {
                             if (targetItem.type === 'food') inventory.food += Math.round(y.food * petFoodWaterBonus);
                             else inventory.water += Math.round(y.water * petFoodWaterBonus);
 
-                            if (this.level >= 20 && Math.random() < 0.10) {
+                            if (Math.random() < getPerkChance('dogDig', this.level)) {
                                 this.state = 'digging';
                                 this.stateTimer = 3.0;
                                 return;
@@ -1261,13 +1264,29 @@ class Pet {
                             let y = getForageYield('squirrel', this.level);
                             if (targetItem.type === 'food') inventory.food += Math.round(y.food * petFoodWaterBonus);
                             else inventory.water += Math.round(y.water * petFoodWaterBonus);
+
+                            // Lv20+: a chance per forage to speed up EVERY pet in this region by +50%
+                            // for SQUIRREL_BOOST_SECONDS (chance in PERK_CHANCES.squirrelBoost; boosts
+                            // don't stack, and a proc while one is running is ignored so it can never be chained).
+                            if (Math.random() < getPerkChance('squirrelBoost', this.level)) {
+                                startRegionSpeedBoost(this.homeRegion || 3);
+                            }
                             } else if (this.type === 'chicken') {
                             let y = getForageYield('chicken', this.level);
                             if (targetItem.type === 'food') inventory.food += Math.round(y.food * petFoodWaterBonus);
                             else inventory.water += Math.round(y.water * petFoodWaterBonus);
 
-                            // 10% chance per forage to lay an egg (Level 20+ only).
-                            if (this.level >= 20 && Math.random() < 0.10) {
+                            // Lv20+: 10% chance per forage to lay an egg. At Lv30 the "chain egg" adds to
+                            // that: once an egg has been laid, the NEXT forage gets +5% egg chance
+                            // (15% total), and every further egg in a row raises the bonus another 5%
+                            // (up to +50%). A forage that lays no egg resets the bonus to 0.
+                            const chickenChain = (this.level >= CHAIN_EGG_MIN_LEVEL) ? this.chainEggBonus : 0;
+                            const laysEgg = getPerkChance('chickenEgg', this.level) > 0 &&
+                                            Math.random() < getPerkChance('chickenEgg', this.level) + chickenChain;
+                            if (this.level >= CHAIN_EGG_MIN_LEVEL) {
+                                this.chainEggBonus = laysEgg ? Math.min(CHAIN_EGG_MAX, this.chainEggBonus + CHAIN_EGG_STEP) : 0;
+                            }
+                            if (laysEgg) {
                                 // The egg goes into the chicken's OWN region (Region 3), not whichever
                                 // region the player happens to be looking at — pets keep foraging in the
                                 // background, and an egg laid while the player was elsewhere used to be
@@ -1291,7 +1310,7 @@ class Pet {
 
                             // 5% chance to play in the mud for 5s after a successful forage
                             // (Level 20+ only — matches the dog/chicken rare-bonus pattern).
-                            if (this.level >= 20 && Math.random() < 0.05) {
+                            if (Math.random() < getPerkChance('pigMud', this.level)) {
                                 this.state = 'mud_play';
                                 this.stateTimer = 5.0;
                                 return;
@@ -1313,7 +1332,7 @@ class Pet {
                             // vine to vine around the region for 20s, paying out 5 coins
                             // once it's done (handled when the 'swinging' state's timer
                             // runs out, below).
-                            if (this.level >= 20 && Math.random() < 0.05) {
+                            if (Math.random() < getPerkChance('monkeySwing', this.level)) {
                                 this.state = 'swinging';
                                 this.stateTimer = 20.0;
                                 this.pickNewWanderTarget(); // first vine to swing to
@@ -1324,7 +1343,7 @@ class Pet {
                             let gain = (targetItem.type === 'food') ? y.food : y.water;
                             let finalGain = Math.round(gain * petFoodWaterBonus);
                             // Level 15+: 10% chance to double whatever was actually granted.
-                            if (this.level >= 15 && Math.random() < 0.10) finalGain *= 2;
+                            if (Math.random() < getPerkChance('catDouble', this.level)) finalGain *= 2;
                             if (targetItem.type === 'food') inventory.food += finalGain;
                             else inventory.water += finalGain;
 
@@ -1333,8 +1352,8 @@ class Pet {
                             // over and calls it. Only rolls while the player is actually
                             // standing in the cat's region (Region 1), matching the
                             // panda's Bamboo Fever "must be in the region" rule.
-                            if (this.level >= 20 && typeof currentRegion !== 'undefined' && currentRegion === 1 &&
-                                Math.random() < 0.03) {
+                            if (typeof currentRegion !== 'undefined' && currentRegion === 1 &&
+                                Math.random() < getPerkChance('catSchrodinger', this.level)) {
                                 this.state = 'schrodinger';
                                 this.schrodingerOutcome = Math.random() < 0.5 ? 'alive' : 'dead';
                                 this.schrodingerVisible = true;
@@ -1347,7 +1366,12 @@ class Pet {
                             let gain = (targetItem.type === 'food') ? y.food : y.water;
                             // +20% while away on an excursion (stacks with the normal
                             // character-level petFoodWaterBonus, same as everywhere else).
-                            let finalGain = Math.round(gain * petFoodWaterBonus * (this.excursionActive ? 1.20 : 1.0));
+                            // The excursion's +20% uses roundStochastic so it averages exactly +20% (a
+                            // plain round turned Lv20's 4 food / 3 water into 5 / 4, i.e. +25% / +33%);
+                            // at home the yield stays the usual plain rounded number.
+                            let finalGain = this.excursionActive
+                                ? roundStochastic(gain * petFoodWaterBonus * 1.20)
+                                : Math.round(gain * petFoodWaterBonus);
                             if (targetItem.type === 'food') inventory.food += finalGain;
                             else inventory.water += finalGain;
 
@@ -1357,7 +1381,7 @@ class Pet {
                             // regions matters because the bird only needs to be Lv20 itself
                             // — the other Region 1-3 pets, and therefore Regions 4-6/7, can
                             // still be locked for the player at that point.
-                            if (this.level >= 20 && !this.excursionActive && Math.random() < 0.05) {
+                            if (!this.excursionActive && Math.random() < getPerkChance('birdFly', this.level)) {
                                 let choices = ALL_REGIONS.filter(r => r !== this.homeRegion &&
                                     (typeof isRegionUnlocked !== 'function' || isRegionUnlocked(r)));
 
@@ -1384,7 +1408,9 @@ class Pet {
 
                                     if (target === 4 && petsByRegion[4]) {
                                         petsByRegion[4].forEach(bee => {
-                                            if (!bee._birdBoosted) {
+                                            // Bees only — the bird itself is in this array by now and
+                                            // must not speed itself up.
+                                            if (bee.type === 'bee' && !bee._birdBoosted) {
                                                 bee.speed *= 1.20;
                                                 bee._birdBoosted = true;
                                             }
@@ -1413,9 +1439,9 @@ class Pet {
                             // already running (now that Play lets the panda resume normal
                             // foraging during the minigame instead of freezing, it could
                             // otherwise re-roll and stack a second round on top).
-                            if (this.level >= 20 && typeof currentRegion !== 'undefined' && currentRegion === 7 &&
+                            if (typeof currentRegion !== 'undefined' && currentRegion === 7 &&
                                 (typeof bambooFever === 'undefined' || !bambooFever.active) &&
-                                Math.random() < 0.05) {
+                                Math.random() < getPerkChance('pandaFever', this.level)) {
                                 this.state = 'bamboo_wait';
                                 updateUI();
                                 if (typeof showBambooFeverPicker === 'function') showBambooFeverPicker(this);
@@ -1852,9 +1878,6 @@ draw() {
         ctx.textAlign = 'center';
         
         let text = `${this.label} Lv.${this.level}`;
-        if (this.level >= 20) {
-            text += ' [MAX]';
-        }
         
         if (this.state === 'whistled') {
             text += ' [WHISTLED]';
@@ -1881,9 +1904,13 @@ draw() {
             }
         }
         
-        ctx.fillText(text, this.x + (this.size / 2), this.y - 16);
+        // A speed boost from the squirrel is running in this pet's region.
+        if (this._regionSpeedMult > 1) text += ' \u26A1';
 
-            if (this.level < 20) {
+        // Drawn on the sharp overlay (see CRISP PET TEXT in world.js), not the game canvas.
+        drawPetText(text, this.x + (this.size / 2), this.y - 16);
+
+            if (this.level < MAX_PET_LEVEL) {
                 let progressRatio = 0;
                 if (this.type === 'bee' || this.type === 'bear' || this.type === 'monkey') {
                     let totalReq = getLevelRequirement(this.type, this.level);
@@ -1936,15 +1963,7 @@ draw() {
             ctx.fillStyle = ratio < 0.25 ? '#e74c3c' : '#1abc9c';
             ctx.fillRect(sBarX, sBarY, sBarWidth * ratio, sBarHeight);
 
-            ctx.font = '9px monospace';
-            ctx.textAlign = 'center';
-            ctx.lineWidth = 3;
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
-            let staminaText = `⚡${Math.floor(this.stamina)}/${maxStamina}`;
-            ctx.strokeText(staminaText, this.x + this.size / 2, sBarY + sBarHeight + 10);
-            ctx.fillStyle = '#ffffff';
-            ctx.fillText(staminaText, this.x + this.size / 2, sBarY + sBarHeight + 10);
-            ctx.textAlign = 'left';
+            drawPetText(`⚡${Math.floor(this.stamina)}/${maxStamina}`, this.x + this.size / 2, sBarY + sBarHeight + 10, { size: 9 });
         }
 
         if (this.digParticles && this.digParticles.length > 0) {

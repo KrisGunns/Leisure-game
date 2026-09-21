@@ -362,7 +362,7 @@ function feedGliders() {
 
     gliderPets.forEach(g => {
         if (!isPetAvailable(g)) return;
-        if (g.level >= 20) return;
+        if (g.level >= MAX_PET_LEVEL) return;
         if (!g.held && g.regionNow !== currentRegion) return;
 
         let dx = (g.x + g.size / 2) - (player.x + player.size / 2);
@@ -374,7 +374,7 @@ function feedGliders() {
         let feedAmount = Math.max(1, Math.ceil(totalNeeded * feedFraction));
 
         for (let i = 0; i < feedAmount; i++) {
-            if (g.level >= 20) break;
+            if (g.level >= MAX_PET_LEVEL) break;
             let cur = getLevelRequirement('glider', g.level);
 
             if (g.honeyEaten < cur.honey && inventory.honey > 0) {
@@ -398,7 +398,7 @@ function feedGliders() {
                 g.honeyEaten = 0;
                 g.bananaEaten = 0;
                 g.waterEaten = 0;
-                // Its max stamina may have gone up (Lv5/10/15/20); the current stamina is left
+                // Its max stamina may have gone up (Lv5/10/15/20/25/30); the current stamina is left
                 // as it is — updateGlider() only ever clamps it down to the max.
                 saveGameProgress();
             }
@@ -449,7 +449,7 @@ function executeContinuousFeed() {
             let feedAmount = Math.max(1, Math.ceil(totalNeeded * feedFraction));
 
             for (let i = 0; i < feedAmount; i++) {
-                if (pet.level >= 20) break;
+                if (pet.level >= MAX_PET_LEVEL) break;
                 
                 if (pet.type === 'bear') {
                     if (inventory.honey > 0) {

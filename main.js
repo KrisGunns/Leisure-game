@@ -23,6 +23,7 @@ function gameLoop(timestamp) {
         tickShopBuffs();
         // Sugar-glider stamina timers use the same wall-clock approach (see world.js).
         tickGliderClock();
+        beginPetText(); // pet labels are queued while drawing and flushed onto the crisp overlay below
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -260,6 +261,8 @@ function gameLoop(timestamp) {
                     let rWater = regionalItems[r] ? regionalItems[r].waters : [];
                     let rFlower = regionalItems[r] ? regionalItems[r].flowers : [];
                     
+                    // Squirrel's speed boost applies to whatever pets are in this region right now.
+                    pet._regionSpeedMult = getRegionSpeedBoost(r);
                     pet.update(dt, rFood, rWater, rFlower);
                     
                     if (r === currentRegion) {
@@ -284,6 +287,7 @@ function gameLoop(timestamp) {
             let gWater = regionalItems[gr] ? regionalItems[gr].waters : [];
             let gFlower = regionalItems[gr] ? regionalItems[gr].flowers : [];
 
+            g._regionSpeedMult = getRegionSpeedBoost(gr);
             g.update(dt, gFood, gWater, gFlower);
 
             if (gr === currentRegion) {
@@ -313,6 +317,9 @@ function gameLoop(timestamp) {
         // proximity has to be checked continuously, unlike the elephant's PLAY check
         // which doesn't depend on distance.
         updateUI();
+
+        // Draw this frame's queued pet labels onto the full-resolution overlay (world.js).
+        flushPetText();
     } // This bracket cleanly closes the frameInterval condition block scope layer
 
     // FIXED: Only requestAnimationFrame sits down here at the safe root level!

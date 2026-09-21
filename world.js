@@ -68,6 +68,35 @@ function tickGliderClock() {
     const d = (gliderLastRealTick === null) ? 0 : (now - gliderLastRealTick) / 1000;
     gliderLastRealTick = now;
     gliderRealDt = Math.min(Math.max(d, 0), 0.25);
+
+    // Also ticks the squirrel's regional speed boosts (below) on the same real clock, so a
+    // "30 second" boost is 30 real seconds.
+    for (const r in regionSpeedBoosts) {
+        if (regionSpeedBoosts[r] > 0) regionSpeedBoosts[r] = Math.max(0, regionSpeedBoosts[r] - gliderRealDt);
+    }
+}
+
+// The whole clock above is also what the bird's excursion uses (gliderRealDt is simply "real
+// seconds since the last frame", not glider-specific) — see the excursion branch of
+// Pet.update(). The name is historical.
+
+// ------------------------------------------------------------------
+// SQUIRREL SPEED BOOST (Lv20+ perk): a forage can start a boost that makes every pet currently
+// in the squirrel's region move SQUIRREL_BOOST_MULT (+50%) faster for SQUIRREL_BOOST_SECONDS
+// (5 real seconds). region -> seconds left. A proc while a boost is already running is IGNORED —
+// it neither stacks nor extends it — so the squirrel can't chain boosts into a permanent one.
+// Not saved — like every other timed state it simply ends on a reload.
+// main.js stamps each pet with getRegionSpeedBoost(its region) before updating it, and
+// Pet.effectiveSpeed multiplies it in, so pets that are only visiting (the bird) or that were
+// dropped there (gliders) follow the region they are actually IN.
+// ------------------------------------------------------------------
+const regionSpeedBoosts = {};
+function getRegionSpeedBoost(region) {
+    return (regionSpeedBoosts[region] > 0) ? SQUIRREL_BOOST_MULT : 1;
+}
+function startRegionSpeedBoost(region) {
+    if (regionSpeedBoosts[region] > 0) return; // already boosted: no extending, no stacking
+    regionSpeedBoosts[region] = SQUIRREL_BOOST_SECONDS;
 }
 
 // Bird excursion fly-away/landing visual effects — simple one-shot expanding+fading poof
@@ -410,7 +439,7 @@ const petsByRegion = {
         createPig('Mud Pig', '#95a5a6', 280, 460)
     ],
     7: [ createPanda('Panda', 200, 220) ],
-    8: [ createMonkey('Monkey', 150, 200), createMonkey('Coco', 280, 200, { bowColor: '#2ecc71' }) ],
+    8: [ createMonkey('Monkey', 150, 200), createMonkey('Bow Monkey', 280, 200, { bowColor: '#2ecc71' }) ],
     // Region 9's pets are the two sugar gliders, but they are deliberately NOT stored here —
     // see `gliderPets` below. The (empty) array just keeps the region-indexed lookups uniform.
     9: []
@@ -503,6 +532,13 @@ function drawCoinPopups() {
 // unlockedIds in state.js) — pet levels no longer have anything to do with it. Single source of
 // truth used by main.js (render/update gating), input.js (region-select gate), ui.js (Codex
 // lock display) and entities.js (the bird's excursion target picker).
+// How many BEES are in Region 4. Use this — not petsByRegion[4].length — for anything about the hive's
+// bee cap or numbering: the bird's Lv20+ excursion puts the bird into that same array for a minute,
+// and counting it made a 2-bee hive look full (refusing the 3rd bee and hiding Buy Bee).
+function countHiveBees() {
+    return Array.isArray(petsByRegion[4]) ? petsByRegion[4].filter(p => p.type === 'bee').length : 0;
+}
+
 function isRegionUnlocked(r) {
     return isRegionOwned(r);
 }
@@ -881,6 +917,73 @@ function drawBedroomBackground() {
     });
 }
 
+// ------------------------------------------------------------------
+// CRISP PET TEXT. The game canvas is drawn at 1 logical px = 1 CSS px and then stretched by the
+// browser to the screen's real pixel density, which is what made the text above the pets look
+// soft on phones — and pet positions are fractional, so glyphs also landed between pixels. The
+// pet name/level/state labels are therefore NOT drawn on the game canvas: Pet.draw() queues them
+// (drawPetText) and main.js flushes the queue onto #labelCanvas, a transparent canvas stacked on
+// top that is backed at the device's full pixel density and draws each string on a whole device
+// pixel with a dark outline. Everything else keeps the game canvas's look.
+// ------------------------------------------------------------------
+const labelCanvas = document.getElementById('labelCanvas');
+const labelCtx = labelCanvas ? labelCanvas.getContext('2d') : null;
+let labelScale = 1;
+let labelQueue = [];
+
+function resizeLabelCanvas() {
+    if (!labelCanvas || !labelCtx) return;
+    labelScale = Math.min(3, Math.max(1, window.devicePixelRatio || 1));
+    labelCanvas.width = Math.round(canvas.width * labelScale);
+    labelCanvas.height = Math.round(canvas.height * labelScale);
+}
+
+// Queue one line of text to be drawn centred at (x, y) in game-canvas coordinates.
+//   opts.size (px, default 10), opts.color (default white)
+function drawPetText(text, x, y, opts) {
+    opts = opts || {};
+    if (!labelCtx) {
+        // No overlay available: fall back to drawing straight onto the game canvas.
+        ctx.font = (opts.size || 10) + 'px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = opts.color || '#ffffff';
+        ctx.fillText(text, x, y);
+        ctx.textAlign = 'left';
+        return;
+    }
+    labelQueue.push({ text: text, x: x, y: y, size: opts.size || 10, color: opts.color || '#ffffff' });
+}
+
+function beginPetText() {
+    labelQueue.length = 0;
+}
+
+// Draws everything queued this frame (and clears whatever was there before).
+function flushPetText() {
+    if (!labelCtx) return;
+    labelCtx.setTransform(1, 0, 0, 1, 0, 0);
+    labelCtx.clearRect(0, 0, labelCanvas.width, labelCanvas.height);
+    if (labelQueue.length === 0) return;
+
+    labelCtx.textAlign = 'center';
+    labelCtx.textBaseline = 'alphabetic';
+    labelCtx.lineJoin = 'round';
+    labelCtx.miterLimit = 2;
+    labelCtx.lineWidth = 3 * labelScale;
+    for (let i = 0; i < labelQueue.length; i++) {
+        const t = labelQueue[i];
+        // Work in device pixels and snap to a whole one, so glyph edges stay sharp.
+        const px = Math.round(t.x * labelScale);
+        const py = Math.round(t.y * labelScale);
+        labelCtx.font = 'bold ' + Math.round(t.size * labelScale) + 'px monospace';
+        labelCtx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+        labelCtx.strokeText(t.text, px, py);
+        labelCtx.fillStyle = t.color;
+        labelCtx.fillText(t.text, px, py);
+    }
+    labelQueue.length = 0;
+}
+
 function resizeCanvas() {
     const parent = canvas.parentElement;
     let w = parent ? parent.clientWidth : 0;
@@ -889,6 +992,7 @@ function resizeCanvas() {
     if (h < 100) h = window.innerHeight > 100 ? window.innerHeight : 600;
     canvas.width = w;
     canvas.height = h;
+    resizeLabelCanvas();
 }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
@@ -1025,7 +1129,7 @@ function checkCollisions() {
         let dist = Math.sqrt(dx * dx + dy * dy);
 
         if (dist < 65) {
-            if (petsByRegion[4] && petsByRegion[4].length < 3) {
+            if (countHiveBees() < 3) {
                 spawnBeeBtn.style.display = 'block';
             } else {
                 spawnBeeBtn.style.display = 'none';

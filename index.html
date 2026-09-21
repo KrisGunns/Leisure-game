@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Just a little leisure</title>
-    <link rel="stylesheet" href="style.css?v=1.7">
+    <link rel="stylesheet" href="style.css?v=1.8">
 </head>
 <body>
     <div id="gameContainer">
@@ -41,6 +41,9 @@
 
 <div id="canvasWrapper">
     <canvas id="gameCanvas"></canvas>
+    <!-- Transparent overlay, drawn at the screen's full pixel density, that pet name/level/state labels are
+         drawn onto so they stay sharp (see the CRISP PET TEXT note in world.js). Ignores touches. -->
+    <canvas id="labelCanvas"></canvas>
 
     <button id="openMenuBtn" class="utilBtn">☰ MENU</button>
     <button id="settingsBtn" class="utilBtn">⚙️</button>
