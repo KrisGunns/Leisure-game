@@ -216,7 +216,7 @@ if (whistleBtn) {
 
         // bee is excluded — it has its own hive-return autonomy, not whistle-recalled.
         // level < 2 pets aren't tamed enough to respond yet.
-        let eligiblePets = activePets.filter(pet => pet.type !== 'bee' && pet.level >= 2);
+        let eligiblePets = activePets.filter(pet => pet.type !== 'bee' && pet.level >= 2 && isPetAvailable(pet));
 
         if (eligiblePets.length === 0) return;
 
@@ -245,20 +245,15 @@ if (regionSelector) {
     regionSelector.addEventListener('change', (e) => {
         let selectedRegion = parseInt(e.target.value);
 
-        if (selectedRegion === 7 || selectedRegion === 8 || selectedRegion === 9) {
-            if (!isJungleTierUnlocked()) {
-                alert("🔒 Region locked! Pets in Regions 1-3 must reach Level 10+, and pets in Regions 4-6 must reach Level 5+, to unlock this region.");
-                regionSelector.value = currentRegion;
-                return;
-            }
-        } else if (selectedRegion >= 4) {
-            if (!areRegions1to3Tamed()) {
-                alert("🔒 Region locked! You must tame all pets in Regions 1-3 (reach Level 2+) to unlock this region.");
-                regionSelector.value = currentRegion;
-                return;
-            }
+        // Regions 4-9 have to be bought in the shop (Menu > Shop > Unlockables).
+        if (!isRegionUnlocked(selectedRegion)) {
+            const regionUnlockable = getUnlockable('region_' + selectedRegion);
+            const price = regionUnlockable ? ` for ${regionUnlockable.cost} 🪙` : '';
+            alert(`🔒 Region locked! You can unlock Region ${selectedRegion}${price} in the Shop (Menu → Shop → Unlockables).`);
+            regionSelector.value = currentRegion;
+            return;
         }
-        
+
         currentRegion = selectedRegion;
         foods = regionalItems[currentRegion].foods;
         waters = regionalItems[currentRegion].waters;
@@ -335,6 +330,7 @@ function feedGliders() {
     const feedFraction = getFeedFraction();
 
     gliderPets.forEach(g => {
+        if (!isPetAvailable(g)) return;
         if (g.level >= 20) return;
         if (!g.held && g.regionNow !== currentRegion) return;
 
@@ -387,6 +383,7 @@ function executeContinuousFeed() {
     feedGliders();
 
         activePets.forEach(pet => {
+        if (!isPetAvailable(pet)) return; // not bought yet — not in the world
         // Play button press triggers Step 2 (The Retreat) instead of paying out early
         if (pet.type === 'elephant' && pet.state === 'playing_approach') {
             pet.state = 'playing_retreat';

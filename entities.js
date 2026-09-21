@@ -579,6 +579,9 @@ class Pet {
     }
 
     update(dt, regionFoods, regionWaters, activeFlowers = []) {
+        // A pet sold in the shop that hasn't been bought yet isn't in the world — no AI, no
+        // foraging, nothing (see isPetAvailable() in state.js and the shopId tags in world.js).
+        if (!isPetAvailable(this)) return;
 
         // Character perk bonuses — from whichever perks the player has unlocked in the
         // Perk Tree; see getCharacterBonuses() in state.js (also the single source of
@@ -1441,6 +1444,8 @@ class Pet {
 
 
 draw() {
+        // A pet sold in the shop that hasn't been bought yet isn't in the world (see isPetAvailable()).
+        if (!isPetAvailable(this)) return;
         if (this._justTeleported) {
             this._justTeleported = false;
             return;

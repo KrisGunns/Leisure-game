@@ -516,7 +516,7 @@ body, html {
 }
 .shopTab {
     flex: 1;
-    padding: 10px;
+    padding: 10px 4px;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid #444;
     border-radius: 8px;
@@ -608,6 +608,23 @@ body, html {
     background: #3a3a3a;
     color: #808080;
     cursor: default;
+}
+/* Unlockables tab: region headings, pets sold for a region indented under it, and owned rows. */
+.shopSectionHeading {
+    margin-top: 6px;
+    padding: 2px 4px;
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: bold;
+    color: #f1c40f;
+    letter-spacing: 0.5px;
+}
+.shopRowSub {
+    margin-left: 14px;
+}
+.shopRowOwned {
+    border-color: #2ecc71;
+    background: rgba(46, 204, 113, 0.07);
 }
 .shopActionBtnActive:disabled {
     background: transparent;

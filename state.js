@@ -324,6 +324,109 @@ const SELL_ITEMS = [
 
 function isShopBuffActive(id) { return shopBuffs[id] > 0; }
 
+// ------------------------------------------------------------------
+// UNLOCKABLES — how regions and most extra pets are obtained (the shop's "Unlockables" tab).
+// Nothing is unlocked by pet levels any more: the game starts with Regions 1-3 and only
+// their first pets (Dog / Elephant / Squirrel + Chicken); everything else is bought with
+// gold coins. Data-driven like SHOP_ITEMS above — the tab (ui.js) builds its rows from this
+// list, so a new unlockable is one new row. Fields:
+//   id      — key in `unlockedIds`, also what a pet's `shopId` (world.js) refers to
+//   kind    — 'region' (opens the region AND brings its starter pet(s) along) or 'pet'
+//             (one extra pet that lives in `region`)
+//   region  — the region it opens / lives in
+// A 'pet' in Region 4+ can only be bought once that region is owned (nothing would show it).
+// ------------------------------------------------------------------
+const UNLOCKABLES = [
+    { id: 'pet_cat',         kind: 'pet',    region: 1, icon: '🐱', name: 'Cat',          cost: 100, desc: 'Joins Region 1. Arrives wild (Lv1) — tame it at Lv2 like the others.' },
+    { id: 'pet_bowElephant', kind: 'pet',    region: 2, icon: '🐘', name: 'Bow Elephant', cost: 50,  desc: 'Joins Region 2 (white bow). Arrives wild (Lv1).' },
+    { id: 'pet_bird',        kind: 'pet',    region: 3, icon: '🐦', name: 'Bird',         cost: 100, desc: 'Joins Region 3. Arrives wild (Lv1).' },
+
+    { id: 'region_4',        kind: 'region', region: 4, icon: '🐝', name: 'Region 4 — Beehive',    cost: 60,  desc: 'Unlocks Region 4 and comes with your first Bee. More bees can be bought at the hive (30 🪙 each, max 3).' },
+
+    { id: 'region_5',        kind: 'region', region: 5, icon: '🐻', name: 'Region 5 — Bear Lake',  cost: 150, desc: 'Unlocks Region 5 and comes with the Bear (Lv1 — needs Lv2 to be tamed).' },
+    { id: 'pet_bowBear',     kind: 'pet',    region: 5, icon: '🐻', name: 'Bow Bear',     cost: 100, desc: 'Joins Region 5. Arrives wild (Lv1).' },
+
+    { id: 'region_6',        kind: 'region', region: 6, icon: '🐷', name: 'Region 6 — Pig Sty',    cost: 150, desc: 'Unlocks Region 6 and comes with the Pig (Lv1 — needs Lv2 to be tamed).' },
+    { id: 'pet_mudPig',      kind: 'pet',    region: 6, icon: '🐖', name: 'Mud Pig',      cost: 100, desc: 'Joins Region 6. Arrives wild (Lv1).' },
+
+    { id: 'region_7',        kind: 'region', region: 7, icon: '🐼', name: 'Region 7 — Panda Habitat', cost: 300, desc: 'Unlocks Region 7 and comes with the Panda (Lv1 — needs Lv2 to be tamed).' },
+
+    { id: 'region_8',        kind: 'region', region: 8, icon: '🐵', name: 'Region 8 — Monkey Jungle', cost: 250, desc: 'Unlocks Region 8 and comes with the Monkey (Lv1 — needs Lv2 to be tamed).' },
+    { id: 'pet_bowMonkey',   kind: 'pet',    region: 8, icon: '🙈', name: 'Bow Monkey',   cost: 150, desc: 'Joins Region 8 (green bow). Arrives wild (Lv1).' },
+
+    { id: 'region_9',        kind: 'region', region: 9, icon: '🛏️', name: 'Region 9 — Bedroom',    cost: 500, desc: 'Unlocks Region 9 and comes with the Sugar Glider, already tamed at Lv1.' },
+    { id: 'pet_missGlider',  kind: 'pet',    region: 9, icon: '🎀', name: 'Miss Glider',  cost: 350, desc: 'A second sugar glider with a red bow, already tamed at Lv1.' }
+];
+
+// Which unlockables the player owns: id -> true. Empty at the start of a new game.
+// Saved as an array of ids (see saveGameProgress / loadGameProgress).
+const unlockedIds = {};
+
+function isUnlockOwned(id) { return !!unlockedIds[id]; }
+
+function getUnlockable(id) {
+    for (let i = 0; i < UNLOCKABLES.length; i++) {
+        if (UNLOCKABLES[i].id === id) return UNLOCKABLES[i];
+    }
+    return null;
+}
+
+// Regions 1-3 are always open; every other region must have been bought.
+function isRegionOwned(r) {
+    return (r >= 1 && r <= 3) || isUnlockOwned('region_' + r);
+}
+
+// Whether a pet is in the game yet. Pets sold separately carry a `shopId` (tagged in
+// world.js); one that hasn't been bought is not updated, drawn, fed, whistled or shown in the
+// Codex. Pets without a shopId (the starters, and the ones that come with a region) are always
+// "available" — whether they're reachable at all is then just down to their region.
+function isPetAvailable(pet) {
+    return !pet || !pet.shopId || isUnlockOwned(pet.shopId);
+}
+
+// Why an unlockable can't be bought right now, or null if it can. (The buttons are also
+// disabled in the UI; this is the authoritative check.)
+function getUnlockableBlockReason(u) {
+    if (!u) return 'unknown';
+    if (isUnlockOwned(u.id)) return 'owned';
+    if (u.kind === 'pet' && !isRegionOwned(u.region)) return 'region';
+    if (inventory.coins < u.cost) return 'coins';
+    return null;
+}
+
+function buyUnlockable(id) {
+    const u = getUnlockable(id);
+    if (getUnlockableBlockReason(u) !== null) return false;
+    inventory.coins -= u.cost;
+    unlockedIds[id] = true;
+    saveGameProgress();
+    return true;
+}
+
+// Bees bought at the hive (Region 4): the first one comes with the region for free, the
+// other two cost this each.
+const BEE_COST = 30;
+
+// The OLD unlock rules — regions used to open by pet levels. Kept ONLY so a save made
+// before the shop existed can be grandfathered in (see loadGameProgress): a player who had
+// already earned a region keeps it, and the pets in it, instead of being locked out or made to
+// pay for something they already had.
+function legacyRegionUnlocked(r) {
+    if (r >= 1 && r <= 3) return true;
+    const allAtLeast = (from, to, lvl) => {
+        for (let rr = from; rr <= to; rr++) {
+            if (!Array.isArray(petsByRegion[rr]) || petsByRegion[rr].length === 0) return false;
+            for (let i = 0; i < petsByRegion[rr].length; i++) {
+                if (petsByRegion[rr][i].level < lvl) return false;
+            }
+        }
+        return true;
+    };
+    if (r >= 4 && r <= 6) return allAtLeast(1, 3, 2);
+    if (r >= 7 && r <= 9) return allAtLeast(1, 3, 10) && allAtLeast(4, 6, 5);
+    return false;
+}
+
 // Called once per frame from gameLoop(). Deliberately does NOT use the loop's own `dt`:
 // gameLoop()'s dt over-counts elapsed time (it re-adds the leftover sub-frame remainder
 // each frame, so game time can run noticeably faster than real time), which would make a
@@ -505,6 +608,9 @@ function saveGameProgress() {
                 waterEaten: birdPet.waterEaten
             };
         }
+
+        // Which regions / shop pets the player has bought (see UNLOCKABLES).
+        stateMatrix.unlocks = Object.keys(unlockedIds).filter(id => unlockedIds[id]);
 
         // Sugar gliders (Region 9) live in their own list, `gliderPets` (world.js), NOT in
         // petsByRegion — they get carried between regions, and keeping them out of the
@@ -704,12 +810,24 @@ function loadGameProgress() {
             });
         }
 
+        // Purchased regions / pets. A save from before the shop existed has no `unlocks`
+        // list: grandfather it in by the OLD rules, so a player keeps every region they had
+        // already unlocked (and the pets in them) rather than losing access or re-buying them.
+        // This must run AFTER the pets above are restored, since the old rules read their levels.
+        if (Array.isArray(stateMatrix.unlocks)) {
+            stateMatrix.unlocks.forEach(id => {
+                if (typeof id === 'string' && getUnlockable(id)) unlockedIds[id] = true;
+            });
+        } else {
+            UNLOCKABLES.forEach(u => {
+                if (legacyRegionUnlocked(u.region)) unlockedIds[u.id] = true;
+            });
+        }
+
         // Never resume standing in a locked region: pets in a locked region are neither
         // updated nor drawn (main.js), so the player would see an empty, frozen area. It can
-        // happen when a save was made in an unlocked region and a later update added a pet to
-        // Regions 1-3 (every unlock rule counts all pets there), which locks Regions 4-8 again
-        // until that pet is tamed. This has to run AFTER the pets above are restored, since
-        // the unlock rules depend on their levels. Regions 1-3 are always unlocked.
+        // happen if the save was made in a region that isn't owned (e.g. a hand-edited save).
+        // This has to run AFTER the purchases above are restored. Regions 1-3 are always open.
         if (typeof isRegionUnlocked === 'function' && !isRegionUnlocked(currentRegion)) {
             currentRegion = 1;
             if (regionSelector) regionSelector.value = currentRegion;

@@ -30,12 +30,9 @@ const regionalItems = {
 const FOOD_WATER_REGIONS = [1, 2, 3, 6, 7];
 
 // All regions the bird's Lv20 excursion perk can randomly fly to — deliberately does NOT
-// include Region 7 or Region 8: both are gated behind a much higher unlock condition
-// (every other pet at Lv10+/Lv5+ — see isJungleTierUnlocked()) than the bird itself needs
-// to start excursions (just its own Lv20), so letting it wander into either before the
-// player has actually unlocked them would be a strange inconsistency.
-// Region 9 is left out for the same reason (it's a "jungle tier" region, see
-// isJungleTierUnlocked()).
+// include Regions 7, 8 or 9 (the upper-tier regions; a bird wandering in from Region 3 to
+// those would be a strange fit). The picker also only considers regions the player has
+// actually bought — see isRegionUnlocked().
 const ALL_REGIONS = [1, 2, 3, 4, 5, 6];
 
 // ------------------------------------------------------------------
@@ -422,8 +419,8 @@ const petsByRegion = {
 // The two sugar gliders, in their own list rather than in petsByRegion. They get carried
 // between regions by the player, so a fixed [region][slot] position doesn't work for them,
 // and keeping them out of petsByRegion means they can never skew the code that reads it
-// (the region-unlock checks — a level-1 glider dropped in Region 1 must not re-lock
-// Regions 4-8 — the bee cap, the positional save format, the whistle, ...). Which region a
+// (a level-1 glider dropped in Region 1 would otherwise count as an untamed pet there, the
+// bee cap, the positional save format, the whistle, ...). Which region a
 // glider is in is `glider.regionNow`; main.js updates/draws them by that. Index 0 = Sugar
 // Glider, 1 = Miss Glider (saves, codex and renaming all go by index).
 const gliderPets = [
@@ -448,6 +445,21 @@ for (let r = 1; r <= 9; r++) {
         petsByRegion[r].forEach(pet => { if (!pet.homeRegion) pet.homeRegion = r; });
     }
 }
+
+// Pets that are bought separately in the shop (Unlockables tab) rather than coming with the
+// game or with their region. The tag is the id of the matching UNLOCKABLES row (state.js);
+// until it's owned the pet isn't updated, drawn, fed, whistled or shown in the Codex (see
+// isPetAvailable()). They stay in their arrays the whole time, which keeps every positional
+// save format and Codex slot exactly as it was. Pets NOT listed here come with the game
+// (Dog, Elephant, Squirrel, Chicken) or with their region (Bee, Bear, Pig, Panda, Monkey,
+// Sugar Glider), so for those only owning the region matters.
+petsByRegion[1][1].shopId = 'pet_cat';
+petsByRegion[2][1].shopId = 'pet_bowElephant';
+birdPet.shopId = 'pet_bird';
+petsByRegion[5][1].shopId = 'pet_bowBear';
+petsByRegion[6][1].shopId = 'pet_mudPig';
+petsByRegion[8][1].shopId = 'pet_bowMonkey';
+gliderPets[1].shopId = 'pet_missGlider';
 
 // Floating "+N 🪙" popups shown above a pet right after it rewards the player with
 // coins (dog digging, elephant tag, pig mud play, bird's excursion return, cat's
@@ -486,51 +498,13 @@ function drawCoinPopups() {
     });
 }
 
-// Whether Regions 4-6 are unlocked: every pet across Regions 1-3 must be Level 2+
-// (tamed). Single source of truth — used by main.js (render/update gating), input.js
-// (region-select gate), ui.js (Codex lock display), and entities.js (the bird's
-// excursion target picker, so it can't send the bird to a region the player hasn't
-// actually unlocked yet).
-function areRegions1to3Tamed() {
-    for (let r = 1; r <= 3; r++) {
-        if (!Array.isArray(petsByRegion[r]) || petsByRegion[r].length === 0) return false;
-        for (let i = 0; i < petsByRegion[r].length; i++) {
-            if (petsByRegion[r][i].level < 2) return false;
-        }
-    }
-    return true;
-}
-
-// Region 7 (panda), Region 8 (monkeys) AND Region 9 (bedroom / sugar gliders) unlock
-// condition — the three "jungle tier" regions share the exact same requirement by design. Single source of truth used by
-// main.js (render gating), input.js (region-select gate), and ui.js (Codex lock
-// display) so the rule can't drift out of sync between them: pets in Regions 1-3
-// must be Level 10+, and pets in Regions 4-6 must be Level 5+.
-function isJungleTierUnlocked() {
-    for (let r = 1; r <= 3; r++) {
-        if (!Array.isArray(petsByRegion[r]) || petsByRegion[r].length === 0) return false;
-        for (let i = 0; i < petsByRegion[r].length; i++) {
-            if (petsByRegion[r][i].level < 10) return false;
-        }
-    }
-    for (let r = 4; r <= 6; r++) {
-        if (!Array.isArray(petsByRegion[r]) || petsByRegion[r].length === 0) return false;
-        for (let i = 0; i < petsByRegion[r].length; i++) {
-            if (petsByRegion[r][i].level < 5) return false;
-        }
-    }
-    return true;
-}
-
-// Whether a given region is currently accessible to the player at all. Wraps the two
-// checks above into one lookup so callers (the render loop, the bird's excursion
-// target picker, etc.) don't have to know the per-region-range rules themselves.
+// Whether a given region is currently accessible to the player at all. Regions 1-3 are always
+// open; Regions 4-9 are unlocked by buying them in the shop's Unlockables tab (UNLOCKABLES /
+// unlockedIds in state.js) — pet levels no longer have anything to do with it. Single source of
+// truth used by main.js (render/update gating), input.js (region-select gate), ui.js (Codex
+// lock display) and entities.js (the bird's excursion target picker).
 function isRegionUnlocked(r) {
-    if (r >= 1 && r <= 3) return true;
-    // Regions 7, 8 and 9 all share the jungle-tier condition (Region 9's requirements mirror 7 and 8).
-    if (r === 7 || r === 8 || r === 9) return isJungleTierUnlocked();
-    if (r >= 4 && r <= 6) return areRegions1to3Tamed();
-    return false;
+    return isRegionOwned(r);
 }
 
 // ------------------------------------------------------------------
@@ -574,6 +548,7 @@ function findTakeableGlider() {
     let best = null;
     let bestDist = GLIDER_TAKE_RANGE;
     gliderPets.forEach(g => {
+        if (!isPetAvailable(g)) return; // Miss Glider before she's been bought
         if (g.held || g.regionNow !== currentRegion || g.state === 'resting') return;
         let dx = (g.x + g.size / 2) - (player.x + player.size / 2);
         let dy = (g.y + g.size / 2) - (player.y + player.size / 2);

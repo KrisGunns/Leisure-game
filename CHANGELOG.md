@@ -38,7 +38,7 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Current Features
 
-**Regions:** 9 total, selected via a dropdown.
+**Regions:** 9 total, selected via a dropdown. **Regions 4–9 (and Cat / Bow Elephant / Bird / Bow Bear / Mud Pig / Bow Monkey / Miss Glider) are bought with gold in Shop → Unlockables — see 2026-09-20 (2); the per-region "locked behind…" notes below describe the OLD level-based rules and are superseded.**
 - Regions 1–3: starter pets (dog + cat, two elephants, squirrel + chicken + bird), food/water item spawns.
 - Region 3 also spawns collectible eggs (from chickens reaching level 20).
 - Region 4: bee hive — locked until every pet in Regions 1–3 is level 2+. Bees forage flowers, carry honey back to the hive, and cost 10 coins to spawn (max 3 bees).
@@ -90,6 +90,38 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 ---
 
 ## Changelog
+
+### 2026-09-20 (2) — Regions & extra pets are now bought in the shop ("Unlockables" tab)
+
+**Changed — how regions unlock.** Pet levels no longer unlock anything. The game starts with **Regions 1–3** and only **Dog / Elephant / Squirrel + Chicken**; every other region and pet is bought with gold coins:
+
+| Item | Cost | Notes |
+|---|---|---|
+| Cat (Region 1) | 100 | wild at Lv1 like the others |
+| Bow Elephant (Region 2) | 50 | |
+| Bird (Region 3) | 100 | |
+| **Region 4** | 60 | comes with the first Bee; the other two are bought at the hive for **30** each (was 10) |
+| **Region 5** | 150 | comes with the Bear (Lv1, still needs Lv2 to tame); Bow Bear 100 |
+| **Region 6** | 150 | comes with the Pig; Mud Pig 100 |
+| **Region 7** | 300 | comes with the Panda |
+| **Region 8** | 250 | comes with the Monkey; Bow Monkey (the green-bowed "Coco") 150 |
+| **Region 9** | 500 | comes with the Sugar Glider (tamed at Lv1); Miss Glider 350 |
+
+**How it works:**
+- `state.js`: `UNLOCKABLES` (the data table, same idea as `SHOP_ITEMS`), `unlockedIds` (owned ids), `isUnlockOwned()`, `isRegionOwned()`, `isPetAvailable(pet)`, `getUnlockableBlockReason()`, `buyUnlockable(id)`, `BEE_COST = 30`. Saved as a top-level **`unlocks`** array of ids.
+- **Regions:** `isRegionUnlocked(r)` (`world.js`) is now "Regions 1–3, or `region_N` owned". `areRegions1to3Tamed()` / `isJungleTierUnlocked()` are **gone** (every caller — main loop, region dropdown, codex, bird excursion picker — already went through `isRegionUnlocked` or was switched to it). The dropdown's locked message now names the price and points to the shop.
+- **Shop-only pets** carry a `shopId` (tagged in `world.js`: cat, Bow Elephant, bird, Bow Bear, Mud Pig, Bow Monkey, Miss Glider). They **stay in their arrays** (so every positional save format and Codex slot is unchanged) but while unowned `Pet.update()`/`Pet.draw()` return immediately, and feeding, the whistle, the elephant/cat button checks, dev insta-tame, glider Take and glider feeding all skip them. Pets that come with a region (Bee, Bear, Pig, Panda, Monkey, Sugar Glider) have no `shopId`: owning the region is enough.
+- **Shop → Unlockables tab** (third tab; `shopTabUnlockables`): grouped by region; Regions 1–3 get a heading naming their starting pets, Regions 4–9 are rows themselves with their extra pet indented under them. Each row shows the price (and how many coins short), or **Owned** (green outline, disabled button) once bought. A pet whose region isn't owned yet shows "🔒 Unlock Region N first" and can't be bought (nothing would show it) — `buyUnlockable` enforces this too, not just the disabled button.
+- **Codex:** unowned shop pets show a mystery card "LOCKED · 🛒 In the Shop: 🪙N" (only once their region is owned — before that the existing plain LOCKED card shows) and can't be renamed.
+- **Bees:** cost 30 (`BEE_COST`; button label, alert text and the charge all use it). The first bee is the region's starter bee (it already existed in `petsByRegion[4]`), so buying Region 4 needs no spawn; the 3-bee cap is unchanged.
+
+**Existing saves are grandfathered** (a save with no `unlocks` list): on load, `legacyRegionUnlocked()` (the old level rules, kept in `state.js` for this only) decides which regions the player had already earned; they get those regions plus every shop pet in them / in Regions 1–3. Nothing they had is lost or has to be re-bought; what they hadn't earned they now buy. New saves always have `unlocks`, so this runs once.
+
+**Dev tools:** insta-tame skips unowned pets; "wipe save" also clears purchases.
+
+**Verification:** Playwright: fresh game shows only the four starters and 4–9 locked (alert text/price); unowned pets frozen, not fed, not takeable; every price against the spec; can't buy below price, can't rebuy, can't buy a pet before its region; Region 4/5/9 purchases bring their starter pet(s); bees cost 30 and are refused at 29; Miss Glider needs buying before she can be taken; save→reload keeps purchases and resumes in a bought region; an unowned saved region falls back to Region 1; three old-format saves (jungle-unlocked / regions 4–6 only / nothing) migrate as described with coins and levels intact; Codex cards; earlier glider/buff regression tests still pass. **Not tested:** Android WebView, and a very long shop list on a small phone beyond the 390×844 screenshot.
+
+---
 
 ### 2026-09-20 (1) — New region: Region 9 (Bedroom) + New pets: Sugar Glider & Miss Glider (Take/Drop, stamina)
 

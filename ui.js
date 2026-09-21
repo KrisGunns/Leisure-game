@@ -463,7 +463,7 @@ function updateUI() {
         // Region 2 has two elephants, and either can start the tag game — check them all.
         let elephantPlaying = false;
         if (typeof petsByRegion !== 'undefined' && petsByRegion && Array.isArray(petsByRegion[2])) {
-            elephantPlaying = petsByRegion[2].some(p => p.type === 'elephant' && p.state &&
+            elephantPlaying = petsByRegion[2].some(p => p.type === 'elephant' && isPetAvailable(p) && p.state &&
                 (p.state.startsWith('playing') || p.state === 'playing_wait_for_move'));
         }
 
@@ -474,7 +474,7 @@ function updateUI() {
         if (typeof currentRegion !== 'undefined' && currentRegion === 1 &&
             typeof petsByRegion !== 'undefined' && petsByRegion && petsByRegion[1]) {
             petsByRegion[1].forEach(pet => {
-                if (pet.type === 'cat' && pet.state === 'schrodinger') {
+                if (pet.type === 'cat' && isPetAvailable(pet) && pet.state === 'schrodinger') {
                     let dx = (pet.x + pet.size / 2) - (player.x + player.size / 2);
                     let dy = (pet.y + pet.size / 2) - (player.y + player.size / 2);
                     let dist = Math.sqrt(dx * dx + dy * dy);
@@ -996,10 +996,15 @@ function updateCodexData() {
 
     document.getElementById('renameBoxChicken').style.display = chicken.level >= 2 ? 'block' : 'none';
 
-    // Region 4-6 unlock condition: every pet across Regions 1-3 at Lv2+ — see
-    // areRegions1to3Tamed() in world.js (single source of truth, also used by
-    // main.js and input.js).
-    let region4Unlocked = areRegions1to3Tamed();
+    // Regions 4-9 are unlocked by buying them in the shop — see isRegionUnlocked() in
+    // world.js (single source of truth, also used by main.js and input.js). Each region's
+    // pets are hidden behind a "LOCKED" card until then.
+    let region4Unlocked = isRegionUnlocked(4);
+    let region5Unlocked = isRegionUnlocked(5);
+    let region6Unlocked = isRegionUnlocked(6);
+    let region7Unlocked = isRegionUnlocked(7);
+    let region8Unlocked = isRegionUnlocked(8);
+    let region9Unlocked = isRegionUnlocked(9);
 
     // 2. FIXED: Re-render the mini pet canvas *only* if unlocked, otherwise pass a dummy locked object
     if (!region4Unlocked) {
@@ -1036,7 +1041,7 @@ function updateCodexData() {
     ].forEach(slot => {
         if (!slot.bear) return;
 
-        if (!region4Unlocked) {
+        if (!region5Unlocked) {
             // 1. Forces the mini-canvas renderer to draw a hidden black card profile with a question mark
             renderMiniPet({ type: 'bear', level: 1, isLocked: true }, slot.viewId);
 
@@ -1062,11 +1067,10 @@ function updateCodexData() {
             `;
         }
         let renameEl = document.getElementById(slot.renameId);
-        if (renameEl) renameEl.style.display = (region4Unlocked && slot.bear.level >= 2) ? 'block' : 'none';
+        if (renameEl) renameEl.style.display = (region5Unlocked && slot.bear.level >= 2) ? 'block' : 'none';
     });
 
-    // Region 6 pigs — gated behind the same region4Unlocked lock as bee/bear, since
-    // Region 6 is >= 4 and follows the same Regions 1-3 taming requirement.
+    // Region 6 pigs — gated behind region6Unlocked (Region 6 has to be bought in the shop).
     // Gracefully no-ops (via renderMiniPet's own `if (!miniCanvas) return;` and the
     // `document.getElementById(...)` calls below) until the corresponding elements
     // exist in index.html — see the HTML snippet for viewPig1/viewPig2 etc.
@@ -1078,7 +1082,7 @@ function updateCodexData() {
     ].forEach(slot => {
         if (!slot.pig) return;
 
-        if (!region4Unlocked) {
+        if (!region6Unlocked) {
             renderMiniPet({ type: 'pig', level: 1, isLocked: true }, slot.viewId);
             let infoEl = document.getElementById(slot.infoId);
             if (infoEl) infoEl.innerHTML = `
@@ -1099,17 +1103,13 @@ function updateCodexData() {
             `;
         }
         let renameEl = document.getElementById(slot.renameId);
-        if (renameEl) renameEl.style.display = (region4Unlocked && slot.pig.level >= 2) ? 'block' : 'none';
+        if (renameEl) renameEl.style.display = (region6Unlocked && slot.pig.level >= 2) ? 'block' : 'none';
     });
 
-    // Region 7 panda AND Region 8 monkeys — both gated behind the same stricter unlock
-    // condition: pets in Regions 1-3 at Lv10+ and pets in Regions 4-6 at Lv5+ — see
-    // isJungleTierUnlocked() in world.js (single source of truth, also used by main.js
-    // and input.js).
-    let jungleTierUnlocked = isJungleTierUnlocked();
+    // Region 7 panda, Region 8 monkeys and Region 9 gliders — each behind its own purchase.
 
     if (panda) {
-        if (!jungleTierUnlocked) {
+        if (!region7Unlocked) {
             renderMiniPet({ type: 'panda', level: 1, isLocked: true }, 'viewPanda');
             document.getElementById('infoPanda').innerHTML = `
                 <strong>???</strong><br>
@@ -1127,10 +1127,10 @@ function updateCodexData() {
                 Next Req: ${panda.level < 20 ? '🍪' + pandaReq.food + ' 💧' + pandaReq.water : 'MAX'}
             `;
         }
-        document.getElementById('renameBoxPanda').style.display = (jungleTierUnlocked && panda.level >= 2) ? 'block' : 'none';
+        document.getElementById('renameBoxPanda').style.display = (region7Unlocked && panda.level >= 2) ? 'block' : 'none';
     }
 
-    // Region 8 monkeys — same jungleTierUnlocked gate as the panda, same "single
+    // Region 8 monkeys — gated by region8Unlocked, same "single
     // resource" Codex format as the bears (bananas instead of food/water).
     const monkey1 = petsByRegion[8] ? petsByRegion[8][0] : null;
     const monkey2 = petsByRegion[8] ? petsByRegion[8][1] : null;
@@ -1140,7 +1140,7 @@ function updateCodexData() {
     ].forEach(slot => {
         if (!slot.monkey) return;
 
-        if (!jungleTierUnlocked) {
+        if (!region8Unlocked) {
             renderMiniPet({ type: 'monkey', level: 1, isLocked: true }, slot.viewId);
             let infoEl = document.getElementById(slot.infoId);
             if (infoEl) infoEl.innerHTML = `
@@ -1161,10 +1161,10 @@ function updateCodexData() {
             `;
         }
         let renameEl = document.getElementById(slot.renameId);
-        if (renameEl) renameEl.style.display = (jungleTierUnlocked && slot.monkey.level >= 2) ? 'block' : 'none';
+        if (renameEl) renameEl.style.display = (region8Unlocked && slot.monkey.level >= 2) ? 'block' : 'none';
     });
 
-    // Region 9 sugar gliders — same jungleTierUnlocked gate as the panda / monkeys. Unlike every
+    // Region 9 sugar gliders — gated by region9Unlocked. Unlike every
     // other pet they are tamed from level 1, so there's no WILD state: once Region 9 is
     // unlocked the card shows the real name, TAMED, and its three-resource requirement
     // (honey + bananas + water) plus its stamina. They live in gliderPets, not petsByRegion.
@@ -1174,7 +1174,7 @@ function updateCodexData() {
         ].forEach(slot => {
             if (!slot.glider) return;
 
-            if (!jungleTierUnlocked) {
+            if (!region9Unlocked) {
                 renderMiniPet({ type: 'glider', level: 1, isLocked: true }, slot.viewId);
                 let infoEl = document.getElementById(slot.infoId);
                 if (infoEl) infoEl.innerHTML = `
@@ -1196,9 +1196,36 @@ function updateCodexData() {
                 `;
             }
             let renameEl = document.getElementById(slot.renameId);
-            if (renameEl) renameEl.style.display = jungleTierUnlocked ? 'block' : 'none';
+            if (renameEl) renameEl.style.display = region9Unlocked ? 'block' : 'none';
         });
     }
+
+    // Pets sold separately in the shop (they carry a `shopId` — see world.js). If the pet's region
+    // is open but the pet itself hasn't been bought, its card stays a mystery card that says
+    // where to get it, and it can't be renamed. (When the whole region is still locked, the blocks
+    // above already show the plain "LOCKED" card, so those are left alone.) Runs last so it
+    // overrides whatever the per-pet blocks above rendered.
+    [ { id: 'pet_cat',         type: 'cat',      region: 1, view: 'viewCat',      info: 'infoCat',      rename: 'renameBoxCat' },
+      { id: 'pet_bowElephant', type: 'elephant', region: 2, view: 'viewElephant2', info: 'infoElephant2', rename: 'renameBoxElephant2', bow: '#ffffff' },
+      { id: 'pet_bird',        type: 'bird',     region: 3, view: 'viewBird',     info: 'infoBird',     rename: 'renameBoxBird' },
+      { id: 'pet_bowBear',     type: 'bear',     region: 5, view: 'viewBear2',    info: 'infoBear2',    rename: 'renameBoxBear2' },
+      { id: 'pet_mudPig',      type: 'pig',      region: 6, view: 'viewPig2',     info: 'infoPig2',     rename: 'renameBoxPig2' },
+      { id: 'pet_bowMonkey',   type: 'monkey',   region: 8, view: 'viewMonkey2',  info: 'infoMonkey2',  rename: 'renameBoxMonkey2' },
+      { id: 'pet_missGlider',  type: 'glider',   region: 9, view: 'viewGlider2',  info: 'infoGlider2',  rename: 'renameBoxGlider2' }
+    ].forEach(slot => {
+        if (isUnlockOwned(slot.id) || !isRegionUnlocked(slot.region)) return;
+        let u = getUnlockable(slot.id);
+        renderMiniPet({ type: slot.type, level: 1, isLocked: true }, slot.view);
+        let infoEl = document.getElementById(slot.info);
+        if (infoEl) infoEl.innerHTML = `
+            <strong>???</strong><br>
+            Status: <span class="codexWild">LOCKED</span><br>
+            Level: ?/20<br>
+            🛒 In the Shop${u ? ': 🪙' + u.cost : ''}
+        `;
+        let renameEl = document.getElementById(slot.rename);
+        if (renameEl) renameEl.style.display = 'none';
+    });
 }
 
 const codexOverlay = document.getElementById('codexOverlay');
@@ -1336,9 +1363,10 @@ if (btnRenameCharacter && characterNameInput) {
 }
 
 // ------------------------------------------------------------
-// SHOP — opened from the MENU overlay (🛒 SHOP). Two tabs: Buy (SHOP_ITEMS in state.js,
-// timed 3-minute buffs) and Sell (SELL_ITEMS in state.js: eggs and fish from the
-// bag). Rows are built from those data tables, so new items need no changes here.
+// SHOP — opened from the MENU overlay (🛒 SHOP). Three tabs: Buy (SHOP_ITEMS in state.js,
+// timed 3-minute buffs), Sell (SELL_ITEMS in state.js: eggs and fish from the bag) and
+// Unlockables (UNLOCKABLES in state.js: every region and shop-only pet, with an "Owned"
+// state once bought). Rows are built from those data tables, so new items need no changes here.
 // ------------------------------------------------------------
 const shopOverlay = document.getElementById('shopOverlay');
 const openShopBtn = document.getElementById('openShopBtn');
@@ -1347,6 +1375,7 @@ const shopContent = document.getElementById('shopContent');
 const shopGoldValue = document.getElementById('shopGoldValue');
 const shopTabBuy = document.getElementById('shopTabBuy');
 const shopTabSell = document.getElementById('shopTabSell');
+const shopTabUnlockables = document.getElementById('shopTabUnlockables');
 
 let shopTab = 'buy';
 let shopRenderedSignature = '';
@@ -1359,8 +1388,11 @@ function getShopSignature() {
     // Buff *active/inactive* is part of the signature, but not the seconds remaining —
     // the countdown text is updated in place by updateShopTimers() so the buttons aren't
     // rebuilt every second.
+    // Which unlockables are owned is part of the signature so the Unlockables tab flips
+    // to "Owned" as soon as something is bought.
     return [shopTab, inventory.coins, inventory.eggs, inventory.fish,
-            isShopBuffActive('cake'), isShopBuffActive('wisdomPotion')].join('|');
+            isShopBuffActive('cake'), isShopBuffActive('wisdomPotion'),
+            Object.keys(unlockedIds).sort().join(',')].join('|');
 }
 
 function refreshShopIfChanged() {
@@ -1396,6 +1428,13 @@ function sellShopItem(item, amount) {
     saveGameProgress();
     renderShop();
     updateUI();
+}
+
+function buyShopUnlockable(u) {
+    if (!buyUnlockable(u.id)) return;
+    renderShop();
+    updateUI();
+    if (typeof updateCodexData === 'function') updateCodexData();
 }
 
 function makeShopButton(label, extraClass, disabled, onClick) {
@@ -1456,6 +1495,7 @@ function renderShop() {
     if (shopGoldValue) shopGoldValue.textContent = inventory.coins;
     if (shopTabBuy) shopTabBuy.classList.toggle('shopTabActive', shopTab === 'buy');
     if (shopTabSell) shopTabSell.classList.toggle('shopTabActive', shopTab === 'sell');
+    if (shopTabUnlockables) shopTabUnlockables.classList.toggle('shopTabActive', shopTab === 'unlockables');
 
     while (shopContent.firstChild) shopContent.removeChild(shopContent.firstChild);
 
@@ -1471,6 +1511,36 @@ function renderShop() {
             let desc = `${item.desc} Lasts ${Math.round(item.duration / 60)} minutes.`;
             shopContent.appendChild(makeShopRow(item.icon, item.name, desc, meta, [btn], active ? item.id : null));
         });
+    } else if (shopTab === 'unlockables') {
+        // Grouped by region. Regions 1-3 are open from the start, so they only get a heading
+        // (naming the pets they start with) and the pets sold for them; Regions 4-9 are
+        // themselves for sale, followed by any extra pet sold for that region.
+        const STARTERS = { 1: 'Dog', 2: 'Elephant', 3: 'Squirrel & Chicken' };
+        for (let r = 1; r <= 9; r++) {
+            if (r <= 3) {
+                let heading = document.createElement('div');
+                heading.className = 'shopSectionHeading';
+                heading.textContent = `Region ${r} · starts with ${STARTERS[r]}`;
+                shopContent.appendChild(heading);
+            }
+            UNLOCKABLES.filter(u => u.region === r).forEach(u => {
+                let owned = isUnlockOwned(u.id);
+                let reason = getUnlockableBlockReason(u);
+                let shortBy = u.cost - inventory.coins;
+                let meta;
+                if (owned) meta = '✅ Owned';
+                else if (reason === 'region') meta = `🔒 Unlock Region ${u.region} first · 🪙 ${u.cost}`;
+                else meta = shortBy > 0 ? `🪙 ${u.cost} (need ${shortBy} more)` : `🪙 ${u.cost}`;
+
+                let btn = owned
+                    ? makeShopButton('Owned', 'shopActionBtnActive', true, null)
+                    : makeShopButton('Buy', '', reason !== null, () => buyShopUnlockable(u));
+                let row = makeShopRow(u.icon, u.name, u.desc, meta, [btn], null);
+                if (owned) row.classList.add('shopRowOwned');
+                if (u.kind === 'pet' && r > 3) row.classList.add('shopRowSub');
+                shopContent.appendChild(row);
+            });
+        }
     } else {
         SELL_ITEMS.forEach(item => {
             let owned = inventory[item.key] || 0;
@@ -1506,6 +1576,7 @@ if (shopClose) {
 }
 if (shopTabBuy) shopTabBuy.addEventListener('click', () => { shopTab = 'buy'; renderShop(); });
 if (shopTabSell) shopTabSell.addEventListener('click', () => { shopTab = 'sell'; renderShop(); });
+if (shopTabUnlockables) shopTabUnlockables.addEventListener('click', () => { shopTab = 'unlockables'; renderShop(); });
 
 // ------------------------------------------------------------
 // PERK TREE — opened from the MENU overlay (🌳 PERK TREE). A skill-tree screen built from
@@ -1786,6 +1857,8 @@ if (btnWipeSave) {
                 }
             }
 
+            Object.keys(unlockedIds).forEach(id => { delete unlockedIds[id]; });
+
             if (typeof gliderPets !== 'undefined') {
                 gliderPets.forEach(g => {
                     g.level = 1;
@@ -1815,6 +1888,7 @@ if (btnInstaTame) {
         let activePets = petsByRegion[currentRegion];
         if (Array.isArray(activePets)) {
             activePets.forEach(pet => {
+                if (!isPetAvailable(pet)) return; // not bought yet
                 // FIXED: Pushes your pets straight to your new maximum Level 20 cap!
                 pet.level = 20; 
                 pet.foodEaten = 0;
@@ -1828,7 +1902,7 @@ if (btnInstaTame) {
             // one being carried. (Stamina is left alone; it's only ever clamped to the new max.)
             if (typeof gliderPets !== 'undefined') {
                 gliderPets.forEach(g => {
-                    if (g.held || g.regionNow === currentRegion) {
+                    if (isPetAvailable(g) && (g.held || g.regionNow === currentRegion)) {
                         g.level = 20;
                         g.honeyEaten = 0;
                         g.bananaEaten = 0;
@@ -1949,6 +2023,7 @@ if (bagClose) {
 }
 
 if (spawnBeeBtn) {
+    spawnBeeBtn.textContent = `🐝 Buy Bee (${BEE_COST}🪙)`;
     const handlePurchaseBee = (e) => {
         if (e) e.preventDefault();
         
@@ -1963,13 +2038,13 @@ if (spawnBeeBtn) {
         }
 
         // 3. Financial Ledger Transaction Check
-        if (inventory.coins < 10) {
-            alert(`🪙 Insufficient Coins! Spawning a new bee costs 10 Coins. (You have: ${inventory.coins})`);
+        if (inventory.coins < BEE_COST) {
+            alert(`🪙 Insufficient Coins! Buying a new bee costs ${BEE_COST} Coins. (You have: ${inventory.coins})`);
             return;
         }
 
         // 4. Process Checkout Deductions
-        inventory.coins -= 10;
+        inventory.coins -= BEE_COST;
         updateUI();
 
         // 5. Extract Base Name Continuity Parameters
