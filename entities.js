@@ -151,6 +151,126 @@ function drawElephantBow(c, x, y, color) {
     c.restore();
 }
 
+// The sugar glider model, front-facing with its gliding membrane spread. Like
+// drawElephantBow above, it takes a drawing context + the pet's top-left origin so ONE
+// implementation serves both the in-world model (Pet.draw) and the codex portrait
+// (renderMiniPet in ui.js), which keeps its own separate copy of every other model. Fits the
+// pet's 36x36 box (the tail curls a couple of px below it).
+//   opts.bowColor  — draws a small bow on the head (Miss Glider's red one)
+//   opts.sleeping  — closed eyes, used while resting inside a tree
+function drawGliderModel(c, x, y, opts) {
+    opts = opts || {};
+    c.save();
+    c.lineJoin = 'round';
+    c.lineCap = 'round';
+
+    // Tail — bushy, curling out from behind the body and round to the right, dark tip.
+    c.strokeStyle = '#7d848b';
+    c.lineWidth = 6;
+    c.beginPath();
+    c.moveTo(x + 21, y + 29);
+    c.quadraticCurveTo(x + 35, y + 40, x + 36, y + 27);
+    c.stroke();
+    c.strokeStyle = '#3b3f44';
+    c.lineWidth = 6;
+    c.beginPath();
+    c.moveTo(x + 35.6, y + 31);
+    c.lineTo(x + 36, y + 27);
+    c.stroke();
+
+    // Gliding membrane (patagium) — the skin flap stretched between the front and hind
+    // legs, with a scalloped lower edge. This is what reads as "sugar glider".
+    c.fillStyle = '#8e959c';
+    c.strokeStyle = '#c4cad0';
+    c.lineWidth = 1.2;
+    c.beginPath();
+    c.moveTo(x + 3, y + 13);
+    c.quadraticCurveTo(x + 0, y + 24, x + 6, y + 31);
+    c.quadraticCurveTo(x + 18, y + 26, x + 30, y + 31);
+    c.quadraticCurveTo(x + 36, y + 24, x + 33, y + 13);
+    c.lineTo(x + 26, y + 17);
+    c.lineTo(x + 10, y + 17);
+    c.closePath();
+    c.fill();
+    c.stroke();
+
+    // Cream belly.
+    c.fillStyle = '#f3e9d2';
+    c.beginPath();
+    c.ellipse(x + 18, y + 22, 7.5, 9, 0, 0, Math.PI * 2);
+    c.fill();
+
+    // Front paws (at the membrane's wrists) and hind feet.
+    c.fillStyle = '#e2b7a5';
+    c.beginPath(); c.arc(x + 3.5, y + 13.5, 2.2, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(x + 32.5, y + 13.5, 2.2, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(x + 7.5, y + 31, 3, 1.8, 0, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(x + 28.5, y + 31, 3, 1.8, 0, 0, Math.PI * 2); c.fill();
+
+    // Big round ears (grey outside, pink inside).
+    c.fillStyle = '#8a9198';
+    c.beginPath(); c.arc(x + 10.5, y + 5, 4.6, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(x + 25.5, y + 5, 4.6, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#e8a5b0';
+    c.beginPath(); c.arc(x + 10.5, y + 5, 2.6, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(x + 25.5, y + 5, 2.6, 0, Math.PI * 2); c.fill();
+
+    // Head, with a lighter muzzle.
+    c.fillStyle = '#9aa1a8';
+    c.beginPath(); c.arc(x + 18, y + 11.5, 8.5, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#e9e2d3';
+    c.beginPath(); c.ellipse(x + 18, y + 15.2, 5, 3.6, 0, 0, Math.PI * 2); c.fill();
+
+    // The dark stripe down the middle of the forehead — the other giveaway.
+    c.fillStyle = '#3a3d42';
+    c.beginPath();
+    c.moveTo(x + 16.8, y + 3.4);
+    c.lineTo(x + 19.2, y + 3.4);
+    c.lineTo(x + 18.7, y + 11);
+    c.lineTo(x + 17.3, y + 11);
+    c.closePath();
+    c.fill();
+
+    // Huge dark eyes (or closed, when asleep).
+    if (opts.sleeping) {
+        c.strokeStyle = '#1b1b1b';
+        c.lineWidth = 1.5;
+        c.beginPath(); c.arc(x + 14, y + 10.5, 2.3, Math.PI * 0.15, Math.PI * 0.85); c.stroke();
+        c.beginPath(); c.arc(x + 22, y + 10.5, 2.3, Math.PI * 0.15, Math.PI * 0.85); c.stroke();
+    } else {
+        c.fillStyle = '#111111';
+        c.beginPath(); c.ellipse(x + 14, y + 10.8, 2.6, 3.3, 0, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.ellipse(x + 22, y + 10.8, 2.6, 3.3, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#ffffff';
+        c.beginPath(); c.arc(x + 13.3, y + 9.6, 0.9, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.arc(x + 21.3, y + 9.6, 0.9, 0, Math.PI * 2); c.fill();
+    }
+
+    // Little pink nose.
+    c.fillStyle = '#e58f9d';
+    c.beginPath(); c.arc(x + 18, y + 14.8, 1.4, 0, Math.PI * 2); c.fill();
+
+    // Miss Glider's small red bow, sat on top of the head between the ears.
+    if (opts.bowColor) {
+        c.fillStyle = opts.bowColor;
+        c.beginPath();
+        c.moveTo(x + 18, y + 3);
+        c.lineTo(x + 12.5, y - 0.5);
+        c.lineTo(x + 12.5, y + 6);
+        c.closePath();
+        c.fill();
+        c.beginPath();
+        c.moveTo(x + 18, y + 3);
+        c.lineTo(x + 23.5, y - 0.5);
+        c.lineTo(x + 23.5, y + 6);
+        c.closePath();
+        c.fill();
+        c.fillStyle = '#a5141c';   // knot, a shade darker than the loops
+        c.beginPath(); c.arc(x + 18, y + 3, 1.7, 0, Math.PI * 2); c.fill();
+    }
+    c.restore();
+}
+
 class Pet {
     constructor(type, label, color) {
         this.type = type;
@@ -211,6 +331,24 @@ class Pet {
         // stateTimer (already declared above for other pets) is reused for the
         // 'full'/'abandoned' durations.
         this.bambooChoicePending = false;
+
+        // Sugar-glider-only fields, same reasoning (see updateGlider() below).
+        //   honeyEaten/bananaEaten (+ the existing waterEaten) — progress toward the next level,
+        //     since a glider is fed three different resources.
+        //   stamina — current stamina; the max comes from getGliderMaxStamina(level).
+        //   regionNow — the region the glider is currently in (gliders are carried around, so
+        //     this is NOT fixed like homeRegion). held — true while the player is carrying it.
+        //   staminaDrainTimer / restTimer — seconds toward the next -1 / +1 stamina tick.
+        //   restTree — index of the Region 9 tree it's heading to / resting in (-1 = none).
+        //   bowColor (shared with monkey/elephant) draws Miss Glider's red bow.
+        this.honeyEaten = 0;
+        this.bananaEaten = 0;
+        this.stamina = getGliderMaxStamina(1);
+        this.regionNow = 9;
+        this.held = false;
+        this.staminaDrainTimer = 0;
+        this.restTimer = 0;
+        this.restTree = -1;
     }
 
     // Movement speed actually used by the AI in update(). `this.speed` stays the pet's raw
@@ -239,6 +377,207 @@ class Pet {
         else this.fishingTimer = Math.random() * 20 + 70;
     }
 
+    // ------------------------------------------------------------------
+    // SUGAR GLIDER AI (Region 9's two pets). Gliders are tamed from level 1 and are carried
+    // between regions by the player (Take / Drop — see world.js), so unlike every other pet
+    // this doesn't go through the generic level-2 / wander / forage path below. What a glider
+    // does depends on the region it was dropped in (this.regionNow), and only while it has
+    // stamina:
+    //   Regions 1,2,3,6,7  forages food + water (1 stamina per object picked up)
+    //   Regions 4,5,8      passive buff (bees / bears / monkeys — applied in their own AI),
+    //                      costs 1 stamina every 2 seconds
+    //   Region 9           when stamina isn't full it climbs into a tree opening and rests
+    //                      (+1 stamina every 2 seconds); when full it roams, waiting to be taken
+    // Timers use the real wall clock (gliderRealDt, world.js) — "every 2 seconds" means 2 real
+    // seconds, the same reasoning as the shop buffs (see tickShopBuffs in state.js).
+    // ------------------------------------------------------------------
+    gliderRoam(dt) {
+        if (this.state === 'idle') {
+            this.stateTimer -= dt;
+            if (this.stateTimer <= 0) {
+                this.state = 'wander';
+                this.pickNewWanderTarget();
+            }
+            return;
+        }
+        if (this.state !== 'wander') {
+            this.state = 'wander';
+            this.pickNewWanderTarget();
+        }
+        let dx = this.targetX - this.x;
+        let dy = this.targetY - this.y;
+        let dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > 5) {
+            this.x += (dx / dist) * this.effectiveSpeed * dt;
+            this.y += (dy / dist) * this.effectiveSpeed * dt;
+        } else {
+            this.state = 'idle';
+            this.stateTimer = Math.random() * 3 + 1;
+        }
+    }
+
+    updateGlider(dt, regionFoods, regionWaters, petFoodWaterBonus) {
+        if (this.held) return; // a carried glider isn't in the update loop at all; belt and braces
+
+        const region = this.regionNow;
+        const maxStamina = getGliderMaxStamina(this.level);
+        if (!(this.stamina >= 0)) this.stamina = 0;
+        if (this.stamina > maxStamina) this.stamina = maxStamina;
+        const clock = gliderRealDt;
+
+        // ---------------- Region 9: rest to recharge, otherwise roam ----------------
+        if (region === 9) {
+            this.staminaDrainTimer = 0;
+            const trees = getBedroomTrees();
+
+            if (this.state === 'resting') {
+                const tree = trees[this.restTree];
+                if (!tree) {
+                    this.restTree = -1;
+                    this.state = 'idle';
+                    this.stateTimer = 0.5;
+                    return;
+                }
+                // Tucked inside the opening (recomputed each frame so it follows the tree if
+                // the canvas is resized).
+                this.x = tree.hollowX - this.size / 2;
+                this.y = tree.hollowY - this.size / 2;
+
+                this.restTimer += clock;
+                while (this.restTimer >= GLIDER_REST_SECONDS && this.stamina < maxStamina) {
+                    this.restTimer -= GLIDER_REST_SECONDS;
+                    this.stamina += 1;
+                }
+                if (this.stamina >= maxStamina) {
+                    // Fully rested — climb out at the foot of the tree and wander off,
+                    // waiting to be picked up.
+                    this.stamina = maxStamina;
+                    this.restTimer = 0;
+                    this.x = tree.x - this.size / 2;
+                    this.y = tree.baseY - this.size / 2 + 10;
+                    this.restTree = -1;
+                    this.state = 'idle';
+                    this.stateTimer = 1 + Math.random() * 2;
+                    this.pickNewWanderTarget();
+                }
+                return;
+            }
+
+            if (this.stamina < maxStamina) {
+                if (this.state !== 'to_rest') {
+                    const idx = findFreeBedroomTree(this);
+                    if (idx >= 0) {
+                        this.restTree = idx;
+                        this.state = 'to_rest';
+                    }
+                    // No free opening (both taken): just keep roaming until one is free.
+                }
+                if (this.state === 'to_rest') {
+                    const tree = trees[this.restTree];
+                    if (tree) {
+                        let dx = tree.hollowX - (this.x + this.size / 2);
+                        let dy = tree.hollowY - (this.y + this.size / 2);
+                        let dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist > 6) {
+                            this.x += (dx / dist) * this.effectiveSpeed * 1.2 * dt;
+                            this.y += (dy / dist) * this.effectiveSpeed * 1.2 * dt;
+                        } else {
+                            this.state = 'resting';
+                            this.restTimer = 0;
+                            this.x = tree.hollowX - this.size / 2;
+                            this.y = tree.hollowY - this.size / 2;
+                        }
+                        return;
+                    }
+                    this.restTree = -1;
+                    this.state = 'idle';
+                    this.stateTimer = 0.5;
+                }
+            } else if (this.state === 'to_rest') {
+                // Got topped up some other way on the way there — never mind.
+                this.restTree = -1;
+                this.state = 'wander';
+                this.pickNewWanderTarget();
+            }
+
+            this.gliderRoam(dt);
+            return;
+        }
+
+        // ---------------- Everywhere else ----------------
+        this.restTimer = 0;
+
+        // Regions 4, 5, 8: stamina ticks down 1 per 2 seconds spent there (strict 2:1),
+        // for as long as there's any left. The benefit itself is applied by the bees / bears /
+        // monkeys' own code via getGliderBuff() (world.js), which also requires stamina > 0.
+        if (GLIDER_DRAIN_REGIONS.indexOf(region) !== -1 && this.stamina > 0) {
+            this.staminaDrainTimer += clock;
+            while (this.staminaDrainTimer >= GLIDER_DRAIN_SECONDS && this.stamina > 0) {
+                this.staminaDrainTimer -= GLIDER_DRAIN_SECONDS;
+                this.stamina -= 1;
+            }
+            if (this.stamina <= 0) this.staminaDrainTimer = 0;
+        } else {
+            this.staminaDrainTimer = 0;
+        }
+
+        // Regions 1, 2, 3, 6, 7: forage food & water — only while there's stamina left.
+        if (this.stamina > 0 && GLIDER_FORAGE_REGIONS.indexOf(region) !== -1) {
+            if (this.state === 'idle') {
+                this.stateTimer -= dt;
+                if (this.stateTimer <= 0) {
+                    this.state = 'wander';
+                    this.pickNewWanderTarget();
+                }
+                return;
+            }
+
+            let targetItem = null;
+            let minDist = 250;
+            regionFoods.forEach(f => {
+                let d = Math.sqrt((f.x - this.x) ** 2 + (f.y - this.y) ** 2);
+                if (d < minDist) { minDist = d; targetItem = { item: f, type: 'food', list: regionFoods }; }
+            });
+            regionWaters.forEach(w => {
+                let d = Math.sqrt((w.x - this.x) ** 2 + (w.y - this.y) ** 2);
+                if (d < minDist) { minDist = d; targetItem = { item: w, type: 'water', list: regionWaters }; }
+            });
+
+            if (targetItem) {
+                this.state = 'forage';
+                this.targetX = targetItem.item.x - this.size / 2;
+                this.targetY = targetItem.item.y - this.size / 2;
+                let dx = this.targetX - this.x;
+                let dy = this.targetY - this.y;
+                let dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < 15) {
+                    let idx = targetItem.list.indexOf(targetItem.item);
+                    if (idx > -1) {
+                        targetItem.list.splice(idx, 1);
+                        let y = getForageYield('glider', this.level);
+                        if (targetItem.type === 'food') inventory.food += Math.round(y.food * petFoodWaterBonus);
+                        else inventory.water += Math.round(y.water * petFoodWaterBonus);
+                        // Strict 1:1 — one stamina per OBJECT picked up, no matter how many
+                        // food/water that object was worth (level yield, perks, etc.).
+                        this.stamina -= 1;
+                        updateUI();
+                    }
+                    this.state = 'idle';
+                    // Cake buff: shorter breather between forages, like every other forager.
+                    this.stateTimer = (Math.random() * 2 + 1) / getPetForageMultiplier();
+                    return;
+                }
+                this.x += (dx / dist) * this.effectiveSpeed * dt;
+                this.y += (dy / dist) * this.effectiveSpeed * dt;
+                return;
+            }
+        }
+
+        // Nothing to do (buff regions, out of stamina, or no items nearby): just roam.
+        this.gliderRoam(dt);
+    }
+
     update(dt, regionFoods, regionWaters, activeFlowers = []) {
 
         // Character perk bonuses — from whichever perks the player has unlocked in the
@@ -250,6 +589,12 @@ class Pet {
         let petFishBonus = charBonuses.petFish;
         let petBananaBonus = charBonuses.petBanana;
         let coinBonus = charBonuses.coin;
+
+        // Sugar gliders have their own AI (tamed from level 1, carried between regions).
+        if (this.type === 'glider') {
+            this.updateGlider(dt, regionFoods, regionWaters, petFoodWaterBonus);
+            return;
+        }
 
         // --- BEE AI SYSTEM MATRIX ---
         if (this.type === 'bee') {
@@ -353,7 +698,13 @@ class Pet {
                     // Deposits into the hive's own stored pool now, not straight into the
                     // player's inventory — the player collects it manually with GIVE
                     // while standing near the hive (see executeContinuousFeed(), input.js).
-                    region4Hive.honey += Math.round(dropCount * petHoneyBonus);
+                    let honeyDeposited = Math.round(dropCount * petHoneyBonus);
+                    // Sugar gliders dropped in Region 4 (with stamina) boost the bees' honey
+                    // yield by +50% each. roundStochastic() keeps the AVERAGE at exactly the
+                    // boost even at tiny loads (a plain round of 1 x 1.5 would always be 2).
+                    let gliderHoneyBuff = getGliderBuff(4);
+                    if (gliderHoneyBuff > 1) honeyDeposited = roundStochastic(honeyDeposited * gliderHoneyBuff);
+                    region4Hive.honey += honeyDeposited;
                     this.honeyCarried = 0;
                     updateUI();
                     saveGameProgress();
@@ -404,7 +755,8 @@ class Pet {
 
             if (this.state === 'fishing') {
                 // Cake buff: fishing is the bear's foraging, so it ticks down faster too.
-                this.fishingActionTimer -= dt * getPetForageMultiplier();
+                // Sugar gliders in Region 5 (with stamina) speed fishing up by 25% each.
+                this.fishingActionTimer -= dt * getPetForageMultiplier() * getGliderBuff(5);
                 
                 // Continuous Splash Generation Loop: Fires while the bear is actively fishing
                 if (this.fishingActionTimer > 0) {
@@ -480,7 +832,7 @@ class Pet {
             // Fishing itself doesn't start until Level 5 — below that the bear is tame
             // (Level 2+) and wanders normally, but never queues up a fishing trip.
             if (this.level >= 5) {
-                this.fishingTimer -= dt * getPetForageMultiplier(); // Cake buff
+                this.fishingTimer -= dt * getPetForageMultiplier() * getGliderBuff(5); // Cake buff + sugar gliders
                 if (this.fishingTimer <= 0) {
                     this.state = 'fishing_travel';
                     return;
@@ -943,7 +1295,8 @@ class Pet {
                             // here — the only bonus is the "Bananas!" perk. roundStochastic() makes the
                             // average equal base x bonus even at these tiny yields (with no perk, the
                             // bonus is 1.0, so the result is exactly the base yield).
-                            inventory.bananas += roundStochastic(y.food * petBananaBonus);
+                            // Sugar gliders in Region 8 (with stamina) add +50% each on top.
+                            inventory.bananas += roundStochastic(y.food * petBananaBonus * getGliderBuff(8));
 
                             // Level 20+: 5% chance per successful forage to swing from
                             // vine to vine around the region for 20s, paying out 5 coins
@@ -1451,6 +1804,34 @@ draw() {
                 ctx.fillText('😢', this.x + 18, this.y - 12);
                 ctx.textAlign = 'left';
             }
+        } else if (this.type === 'glider') {
+            const tree = (this.state === 'resting') ? getBedroomTrees()[this.restTree] : null;
+            if (tree) {
+                // Resting: tucked inside the tree's opening — only the sleeping face shows,
+                // clipped to the hollow's outline.
+                ctx.save();
+                ctx.beginPath();
+                ctx.ellipse(tree.hollowX, tree.hollowY, tree.hollowRX, tree.hollowRY, 0, 0, Math.PI * 2);
+                ctx.clip();
+                ctx.fillStyle = '#24160d';
+                ctx.fillRect(tree.hollowX - tree.hollowRX, tree.hollowY - tree.hollowRY, tree.hollowRX * 2, tree.hollowRY * 2);
+                ctx.translate(tree.hollowX, tree.hollowY + 4);
+                ctx.scale(0.62, 0.62);
+                drawGliderModel(ctx, -18, -18, { bowColor: this.bowColor, sleeping: true });
+                ctx.restore();
+                // Re-stroke the opening's rim over the sprite so it reads as "inside".
+                ctx.strokeStyle = '#6b4526';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.ellipse(tree.hollowX, tree.hollowY, tree.hollowRX, tree.hollowRY, 0, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('💤', tree.hollowX + tree.hollowRX + 6, tree.hollowY - tree.hollowRY + 4);
+                ctx.textAlign = 'left';
+            } else {
+                drawGliderModel(ctx, this.x, this.y, { bowColor: this.bowColor });
+            }
         }
 
         ctx.fillStyle = '#fff';
@@ -1464,9 +1845,16 @@ draw() {
         
         if (this.state === 'whistled') {
             text += ' [WHISTLED]';
-        } else if (this.level > 1 || this.type === 'bee' || this.type === 'bear') {
+        } else if (this.level > 1 || this.type === 'bee' || this.type === 'bear' || this.type === 'glider') {
             // FIXED: Checks if Elephant is in any of its custom chase sub-states, keeping tag as [PLAYING]
-            if (this.state.startsWith('playing') || this.state === 'playing_wait_for_move') {
+            if (this.type === 'glider' && this.state === 'to_rest') {
+                // Heading for a tree opening in Region 9 (the label becomes [RESTING] once inside).
+                text += ' [TO TREE]';
+            } else if (this.type === 'glider' && this.stamina <= 0 && this.regionNow !== 9 &&
+                       this.state !== 'held' && this.state !== 'resting') {
+                // Out of stamina away from Region 9: it does nothing until it's taken back to rest.
+                text += ' [TIRED]';
+            } else if (this.state.startsWith('playing') || this.state === 'playing_wait_for_move') {
                 text += ' [PLAYING]';
             } else if (this.type === 'bee' && (this.state === 'travel' || this.state === 'return_hive')) {
                 // Both legs of the bee's flower run (heading to a flower, or heading
@@ -1487,6 +1875,12 @@ draw() {
                 if (this.type === 'bee' || this.type === 'bear' || this.type === 'monkey') {
                     let totalReq = getLevelRequirement(this.type, this.level);
                     progressRatio = this.foodEaten / totalReq;
+            } else if (this.type === 'glider') {
+                // Three resources (honey + bananas + water), same "total eaten / total needed" idea.
+                let req = getLevelRequirement('glider', this.level);
+                let totalNeeded = req.honey + req.bananas + req.water;
+                let totalEaten = this.honeyEaten + this.bananaEaten + this.waterEaten;
+                progressRatio = totalNeeded > 0 ? (totalEaten / totalNeeded) : 0;
             } else {
                 // FIXED: Uses our new math engine function instead of looking for the deleted data array
                 let req = getLevelRequirement(this.type, this.level);
@@ -1512,6 +1906,32 @@ draw() {
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
             ctx.lineWidth = 1;
             ctx.strokeRect(barX, barY, barWidth, barHeight);
+        }
+
+        // Sugar glider stamina bar (+ number) under the model: teal while healthy, red when
+        // it's nearly out.
+        if (this.type === 'glider') {
+            let maxStamina = getGliderMaxStamina(this.level);
+            let ratio = maxStamina > 0 ? Math.min(1, Math.max(0, this.stamina / maxStamina)) : 0;
+            let sBarWidth = this.size + 8;
+            let sBarHeight = 5;
+            let sBarX = this.x + (this.size / 2) - (sBarWidth / 2);
+            let sBarY = this.y + this.size + 6;
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            ctx.fillRect(sBarX - 1, sBarY - 1, sBarWidth + 2, sBarHeight + 2);
+            ctx.fillStyle = ratio < 0.25 ? '#e74c3c' : '#1abc9c';
+            ctx.fillRect(sBarX, sBarY, sBarWidth * ratio, sBarHeight);
+
+            ctx.font = '9px monospace';
+            ctx.textAlign = 'center';
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+            let staminaText = `⚡${Math.floor(this.stamina)}/${maxStamina}`;
+            ctx.strokeText(staminaText, this.x + this.size / 2, sBarY + sBarHeight + 10);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(staminaText, this.x + this.size / 2, sBarY + sBarHeight + 10);
+            ctx.textAlign = 'left';
         }
 
         if (this.digParticles && this.digParticles.length > 0) {

@@ -24,6 +24,20 @@ function getLevelRequirement(type, currentLevel) {
     // Safety fallback: If currentLevel is accidentally passed as an object or undefined, default to 1
     let lvl = (typeof currentLevel === 'number') ? currentLevel : 1;
     
+    // Sugar gliders (Region 9) are the only pets fed THREE different resources: Base Exp is
+    // 40 honey + 40 bananas + 20 water at level 1, each scaled by the same Level ^ 1.2 curve
+    // as everything else. All three must be met to level up (like food AND water for the
+    // rest of the pets). Returns { honey, bananas, water } — see the glider branches in
+    // input.js (feeding), ui.js (codex) and entities.js (progress bar).
+    if (type === 'glider') {
+        const curve = Math.pow(lvl, 1.2);
+        return {
+            honey:   Math.floor(40 * curve),
+            bananas: Math.floor(40 * curve),
+            water:   Math.floor(20 * curve)
+        };
+    }
+
     // Base XP * (Level ^ 1.2) - Continuous scaling curve calculation matrix
     let reqValue = Math.floor(base * Math.pow(lvl, 1.2));
     
@@ -62,8 +76,24 @@ const FORAGE_TIERS = {
     chicken:  [ [1, 1, 1], [5, 2, 1], [10, 3, 1], [20, 4, 2] ],
     // Single-resource forager (bananas only, Region 8 never spawns water) — the water
     // slot is always 0 and unused, kept only for shape consistency with getForageYield().
-    monkey:   [ [1, 1, 0], [5, 2, 0], [10, 3, 0], [15, 4, 0], [20, 6, 0] ]
+    monkey:   [ [1, 1, 0], [5, 2, 0], [10, 3, 0], [15, 4, 0], [20, 6, 0] ],
+    // Sugar gliders (Region 9): +2/+2 base, then +3/+4/+5/+7 at Lv5/10/15/20 — food and water
+    // are always equal. Only used while a glider is dropped in a food/water region (1, 2, 3,
+    // 6, 7) with stamina left — see GLIDER_FORAGE_REGIONS in world.js.
+    glider:   [ [1, 2, 2], [5, 3, 3], [10, 4, 4], [15, 5, 5], [20, 7, 7] ]
 };
+
+// Sugar glider max stamina by level: [minLevel, maxStamina]. Same lookup idea as
+// FORAGE_TIERS — add/edit a row to retune, order doesn't matter.
+const GLIDER_STAMINA_TIERS = [ [1, 40], [5, 45], [10, 50], [15, 55], [20, 70] ];
+
+function getGliderMaxStamina(level) {
+    let best = GLIDER_STAMINA_TIERS[0];
+    for (let i = 0; i < GLIDER_STAMINA_TIERS.length; i++) {
+        if (level >= GLIDER_STAMINA_TIERS[i][0]) best = GLIDER_STAMINA_TIERS[i];
+    }
+    return best[1];
+}
 
 function getForageYield(type, level) {
     const tiers = FORAGE_TIERS[type];
@@ -476,6 +506,25 @@ function saveGameProgress() {
             };
         }
 
+        // Sugar gliders (Region 9) live in their own list, `gliderPets` (world.js), NOT in
+        // petsByRegion — they get carried between regions, and keeping them out of the
+        // per-region arrays means they can't skew the region-unlock checks, the bee cap or
+        // the positional save format above. Saved by index (0 = Sugar Glider, 1 = Miss Glider).
+        // Everything is persisted, including which region each one was dropped in and
+        // whether the player is currently carrying it.
+        if (typeof gliderPets !== 'undefined' && Array.isArray(gliderPets)) {
+            stateMatrix.gliderData = gliderPets.map(g => ({
+                label: g.label,
+                level: g.level,
+                honeyEaten: g.honeyEaten,
+                bananaEaten: g.bananaEaten,
+                waterEaten: g.waterEaten,
+                stamina: g.stamina,
+                region: g.regionNow,
+                held: !!g.held
+            }));
+        }
+
         stateMatrix.characterData = character;
 
         stateMatrix.shopBuffs = {
@@ -610,6 +659,51 @@ function loadGameProgress() {
             }
         }
         
+        // Sugar gliders. Saves from before Region 9 have no gliderData, in which case both
+        // gliders simply keep their defaults (Lv1, full stamina, resting place in Region 9).
+        // Every value is validated: a hand-edited/corrupt save can't produce a glider with
+        // NaN stamina, a level outside 1-20 or a region that doesn't exist.
+        if (Array.isArray(stateMatrix.gliderData) && typeof gliderPets !== 'undefined') {
+            let alreadyHolding = false;
+            stateMatrix.gliderData.forEach((saved, i) => {
+                const g = gliderPets[i];
+                if (!g || !saved || typeof saved !== 'object') return;
+
+                let lvl = Math.floor(Number(saved.level));
+                g.level = (isFinite(lvl) && lvl >= 1) ? Math.min(lvl, 20) : 1;
+                if (typeof saved.label === 'string' && saved.label.trim()) g.label = saved.label;
+                g.honeyEaten = Math.max(0, Math.floor(Number(saved.honeyEaten)) || 0);
+                g.bananaEaten = Math.max(0, Math.floor(Number(saved.bananaEaten)) || 0);
+                g.waterEaten = Math.max(0, Math.floor(Number(saved.waterEaten)) || 0);
+
+                const maxStamina = getGliderMaxStamina(g.level);
+                let st = Number(saved.stamina);
+                g.stamina = (saved.stamina !== undefined && saved.stamina !== null && isFinite(st))
+                    ? Math.min(maxStamina, Math.max(0, st)) : maxStamina;
+
+                let region = Math.floor(Number(saved.region));
+                g.regionNow = (isFinite(region) && region >= 1 && region <= 9) ? region : 9;
+
+                // Timers/reservations are never resumed — same simplification as every other
+                // pet's transient state (the bird's excursion, mini-games, etc.).
+                g.staminaDrainTimer = 0;
+                g.restTimer = 0;
+                g.restTree = -1;
+                g.pickNewWanderTarget();
+
+                if (saved.held && !alreadyHolding) {
+                    // Still in the player's arms — one at a time.
+                    alreadyHolding = true;
+                    g.held = true;
+                    g.state = 'held';
+                } else {
+                    g.held = false;
+                    g.state = 'idle';
+                    g.stateTimer = 0.5;
+                }
+            });
+        }
+
         // Never resume standing in a locked region: pets in a locked region are neither
         // updated nor drawn (main.js), so the player would see an empty, frozen area. It can
         // happen when a save was made in an unlocked region and a later update added a pet to

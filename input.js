@@ -102,46 +102,93 @@ function handleJoystickMove(clientX, clientY) {
     input.down = dy > threshold;
 }
 const interactBtnElement = document.getElementById('interactBtn');
+// Auxiliary GIVE / PLAY button. It is only visible while the main button is busy being
+// TAKE or DROP (a sugar glider is in reach, or being carried — see updateUI() in ui.js), so
+// feeding pets and the cat / elephant mini-games stay reachable in that situation.
+const giveAuxBtnElement = document.getElementById('giveAuxBtn');
+
+// The main button's Take / Drop action for the sugar gliders (Region 9's pets). Returns true if it
+// did something. A single tap, not a hold. It mirrors getGliderButtonMode() (world.js), which
+// is what labels the button.
+function handleGliderButton() {
+    if (getHeldGlider()) {
+        dropGlider();
+        return true;
+    }
+    const g = findTakeableGlider();
+    if (g) {
+        takeGlider(g);
+        return true;
+    }
+    return false;
+}
+
+// One press of a GIVE / PLAY button (hold-to-feed). Shared by the main button (whenever it
+// isn't currently Take / Drop) and the auxiliary GIVE button, so both behave identically.
+function startGiveHold(buttonEl, e) {
+    // Cat's Schrödinger box takes priority over the normal GIVE action — updateUI()
+    // (ui.js) only sets this while the player is standing near a boxed cat.
+    if (typeof activeSchrodingerCat !== 'undefined' && activeSchrodingerCat) {
+        if (typeof showSchrodingerPicker === 'function') showSchrodingerPicker(activeSchrodingerCat);
+        return;
+    }
+
+    // Capture the pointer to this button for the duration of the press. Without
+    // this, a touch's natural micro-movement during a hold (a few px of finger
+    // drift, still very much on the screen) fires a real `pointerleave` the moment
+    // it crosses the button's edge — which haltFeedTimers() below was treating as
+    // "the player let go," cutting the hold short or making a press feel like it
+    // never registered in the first place. Capturing keeps every subsequent event
+    // for this pointer targeted at the button regardless of where the finger
+    // actually drifts, so the hold only ever ends on a genuine release.
+    if (typeof buttonEl.setPointerCapture === 'function') {
+        try { buttonEl.setPointerCapture(e.pointerId); } catch (err) { /* unsupported/already released — fine, falls back to normal hit-testing */ }
+    }
+
+    haltFeedTimers(); // never leave an earlier hold's interval running
+    feedHoldCounter = 0; 
+    executeContinuousFeed();
+    
+    feedInterval = setInterval(() => {
+        feedHoldCounter++;
+        executeContinuousFeed();
+    }, 100); 
+}
+
+function bindGiveButtonRelease(buttonEl) {
+    buttonEl.addEventListener('pointerup', haltFeedTimers);
+    buttonEl.addEventListener('pointerleave', haltFeedTimers);
+    buttonEl.addEventListener('pointercancel', haltFeedTimers);
+    // Fallback in case capture is released by the OS/browser without a matching
+    // pointerup/pointercancel ever arriving (rare, but same spirit as the other
+    // safety nets below) — makes sure the hold can't get stuck running forever.
+    buttonEl.addEventListener('lostpointercapture', haltFeedTimers);
+}
 
 if (interactBtnElement) {
     interactBtnElement.addEventListener('pointerdown', (e) => {
         e.preventDefault();
 
-        // Cat's Schrödinger box takes priority over the normal GIVE action — updateUI()
-        // (ui.js) only sets this while the player is standing near a boxed cat.
-        if (typeof activeSchrodingerCat !== 'undefined' && activeSchrodingerCat) {
-            if (typeof showSchrodingerPicker === 'function') showSchrodingerPicker(activeSchrodingerCat);
+        // TAKE / DROP for the sugar gliders comes first: when a glider is in reach (or being
+        // carried) this button IS that action, and it's a single tap — no hold-to-feed.
+        if (handleGliderButton()) {
+            updateUI();
             return;
         }
 
-        // Capture the pointer to this button for the duration of the press. Without
-        // this, a touch's natural micro-movement during a hold (a few px of finger
-        // drift, still very much on the screen) fires a real `pointerleave` the moment
-        // it crosses the button's edge — which haltFeedTimers() below was treating as
-        // "the player let go," cutting the hold short or making a press feel like it
-        // never registered in the first place. Capturing keeps every subsequent event
-        // for this pointer targeted at the button regardless of where the finger
-        // actually drifts, so the hold only ever ends on a genuine release.
-        if (typeof interactBtnElement.setPointerCapture === 'function') {
-            try { interactBtnElement.setPointerCapture(e.pointerId); } catch (err) { /* unsupported/already released — fine, falls back to normal hit-testing */ }
-        }
-
-        feedHoldCounter = 0; 
-        executeContinuousFeed();
-        
-        feedInterval = setInterval(() => {
-            feedHoldCounter++;
-            executeContinuousFeed();
-        }, 100); 
+        startGiveHold(interactBtnElement, e);
     });
 
-    interactBtnElement.addEventListener('pointerup', haltFeedTimers);
-    interactBtnElement.addEventListener('pointerleave', haltFeedTimers);
-    interactBtnElement.addEventListener('pointercancel', haltFeedTimers);
-    // Fallback in case capture is released by the OS/browser without a matching
-    // pointerup/pointercancel ever arriving (rare, but same spirit as the other
-    // safety nets below) — makes sure the hold can't get stuck running forever.
-    interactBtnElement.addEventListener('lostpointercapture', haltFeedTimers);
+    bindGiveButtonRelease(interactBtnElement);
+}
+
+if (giveAuxBtnElement) {
+    giveAuxBtnElement.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        startGiveHold(giveAuxBtnElement, e);
+    });
+
+    bindGiveButtonRelease(giveAuxBtnElement);
 }
 
 // SAFETY NET: guarantees the feed-hold interval always stops, even if the button
@@ -198,7 +245,7 @@ if (regionSelector) {
     regionSelector.addEventListener('change', (e) => {
         let selectedRegion = parseInt(e.target.value);
 
-        if (selectedRegion === 7 || selectedRegion === 8) {
+        if (selectedRegion === 7 || selectedRegion === 8 || selectedRegion === 9) {
             if (!isJungleTierUnlocked()) {
                 alert("🔒 Region locked! Pets in Regions 1-3 must reach Level 10+, and pets in Regions 4-6 must reach Level 5+, to unlock this region.");
                 regionSelector.value = currentRegion;
@@ -249,6 +296,16 @@ window.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowRight' || e.key === 'd') input.right = true;
     if (e.key === ' ' || e.key === 'e') {
         e.preventDefault();
+        // Same as the main button: TAKE / DROP when a sugar glider is in reach or carried
+        // (once per key press, not while held down), otherwise GIVE.
+        if (getGliderButtonMode() !== 'normal') {
+            if (!e.repeat) handleGliderButton();
+        } else {
+            executeContinuousFeed();
+        }
+    }
+    // Keyboard equivalent of the auxiliary GIVE button (feeding while the main button is Take/Drop).
+    if (e.key === 'f') {
         executeContinuousFeed();
     }
 });
@@ -260,9 +317,74 @@ window.addEventListener('keyup', (e) => {
     if (e.key === 'ArrowRight' || e.key === 'd') input.right = false;
 });
 
+// Fraction of a pet's remaining requirement given per 100ms tick, ramping up the longer
+// GIVE has been held (thresholds in ticks: 0.5s / 1.5s). Shared by the normal pets and the
+// sugar gliders so they always feed at the same speed.
+function getFeedFraction() {
+    if (feedHoldCounter > 15) return 0.0467;
+    if (feedHoldCounter > 5) return 0.025;
+    return 0.01;
+}
+
+// Feeds the sugar gliders in reach — the ones in the region the player is in, plus the one
+// being carried. They aren't in petsByRegion (see gliderPets in world.js), so the loop in
+// executeContinuousFeed() doesn't see them. Unlike every other pet they're fed THREE
+// resources — honey, bananas and water — and need all three to level up (Base Exp 40 / 40 /
+// 20 at level 1). Same +1 XP per unit given as everywhere else.
+function feedGliders() {
+    const feedFraction = getFeedFraction();
+
+    gliderPets.forEach(g => {
+        if (g.level >= 20) return;
+        if (!g.held && g.regionNow !== currentRegion) return;
+
+        let dx = (g.x + g.size / 2) - (player.x + player.size / 2);
+        let dy = (g.y + g.size / 2) - (player.y + player.size / 2);
+        if (Math.sqrt(dx * dx + dy * dy) >= 80) return;
+
+        let req = getLevelRequirement('glider', g.level);
+        let totalNeeded = req.honey + req.bananas + req.water;
+        let feedAmount = Math.max(1, Math.ceil(totalNeeded * feedFraction));
+
+        for (let i = 0; i < feedAmount; i++) {
+            if (g.level >= 20) break;
+            let cur = getLevelRequirement('glider', g.level);
+
+            if (g.honeyEaten < cur.honey && inventory.honey > 0) {
+                inventory.honey--;
+                g.honeyEaten++;
+                gainPlayerXP(1);
+            } else if (g.bananaEaten < cur.bananas && inventory.bananas > 0) {
+                inventory.bananas--;
+                g.bananaEaten++;
+                gainPlayerXP(1);
+            } else if (g.waterEaten < cur.water && inventory.water > 0) {
+                inventory.water--;
+                g.waterEaten++;
+                gainPlayerXP(1);
+            } else {
+                break;
+            }
+
+            if (g.honeyEaten >= cur.honey && g.bananaEaten >= cur.bananas && g.waterEaten >= cur.water) {
+                g.level++;
+                g.honeyEaten = 0;
+                g.bananaEaten = 0;
+                g.waterEaten = 0;
+                // Its max stamina may have gone up (Lv5/10/15/20); the current stamina is left
+                // as it is — updateGlider() only ever clamps it down to the max.
+                saveGameProgress();
+            }
+        }
+    });
+    updateUI();
+}
+
 function executeContinuousFeed() {
     let activePets = petsByRegion[currentRegion];
     if (!Array.isArray(activePets)) return;
+
+    feedGliders();
 
         activePets.forEach(pet => {
         // Play button press triggers Step 2 (The Retreat) instead of paying out early
@@ -294,10 +416,7 @@ function executeContinuousFeed() {
             let totalNeeded = (pet.type === 'bear' || pet.type === 'monkey') ? req : (req.food + req.water);
             if (!(totalNeeded > 0)) totalNeeded = 1;
 
-            let feedFraction;
-            if (feedHoldCounter > 15) feedFraction = 0.0467;
-            else if (feedHoldCounter > 5) feedFraction = 0.025;
-            else feedFraction = 0.01;
+            let feedFraction = getFeedFraction();
 
             let feedAmount = Math.max(1, Math.ceil(totalNeeded * feedFraction));
 

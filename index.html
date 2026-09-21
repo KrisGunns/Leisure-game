@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Just a little leisure</title>
-    <link rel="stylesheet" href="style.css?v=1.4">
+    <link rel="stylesheet" href="style.css?v=1.5">
 </head>
 <body>
     <div id="gameContainer">
@@ -327,6 +327,30 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- SUGAR GLIDER 1 -->
+                    <div class="codexEntry">
+                        <canvas id="viewGlider1" class="codexCanvasView"></canvas>
+                        <div>
+                            <div id="infoGlider1" class="codexInfo"></div>
+                            <div id="renameBoxGlider1" style="margin-top: 6px; display: none;">
+                                <input type="text" id="inputGlider1" placeholder="New Name" style="width: 80px; font-size: 10px;">
+                                <button id="btnRenameGlider1" style="font-size: 10px; padding: 2px 6px;">Set</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SUGAR GLIDER 2 (Miss Glider — red bow) -->
+                    <div class="codexEntry">
+                        <canvas id="viewGlider2" class="codexCanvasView"></canvas>
+                        <div>
+                            <div id="infoGlider2" class="codexInfo"></div>
+                            <div id="renameBoxGlider2" style="margin-top: 6px; display: none;">
+                                <input type="text" id="inputGlider2" placeholder="New Name" style="width: 80px; font-size: 10px;">
+                                <button id="btnRenameGlider2" style="font-size: 10px; padding: 2px 6px;">Set</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -335,6 +359,9 @@
             </div>
 
             <div id="interactBtn">GIVE</div>
+            <!-- Only shown while the main button above is TAKE / DROP (a sugar glider in reach or
+                 in hand): carries the normal GIVE / PLAY action so feeding still works. -->
+            <div id="giveAuxBtn" style="display: none;">GIVE</div>
         </div>
 
         <!-- Consolidated MENU overlay: opened from the single MENU button (where the

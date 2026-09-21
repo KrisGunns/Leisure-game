@@ -134,6 +134,31 @@ body, html {
 #interactBtn:active {
     background: rgba(211, 84, 0, 1);
 }
+/* Auxiliary GIVE / PLAY button: shown only while #interactBtn is busy being TAKE / DROP for a
+   sugar glider. Sits just to its left, smaller, in a cooler colour so the two don't get
+   mixed up. Same press behaviour as the main button (see input.js). */
+#giveAuxBtn {
+    position: absolute;
+    bottom: 45px;
+    right: 105px;
+    width: 58px;
+    height: 58px;
+    background: rgba(41, 128, 185, 0.85);
+    border: 2px solid #1f6391;
+    border-radius: 50%;
+    color: white;
+    font-size: 11px;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    touch-action: none;
+}
+#giveAuxBtn:active {
+    background: rgba(31, 99, 145, 1);
+}
 #whistleBtn {
     bottom: 125px;
     right: 20px;

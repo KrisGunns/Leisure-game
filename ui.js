@@ -328,6 +328,20 @@ function getPetPerkDescriptions(type) {
             });
         }
         perks.push({ level: 20, text: '5% chance per forage to swing on the vines for 20s, then +5 coins' });
+    } else if (type === 'glider') {
+        // What it does depends on the region it's dropped in — all of it needs stamina above 0.
+        perks.push({ level: 1, text: 'Dropped in Regions 1, 2, 3, 6 or 7: forages food & water (1 stamina per object picked up)' });
+        perks.push({ level: 1, text: 'Dropped in Region 4: bees produce +50% honey (1 stamina per 2 seconds)' });
+        perks.push({ level: 1, text: 'Dropped in Region 5: bears fish 25% faster (1 stamina per 2 seconds)' });
+        perks.push({ level: 1, text: 'Dropped in Region 8: monkeys forage +50% more (1 stamina per 2 seconds)' });
+        perks.push({ level: 1, text: 'Dropped in Region 9: rests in a tree to recharge (+1 stamina per 2 seconds)' });
+        if (typeof GLIDER_STAMINA_TIERS !== 'undefined') {
+            GLIDER_STAMINA_TIERS.forEach(tier => {
+                let [lvl, maxStamina] = tier;
+                if (lvl === 1) return; // level 1 is the base stamina, not a milestone to list
+                perks.push({ level: lvl, text: `Max stamina increases to ${maxStamina}` });
+            });
+        }
     }
 
     perks.sort((a, b) => a.level - b.level);
@@ -401,6 +415,11 @@ function showPetDetail(pet) {
         let fishPerCycle = pet.level >= 10 ? 3 : 1;
         yieldSection.innerHTML = `<strong>Fishing</strong><br>🐟 catches ${fishPerCycle} fish per cycle (starts at Lv.5, cycle speeds up at Lv.10 and Lv.15${pet.level >= 20 ? ', 10% chance of a double catch' : ''})`;
     }
+    if (pet.type === 'glider') {
+        // The generic food/water line above is what it forages in Regions 1, 2, 3, 6 and 7;
+        // add its stamina (the resource every glider ability spends).
+        yieldSection.innerHTML += `<br>⚡ Max stamina ${getGliderMaxStamina(pet.level)} (currently ${Math.floor(pet.stamina)})`;
+    }
     card.appendChild(yieldSection);
 
     let perksTitle = document.createElement('strong');
@@ -464,7 +483,25 @@ function updateUI() {
             });
         }
 
-        interactBtn.textContent = (activeSchrodingerCat || elephantPlaying) ? 'PLAY' : 'GIVE';
+        const giveLabel = (activeSchrodingerCat || elephantPlaying) ? 'PLAY' : 'GIVE';
+
+        // Sugar gliders (Region 9): when one is within reach the main button becomes TAKE, and
+        // while the player is carrying one it becomes DROP (see getGliderButtonMode() in
+        // world.js and handleGliderButton() in input.js). Since that takes the place of the
+        // usual GIVE / PLAY, a small auxiliary button carrying the normal GIVE / PLAY label
+        // appears beside it for as long as the main one is busy — otherwise a glider (or
+        // anything else nearby) couldn't be fed, and the cat / elephant games couldn't be
+        // played, while a glider is in reach or in hand.
+        const gliderMode = (typeof getGliderButtonMode === 'function') ? getGliderButtonMode() : 'normal';
+        if (gliderMode === 'take') interactBtn.textContent = 'TAKE';
+        else if (gliderMode === 'drop') interactBtn.textContent = 'DROP';
+        else interactBtn.textContent = giveLabel;
+
+        const giveAuxBtn = document.getElementById('giveAuxBtn');
+        if (giveAuxBtn) {
+            giveAuxBtn.style.display = (gliderMode === 'normal') ? 'none' : 'flex';
+            giveAuxBtn.textContent = giveLabel;
+        }
     }
 
     const charLevel = document.getElementById('charLevel');
@@ -520,8 +557,11 @@ function renderMiniPet(pet, elementId) {
     let isLocked = false;
     if (pet && pet.isLocked) {
         isLocked = true;
-    } else if (pet && pet.type === 'bee') {
-        isLocked = (petLvl < 1); // Autonomous Bee unlocks immediately at Level 1+
+    } else if (pet && (pet.type === 'bee' || pet.type === 'glider')) {
+        // Autonomous Bee unlocks immediately at Level 1+; so do the sugar gliders, which are
+        // tamed from level 1 (their portrait is only masked by the explicit isLocked flag
+        // that updateCodexData() passes while Region 9 is still locked).
+        isLocked = (petLvl < 1);
     } else {
         isLocked = (petLvl < 2); // Standard pets stay masked until Wild Level 1 turns to Tamed Level 2
     }
@@ -861,6 +901,10 @@ function renderMiniPet(pet, elementId) {
             mctx.beginPath();
             mctx.ellipse(ox + 24, oy + 5, 3.5, 4.5, 0.3, 0, Math.PI * 2);
             mctx.fill();
+        } else if (pet.type === 'glider') {
+            // One shared model (entities.js) — the codex portrait can't drift from the in-world
+            // sprite, and Miss Glider's red bow comes along for free via bowColor.
+            drawGliderModel(mctx, ox, oy, { bowColor: pet.bowColor });
         }
     }
 
@@ -1119,6 +1163,42 @@ function updateCodexData() {
         let renameEl = document.getElementById(slot.renameId);
         if (renameEl) renameEl.style.display = (jungleTierUnlocked && slot.monkey.level >= 2) ? 'block' : 'none';
     });
+
+    // Region 9 sugar gliders — same jungleTierUnlocked gate as the panda / monkeys. Unlike every
+    // other pet they are tamed from level 1, so there's no WILD state: once Region 9 is
+    // unlocked the card shows the real name, TAMED, and its three-resource requirement
+    // (honey + bananas + water) plus its stamina. They live in gliderPets, not petsByRegion.
+    if (typeof gliderPets !== 'undefined') {
+        [ { glider: gliderPets[0], viewId: 'viewGlider1', infoId: 'infoGlider1', renameId: 'renameBoxGlider1' },
+          { glider: gliderPets[1], viewId: 'viewGlider2', infoId: 'infoGlider2', renameId: 'renameBoxGlider2' }
+        ].forEach(slot => {
+            if (!slot.glider) return;
+
+            if (!jungleTierUnlocked) {
+                renderMiniPet({ type: 'glider', level: 1, isLocked: true }, slot.viewId);
+                let infoEl = document.getElementById(slot.infoId);
+                if (infoEl) infoEl.innerHTML = `
+                    <strong>???</strong><br>
+                    Status: <span class="codexWild">LOCKED</span><br>
+                    Level: ?/20<br>
+                    Next Req: ???
+                `;
+            } else {
+                let gliderReq = getLevelRequirement('glider', slot.glider.level);
+                renderMiniPet(slot.glider, slot.viewId);
+                let infoEl = document.getElementById(slot.infoId);
+                if (infoEl) infoEl.innerHTML = `
+                    <strong>${slot.glider.label}</strong><br>
+                    Status: <span class="codexTamed">TAMED</span><br>
+                    Level: ${slot.glider.level}/20<br>
+                    Next Req: ${slot.glider.level < 20 ? '🍯' + gliderReq.honey + ' 🍌' + gliderReq.bananas + ' 💧' + gliderReq.water : 'MAX'}<br>
+                    ⚡ Stamina: ${Math.floor(slot.glider.stamina)}/${getGliderMaxStamina(slot.glider.level)}
+                `;
+            }
+            let renameEl = document.getElementById(slot.renameId);
+            if (renameEl) renameEl.style.display = jungleTierUnlocked ? 'block' : 'none';
+        });
+    }
 }
 
 const codexOverlay = document.getElementById('codexOverlay');
@@ -1706,6 +1786,20 @@ if (btnWipeSave) {
                 }
             }
 
+            if (typeof gliderPets !== 'undefined') {
+                gliderPets.forEach(g => {
+                    g.level = 1;
+                    g.honeyEaten = 0;
+                    g.bananaEaten = 0;
+                    g.waterEaten = 0;
+                    g.stamina = getGliderMaxStamina(1);
+                    g.regionNow = 9;
+                    g.held = false;
+                    g.state = 'idle';
+                    g.stateTimer = 0.5;
+                });
+            }
+
             // 4. Force a fresh interface drawing update to securely lock panels before reloading
             if (typeof updateCodexData === 'function') updateCodexData();
             updateUI();
@@ -1730,6 +1824,18 @@ if (btnInstaTame) {
                     pet.state = 'wander';
                 }
             });
+            // Sugar gliders aren't in petsByRegion — level up the ones in this region, plus the
+            // one being carried. (Stamina is left alone; it's only ever clamped to the new max.)
+            if (typeof gliderPets !== 'undefined') {
+                gliderPets.forEach(g => {
+                    if (g.held || g.regionNow === currentRegion) {
+                        g.level = 20;
+                        g.honeyEaten = 0;
+                        g.bananaEaten = 0;
+                        g.waterEaten = 0;
+                    }
+                });
+            }
             updateUI();
             if (typeof updateCodexData === 'function') updateCodexData();
             saveGameProgress();
@@ -1777,6 +1883,28 @@ bindPetRename('btnRenameMonkey2', 'inputMonkey2', 8, 1); // Region 8, Coco
 bindPetRename('btnRenamePig1', 'inputPig1', 6, 0);     // Region 6, Pig (pink)
 bindPetRename('btnRenamePig2', 'inputPig2', 6, 1);     // Region 6, Mud Pig (grey)
 bindPetRename('btnRenamePanda', 'inputPanda', 7, 0);   // Region 7, Panda
+
+// Sugar gliders aren't in petsByRegion either (see gliderPets in world.js), so they get their own
+// small binding, by index: 0 = Sugar Glider, 1 = Miss Glider.
+function bindGliderRename(btnId, inputId, gliderIdx) {
+    const btn = document.getElementById(btnId);
+    const input = document.getElementById(inputId);
+    if (btn && input) {
+        btn.addEventListener('click', () => {
+            let nameVal = input.value.trim();
+            if (nameVal && typeof gliderPets !== 'undefined' && gliderPets[gliderIdx]) {
+                gliderPets[gliderIdx].label = nameVal;
+                input.value = '';
+                saveGameProgress();
+                updateUI();
+                if (typeof updateCodexData === 'function') updateCodexData();
+                alert(`✨ Name successfully updated to: ${nameVal}!`);
+            }
+        });
+    }
+}
+bindGliderRename('btnRenameGlider1', 'inputGlider1', 0); // Sugar Glider
+bindGliderRename('btnRenameGlider2', 'inputGlider2', 1); // Miss Glider
 
 // Bird uses its own handler rather than bindPetRename's fixed [regionIdx][petIdx] lookup,
 // since it may be physically away on an excursion (not sitting at petsByRegion[3][2]) —

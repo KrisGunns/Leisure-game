@@ -21,6 +21,8 @@ function gameLoop(timestamp) {
         // Shop buffs (Cake / Wisdom Potion) count down in real time (see tickShopBuffs in
         // state.js for why this doesn't use `dt`).
         tickShopBuffs();
+        // Sugar-glider stamina timers use the same wall-clock approach (see world.js).
+        tickGliderClock();
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -193,6 +195,10 @@ function gameLoop(timestamp) {
                 ctx.fillStyle = '#2e7d32'; // canopy
                 ctx.beginPath(); ctx.arc(tx, ty - 6, 26, 0, Math.PI * 2); ctx.fill();
             });
+        } else if (currentRegion === 9) {
+            // Bedroom: wooden floor, back wall with a window, bed, desk, rug and two small
+            // artificial trees with an opening (world.js — the layout is shared with the gliders).
+            drawBedroomBackground();
         }
 
         ctx.strokeStyle = '#ffffff';
@@ -238,7 +244,7 @@ function gameLoop(timestamp) {
         }
 
         // --- AUTOMATED PET STATE PHYSICS & DRAWS ---
-        for (let r = 1; r <= 8; r++) {
+        for (let r = 1; r <= 9; r++) {
             if (!isRegionUnlocked(r)) continue;
 
             let activePets = petsByRegion[r];
@@ -263,7 +269,30 @@ function gameLoop(timestamp) {
             }
         }
 
+        // Sugar gliders (Region 9's pets) live in their own list, and each one is updated in
+        // whichever region it was dropped in (`regionNow`) — using THAT region's items — no
+        // matter which region the player is looking at, exactly like the pets above. The
+        // region-unlock rule applies the same way (a locked region is frozen). A glider the
+        // player is carrying isn't updated or drawn here — it's drawn with the player below.
+        gliderPets.forEach(g => {
+            if (g.held) return;
+            let gr = g.regionNow;
+            if (!isRegionUnlocked(gr)) return;
+            let gFood = (gr === 8)
+                ? (regionalItems[8] ? regionalItems[8].bananas : [])
+                : (regionalItems[gr] ? regionalItems[gr].foods : []);
+            let gWater = regionalItems[gr] ? regionalItems[gr].waters : [];
+            let gFlower = regionalItems[gr] ? regionalItems[gr].flowers : [];
+
+            g.update(dt, gFood, gWater, gFlower);
+
+            if (gr === currentRegion) {
+                g.draw();
+            }
+        });
+
         player.draw();
+        drawHeldGlider();
 
         // Bird excursion fly-away/landing poof effects (world.js) — drawn last so they
         // sit on top of everything else in whichever region they were spawned in.
@@ -337,6 +366,21 @@ if (regionSelector && !regionSelector.querySelector('option[value="8"]')) {
     monkeyOption.value = '8';
     monkeyOption.textContent = 'Region 8';
     regionSelector.appendChild(monkeyOption);
+}
+
+// Same approach for Region 9 (Bedroom).
+if (regionSelector && !regionSelector.querySelector('option[value="9"]')) {
+    let bedroomOption = document.createElement('option');
+    bedroomOption.value = '9';
+    bedroomOption.textContent = 'Region 9';
+    regionSelector.appendChild(bedroomOption);
+}
+
+// The saved game is loaded before the Region 6-9 options above exist, so a save made while
+// standing in one of them left the dropdown showing "Region 1" after a reload even though the
+// game resumed in that region. Sync it now that every option is present.
+if (regionSelector && typeof currentRegion !== 'undefined') {
+    regionSelector.value = String(currentRegion);
 }
 
 if (document.getElementById('joystickContainer')) document.getElementById('joystickContainer').style.display = 'flex';

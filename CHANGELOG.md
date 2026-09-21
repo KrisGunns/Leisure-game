@@ -38,7 +38,7 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Current Features
 
-**Regions:** 8 total, selected via a dropdown.
+**Regions:** 9 total, selected via a dropdown.
 - Regions 1–3: starter pets (dog + cat, two elephants, squirrel + chicken + bird), food/water item spawns.
 - Region 3 also spawns collectible eggs (from chickens reaching level 20).
 - Region 4: bee hive — locked until every pet in Regions 1–3 is level 2+. Bees forage flowers, carry honey back to the hive, and cost 10 coins to spawn (max 3 bees).
@@ -46,6 +46,7 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 - Region 6: **Pig Sty** — locked behind the same Regions 1–3 requirement (flagged as an assumption, not explicitly specified). 2 pigs (pink `Pig`, grey `Mud Pig`), spawns food/water like Regions 1-3. See "Pig specifics" below.
 - Region 7: **Panda habitat** — locked behind the "jungle tier" condition: pets in Regions 1-3 must be Level 10+, **and** pets in Regions 4-6 must be Level 5+ (changed from the original "every pet in Regions 1-6 at Lv10+" — see 2026-09-17 (1)). Single source of truth is `isJungleTierUnlocked()` in `world.js` (renamed from `isRegion7Unlocked()` when Region 8 was added — see 2026-09-19 (1) — since it now gates two regions, not one). The player-facing locked-region alerts (`input.js`) deliberately describe only the *requirement*, never the region's identity/theme, so unlocking it stays a surprise.
 - Region 8: **Monkey jungle** — locked behind the same `isJungleTierUnlocked()` condition as Region 7 (by design, per spec — see 2026-09-19 (1)). Jungle background: trees with hanging vines, brown color palette distinct from Region 7's bamboo forest. 2 brown monkeys forage a new resource, **bananas**, which only spawn in this region. See "Monkey specifics" below.
+- Region 9: **Bedroom** — same `isJungleTierUnlocked()` condition as 7 and 8. Home of the two **sugar gliders** (`Sugar Glider`, `Miss Glider`, tamed at Lv1, carried around with TAKE/DROP, stamina-based abilities per region — see 2026-09-20 (1)). Not in `petsByRegion` — they live in `gliderPets`.
 
 **New resource — bananas:** Region 8 only. Same manual-pickup pattern as food/water (1:1 XP with amount collected, same `manualGather` character bonus), own dedicated item pool/respawn queue (mirrors how Region 4 gets flowers instead of food/water), shown in the bag overlay.
 
@@ -89,6 +90,45 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 ---
 
 ## Changelog
+
+### 2026-09-20 (1) — New region: Region 9 (Bedroom) + New pets: Sugar Glider & Miss Glider (Take/Drop, stamina)
+
+**Added — Region 9 (Bedroom):**
+- Shown as "Region 9" in the dropdown (added from `main.js`, like 6–8). **Unlock mirrors Regions 7 & 8** — `isRegionUnlocked(9)` shares the `isJungleTierUnlocked()` branch (`world.js`), the dropdown gate in `input.js` includes 9, and the codex cards use the same `jungleTierUnlocked` flag.
+- Background art: `drawBedroomBackground()` in `world.js` — wooden floor, striped back wall with window/curtains/picture, a rug, a **bed**, a **desk** (laptop, lamp, notepad, mug) with a chair, and **two small artificial trees** (glossy white pots, faux-wood trunk with an **opening**, smooth layered-sphere canopy). Furniture is scenery only (no collision).
+- `getBedroomLayout()` / `getBedroomTrees()` (`world.js`) derive every position from the canvas size, and the **same numbers** drive the art and the gliders' behaviour (a glider always climbs into the opening that is drawn). Each tree exposes `hollowX/hollowY/hollowRX/hollowRY`.
+- `regionalItems[9]` exists but is empty (Region 9 has no spawns).
+
+**Added — Sugar Glider & Miss Glider (`type: 'glider'`):**
+- Created by `createGlider(label, x, y, options)` (`world.js`; `options.bowColor` = Miss Glider's small red bow). **Tamed at Lv1** — they use their own AI, `Pet.updateGlider()` (`entities.js`), and never go through the generic "level < 2 = wild" path.
+- **Model:** one shared `drawGliderModel(ctx, x, y, { bowColor, sleeping })` in `entities.js` (front-facing, gliding membrane spread, forehead stripe, big eyes/ears, bushy tail). Called from `Pet.draw()` **and** `renderMiniPet()` (same "one shared function" idea as `drawElephantBow`).
+- **Leveling:** fed **honey + bananas + water**; Base Exp 40 / 40 / 20 at Lv1, each scaled by the usual `Level^1.2`. `getLevelRequirement('glider', lvl)` returns `{ honey, bananas, water }` (the only pet whose requirement is an object). New pet fields `honeyEaten` / `bananaEaten` (+ existing `waterEaten`). Feeding: `feedGliders()` in `input.js`, called from `executeContinuousFeed()`; same ramping speed via the new shared `getFeedFraction()`. +1 player XP per unit, like everything else.
+- **Forage yield** (`FORAGE_TIERS.glider`): Lv1 +2/+2, Lv5 +3/+3, Lv10 +4/+4, Lv15 +5/+5, Lv20 +7/+7 food/water. Character food/water bonus applies.
+- **Stamina** (`GLIDER_STAMINA_TIERS` + `getGliderMaxStamina()` in `state.js`): 40 / 45 / 50 / 55 / 70 at Lv1 / 5 / 10 / 15 / 20. Bar + number drawn under the glider. On a level-up the current stamina is **not** changed (only clamped down to the max), so a full glider reads e.g. 40/45 after Lv5.
+
+**Take / Drop:**
+- Within `GLIDER_TAKE_RANGE` (80px, same as feeding) the main button reads **TAKE**; while carrying, **DROP**. A single tap, not hold-to-feed. `getGliderButtonMode()` (`world.js`) labels it in `updateUI()`; `handleGliderButton()` (`input.js`) acts on it. Keyboard: E/Space does the same.
+- **Auxiliary GIVE/PLAY button** (`#giveAuxBtn`, `index.html` + `style.css`, `style.css?v=1.5`): appears beside the main button only while it is TAKE/DROP, and carries the normal GIVE/PLAY behaviour (via the shared `startGiveHold()`), because otherwise gliders couldn't be fed and other pets / the cat & elephant games would be unreachable while a glider is near or carried. Keyboard: F.
+- A carried glider rides on the player (`drawHeldGlider()`), and is **inactive**: no foraging, buffs, drain or resting. A glider **resting inside a tree can't be taken** (it comes out by itself when full).
+
+**Glider behaviour by region — only while stamina > 0 and the glider is dropped there:**
+- **Regions 1, 2, 3, 6, 7** (`GLIDER_FORAGE_REGIONS`): forages food and water. **1 stamina per object**, strictly, regardless of yield/perks.
+- **Region 4:** bees' honey deposit ×(1 + 0.5 per glider) — `getGliderBuff(4)` in the bee's deposit code, with `roundStochastic` so the average is exactly +50% even at 1-honey loads. **Region 5:** bear fishing timers (action + cooldown between trips) tick ×(1 + 0.25 per glider). **Region 8:** monkey forage yield ×(1 + 0.5 per glider). Each costs **1 stamina per 2 s** (`GLIDER_DRAIN_REGIONS`, `GLIDER_DRAIN_SECONDS`). **Several gliders in one region stack** (the cap is one line in `getGliderBuff()`).
+- **Region 8 note:** the generic code passes *bananas* in the "food" slot there, so gliders are deliberately excluded from foraging in 8 (they'd have eaten bananas as food).
+- **Region 9:** stamina < max → walks to the nearest **free** tree opening (each holds one glider; `findFreeBedroomTree()`), state **`[RESTING]`**, drawn asleep inside the hollow, **+1 stamina per 2 s**; when full it climbs out and roams, waiting to be taken. Out of stamina elsewhere: shows `[TIRED]` and just roams.
+- **Timers use the real wall clock** (`tickGliderClock()` / `gliderRealDt` in `world.js`, ticked in `gameLoop()`), not `dt` — same reasoning as the shop buffs (the loop's `dt` over-counts on some devices), so "every 2 seconds" is 2 real seconds.
+
+**Architecture decision — gliders are NOT in `petsByRegion`.** They live in `gliderPets` (`world.js`; index 0 = Sugar Glider, 1 = Miss Glider) and carry `regionNow` (where they are) and `held`. `main.js` updates/draws each one in its `regionNow`, with that region's items. Reasons: they move between regions, and being in `petsByRegion` would have broken (a) the region-unlock checks (a Lv1 glider dropped in Region 1 would re-lock Regions 4–8), (b) the bee cap / worker numbering, (c) the positional save format. `petsByRegion[9]` is an empty array. Excluded from the whistle for the same reason.
+
+**Saves:** new top-level `gliderData` (per glider: label, level, honeyEaten, bananaEaten, waterEaten, stamina, region, held). Old saves without it load with defaults. Every field is validated on load. Timers/tree reservations aren't resumed.
+
+**Codex / Detail / Dev:** two new codex cards (`viewGlider1/2`, `infoGlider1/2`, `renameBoxGlider1/2`, `inputGlider1/2`, `btnRenameGlider1/2`; renaming via `bindGliderRename()`), showing TAMED at Lv1, the honey/banana/water requirement and stamina. Pet Detail lists the per-region abilities and stamina milestones. Dev "insta-max" and "wipe save" cover gliders.
+
+**Fixed (pre-existing):** after a reload, the region dropdown showed "Region 1" while the game resumed in Region 6–8 (the save loaded before those options were added). `main.js` now syncs the dropdown after adding the options.
+
+**Verification:** `node --check` on all files; Playwright headless-Chromium runs: resting ticks exactly +1 per 2.0 s, both gliders pick different trees, resting glider can't be taken; Take/Drop labels and flow; held glider frozen; a Lv1 glider in Region 1 doesn't affect unlocks; forage in Regions 1/2/3/6/7 = stamina spent equals objects taken, +2 each; no forage at 0 stamina; no banana foraging in Region 8; drain −3 per 6.3 s in 4/5/8; bee ×1.49, monkey ×1.50, bear ×1.25 (and ×1 at 0 stamina); level-up consumes exactly 40/40/20; save→reload round trip incl. held; bedroom checked at 360×640, 390×844, 450×900. **Not tested:** Android WebView, multi-touch feeding on both buttons.
+
+---
 
 ### 2026-09-19 (10) — Second elephant in Region 2 (white bow); elephant water yields retuned
 
