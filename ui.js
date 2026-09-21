@@ -1226,6 +1226,38 @@ function updateCodexData() {
         let renameEl = document.getElementById(slot.rename);
         if (renameEl) renameEl.style.display = 'none';
     });
+
+    // Pets in a region that hasn't been bought yet (Regions 4-9): the cards above are already
+    // the plain mystery "LOCKED" card; replace its "Next Req: ???" line with where to get it and
+    // what it costs, the same way the shop-only pets in Regions 1-3 do. A pet that comes WITH the
+    // region shows the region's price; a pet sold separately (`id`) shows the region's price and
+    // then its own, since the region has to be bought first.
+    [ { region: 4, info: 'infoBee',     rename: 'renameBoxBee' },
+      { region: 5, info: 'infoBear1',   rename: 'renameBoxBear1' },
+      { region: 5, info: 'infoBear2',   rename: 'renameBoxBear2',   id: 'pet_bowBear' },
+      { region: 6, info: 'infoPig1',    rename: 'renameBoxPig1' },
+      { region: 6, info: 'infoPig2',    rename: 'renameBoxPig2',    id: 'pet_mudPig' },
+      { region: 7, info: 'infoPanda',   rename: 'renameBoxPanda' },
+      { region: 8, info: 'infoMonkey1', rename: 'renameBoxMonkey1' },
+      { region: 8, info: 'infoMonkey2', rename: 'renameBoxMonkey2', id: 'pet_bowMonkey' },
+      { region: 9, info: 'infoGlider1', rename: 'renameBoxGlider1' },
+      { region: 9, info: 'infoGlider2', rename: 'renameBoxGlider2', id: 'pet_missGlider' }
+    ].forEach(slot => {
+        if (isRegionUnlocked(slot.region)) return;
+        let regionRow = getUnlockable('region_' + slot.region);
+        let petRow = slot.id ? getUnlockable(slot.id) : null;
+        if (!regionRow) return;
+        let shopLine = `🛒 Region ${slot.region}: 🪙${regionRow.cost}` + (petRow ? ` + 🪙${petRow.cost}` : '');
+        let infoEl = document.getElementById(slot.info);
+        if (infoEl) infoEl.innerHTML = `
+            <strong>???</strong><br>
+            Status: <span class="codexWild">LOCKED</span><br>
+            Level: ?/20<br>
+            ${shopLine}
+        `;
+        let renameEl = document.getElementById(slot.rename);
+        if (renameEl) renameEl.style.display = 'none';
+    });
 }
 
 const codexOverlay = document.getElementById('codexOverlay');
