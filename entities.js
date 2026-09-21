@@ -27,7 +27,7 @@ const PLAYER_PALETTE = {
     s: '#e3a684',   // skin, shaded (far arm/leg)
     B: '#f19696',   // blush
     M: '#d6404f',   // mouth
-    E: '#141418',   // eyes
+    E: '#2b2226',   // eyes (a soft dark brown-black, gentler than the hair)
     W: '#ffffff',   // dress
     w: '#dde4ef',   // dress shading
     o: '#aab6cc',   // dress outline (keeps the white dress readable on light ground)
@@ -39,16 +39,16 @@ const PLAYER_PALETTE = {
 const PLAYER_FRAMES = {
     idle: [
         [
-            '.....KKKKKK.....',
             '...KKKKKKKKKK...',
             '..KKKhhKKKKhKK..',
             '..KKKKKKKKKKKC..',
             '..KKKKKKKKKKKK..',
             '..KKKKSSSSKKKC..',
-            '..KKKSSSSSSKKK..',
-            '..KKSESSSSESKK..',
-            '..KKESESSESEKK..',
-            '..KKSBSMMSBSKSS.',
+            '..KKSSSSSSSSKK..',
+            '..KSSSSSSSSSSK..',
+            '..KSSESSSSESSK..',
+            '..KSESESSESESK..',
+            '..KSBSSMMSSBSSS.',
             '...KKSSSSSSKKSS.',
             '...KKKKSSKKKSS..',
             '..KKSSSSSSSSSK..',
@@ -65,16 +65,16 @@ const PLAYER_FRAMES = {
             '....ttt..ttt....',
         ],
         [
-            '.....KKKKKK.....',
             '...KKKKKKKKKK...',
             '..KKKhhKKKKhKK..',
             '..KKKKKKKKKKKC..',
             '..KKKKKKKKKKKK..',
             '..KKKKSSSSKKKC..',
-            '..KKKSSSSSSKKK..',
-            '..KKSESSSSESKK..',
-            '..KKESESSESEKK..',
-            '..KKSBSMMSBSKK..',
+            '..KKSSSSSSSSKK..',
+            '..KSSSSSSSSSSK..',
+            '..KSSESSSSESSK..',
+            '..KSESESSESESK..',
+            '..KSBSSMMSSBSK..',
             '...KKSSSSSSKKSS.',
             '...KKKKSSKKKKSS.',
             '..KKSSSSSSSSSK..',
@@ -93,13 +93,13 @@ const PLAYER_FRAMES = {
     ],
     walk: [
         [
-            '.....KKKKKK.....',
             '...KKKKKKKKKK...',
             '..KKKhhKKKKhKK..',
             '..KKKKKKKKKKKK..',
             '..KKKKKKKKKKKC..',
             '..KKKKKKKSSSKC..',
             '..KKKKKKSSSSSK..',
+            '..KKKKKSSSSSSK..',
             '..KKKKKSSESESK..',
             '..KKKKKSBSSSMK..',
             '..KKKKKKSSSSSK..',
@@ -119,13 +119,13 @@ const PLAYER_FRAMES = {
             '...ttt....ttt...',
         ],
         [
-            '.....KKKKKK.....',
             '...KKKKKKKKKK...',
             '..KKKhhKKKKhKK..',
             '..KKKKKKKKKKKK..',
             '..KKKKKKKKKKKC..',
             '..KKKKKKKSSSKC..',
             '..KKKKKKSSSSSK..',
+            '..KKKKKSSSSSSK..',
             '..KKKKKSSESESK..',
             '..KKKKKSBSSSMK..',
             '..KKKKKKSSSSSK..',
@@ -145,13 +145,13 @@ const PLAYER_FRAMES = {
             '.....tttttt.....',
         ],
         [
-            '.....KKKKKK.....',
             '...KKKKKKKKKK...',
             '..KKKhhKKKKhKK..',
             '..KKKKKKKKKKKK..',
             '..KKKKKKKKKKKC..',
             '..KKKKKKKSSSKC..',
             '..KKKKKKSSSSSK..',
+            '..KKKKKSSSSSSK..',
             '..KKKKKSSESESK..',
             '..KKKKKSBSSSMK..',
             '..KKKKKKSSSSSK..',
@@ -171,13 +171,13 @@ const PLAYER_FRAMES = {
             '...ttt....ttt...',
         ],
         [
-            '.....KKKKKK.....',
             '...KKKKKKKKKK...',
             '..KKKhhKKKKhKK..',
             '..KKKKKKKKKKKK..',
             '..KKKKKKKKKKKC..',
             '..KKKKKKKSSSKC..',
             '..KKKKKKSSSSSK..',
+            '..KKKKKSSSSSSK..',
             '..KKKKKSSESESK..',
             '..KKKKKSBSSSMK..',
             '..KKKKKKSSSSSK..',
@@ -1189,13 +1189,13 @@ class Pet {
         }
 
                 // --- BIRD EXCURSION IN PROGRESS (Lv20 perk): away from home region 3 for
-        // 60s. Region 5: rolls a 10% fish-catch chance every whole second it's present.
+        // 30s (BIRD_EXCURSION_SECONDS). Region 5: rolls a 10% fish-catch chance every whole second it's present.
         // Region 4: a one-time +20% bee speed boost was already applied on arrival (see
         // the trigger below) and reverted here on return. Food/water regions (1/2/6):
         // no special-case needed here — falls through to the normal wander/forage
         // pipeline below, which already grants a +20% excursion bonus (see that branch). ---
         if (this.type === 'bird' && this.excursionActive) {
-            // The trip's 60 seconds (and Region 5's once-a-second fish rolls) run on the REAL clock,
+            // The trip's 30 seconds (and Region 5's once-a-second fish rolls) run on the REAL clock,
             // not the game loop's `dt` — that over-counts on some devices (see tickShopBuffs in
             // state.js), which used to make a "60 second" trip last about half that.
             this.excursionTimer -= gliderRealDt;
@@ -1659,7 +1659,7 @@ class Pet {
 
                             // Lv20+: 5% chance per successful forage (from its home region
                             // only — can't trigger a new trip mid-excursion) to fly off to a
-                            // random other *unlocked* region for 60s. Filtering to unlocked
+                            // random other *unlocked* region for BIRD_EXCURSION_SECONDS (30s). Filtering to unlocked
                             // regions matters because the bird only needs to be Lv20 itself
                             // — the other Region 1-3 pets, and therefore Regions 4-6/7, can
                             // still be locked for the player at that point.
@@ -1680,7 +1680,7 @@ class Pet {
 
                                     this.excursionActive = true;
                                     this.excursionRegion = target;
-                                    this.excursionTimer = 60.0;
+                                    this.excursionTimer = BIRD_EXCURSION_SECONDS;
                                     this.excursionFishTimer = 0;
                                     this.pickNewWanderTarget();
                                     this.x = this.targetX;

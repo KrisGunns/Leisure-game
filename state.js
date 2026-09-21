@@ -117,11 +117,15 @@ function getPerkChance(key, level) {
     return chance;
 }
 
+// How long the Lv20+ bird's trip to another region lasts, in REAL seconds (see the excursion
+// branch of Pet.update()).
+const BIRD_EXCURSION_SECONDS = 30;
+
 // Squirrel's speed boost: how long it lasts (real seconds) and how much faster every pet in the
 // region moves. See getRegionSpeedBoost() in world.js. Deliberately short, and a proc while a
 // boost is already running is ignored (it does NOT extend it), so the region can never be kept
 // boosted continuously — every boost ends before another can begin.
-const SQUIRREL_BOOST_SECONDS = 5;
+const SQUIRREL_BOOST_SECONDS = 10;
 const SQUIRREL_BOOST_MULT = 1.5;
 
 // Chicken "chain egg" (Lv30): after a forage lays an egg, the NEXT forage gets this much extra

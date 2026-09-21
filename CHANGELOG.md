@@ -91,6 +91,18 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Changelog
 
+### 2026-09-20 (10) — Relaxed player face; bird trip 30 s; squirrel boost 10 s
+
+**Player face (fix to 2026-09-20 (9)):** the closed-eye arcs sat right against the hair with heavy bangs directly above them, which read as angry brows. The forehead is now open (the fringe is one row, with two rows of skin under it), the face is one pixel wider on each side so the soft ∩ eyes sit clear of the hair, and the eye colour is a gentler dark brown (`PLAYER_PALETTE.E`). The walk frames got the same open forehead. Same file/place as before (`PLAYER_FRAMES`, `entities.js`).
+
+**Bird trip:** the Lv20+ bird's visit to another region now lasts **30 real seconds** (was 60) — one constant, `BIRD_EXCURSION_SECONDS` (`state.js`), used where the trip starts. (Region 5's fish are still 10% per second, so about 3 fish per visit now instead of 6; everything else about the trip is unchanged.)
+
+**Squirrel boost:** now **10 real seconds** (`SQUIRREL_BOOST_SECONDS`, was 5). A proc during a running boost is still ignored, so it still can't be chained; the Pet Detail text reads the constant ("for 10s").
+
+**Verification:** Playwright: bird trip measured 30.1 s and the bird came home; squirrel boost 10.04 s with the re-proc still ignored; the new face inspected in-game. **Not tested:** a physical phone screen.
+
+---
+
 ### 2026-09-20 (9) — New player character: chibi girl in a white sundress (from the reference sprite sheet)
 
 **Changed:** the player is no longer a plain rectangle; it is a pixel-art girl modelled on the uploaded sheet — long black hair with side bangs, two blue hair clips, pink cheeks, a happy face, a white sleeveless sundress with a flared skirt, and tan sandals. Colours follow the sheet's palette (white / black / peach / blue / brown).
