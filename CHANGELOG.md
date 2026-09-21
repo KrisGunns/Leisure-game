@@ -67,7 +67,7 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 - **Dog** (level 20): 10% chance per successful forage to enter a `digging` state — plays a dirt-particle animation, then awards 1 coin.
 - **Cat** (Region 1): Level 15+: 10% chance per forage to double the food/water it just collected. Level 20+: 3% chance per forage — **only while the player is standing in Region 1** — to enter a "Schrödinger" state — frozen in place, flickering between two visual states — until the player approaches (within 70px) and presses PLAY, opening a Dead/Alive picker; correct guess pays 10 coins either way the box resolves and it returns to wandering.
 - **Elephant** (level 20, Region 2 — either elephant): 10% chance to trigger a multi-step "tag" minigame (approach → retreat → wait for player to move → chase) rewarding 5 coins if caught.
-- **Chicken** (level 20): 5% chance per forage to lay an egg on the map (Region 3 only).
+- **Chicken** (level 20): 10% chance per forage to lay an egg on the map (Region 3 only) — raised from 5%, see 2026-09-20 (3).
 - **Bird** (Region 3, level 20): 5% chance per successful forage to fly off to a random other region for 60s — filtered to regions the player has actually **unlocked** (see 2026-09-18 (1); it used to consider all of Regions 1-6 regardless of the player's actual progress). Forages there with a +20% food/water bonus if it's a food/water region, fishes (10% chance/sec) if it lands in Region 5, or gives every bee in Region 4 a temporary +20% speed boost for the visit. Returns home after 60s with +2 coins. Fly-away/landing visual effects play in whichever region the player is currently viewing at each end of the trip. See the 2026-09-16 (8) changelog entry for full mechanics and the save/load handling this required.
 - **Bee**: forages flowers, carries honey (capacity scales with level: 1/2/3/5 at levels 1/5/10/20); time to forage a single flower also drops with level (5.0s base → 4.5s at Lv5 → 4.0s at Lv10 → 3.0s at Lv20 — travel speed to/from the hive is unaffected by level). Returns to hive to deposit, then goes idle. Up to 3 bees total per save (the starter bee + 2 purchasable "Worker Bee" hires at 10 coins each via the hive's spawn button); all bees — starter or purchased — are built through the same `createBee()` factory so they behave identically.
 - **Bear** (tames at level 2, but doesn't start fishing until level 5) — Region 5, 2 of them: travels to a lake, fishes for ~20s per cycle, catches 1 fish per cycle (3 from level 10). Fishing cycle cooldown speeds up at level 10 and again at level 15. 10% chance of a double catch (up to 6 fish) at level 20. The second bear, `Bow Bear` (female), is a purely cosmetic variant added 2026-09-18 (2): same brown color, same base Exp/fishing mechanic/fishing yield (both driven by `type === 'bear'`, untouched by the variant), just a ~15% smaller model with a pink bow drawn above its ears (`isFemaleBear` flag in `entities.js`, set by `createBear()`'s `options.female`).
@@ -90,6 +90,14 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 ---
 
 ## Changelog
+
+### 2026-09-20 (3) — Chicken egg chance 5% → 10%
+
+**Changed:** a Lv20 chicken now lays an egg on **10%** of its forages (was 5%). One line in `Pet.update()` (`entities.js`, the chicken forage branch: `Math.random() < 0.10`), plus the matching perk text in the Pet Detail screen (`getPetPerkDescriptions`, `ui.js`). Nothing else uses this number (eggs still sell for 1 🪙 each).
+
+**Verification:** `node --check`; Playwright: a Lv20 chicken foraging 20,000 times laid eggs on ~10.4% of forages (2,079 of 20,000), and the Pet Detail perk line reads 10%.
+
+---
 
 ### 2026-09-20 (2) — Regions & extra pets are now bought in the shop ("Unlockables" tab)
 

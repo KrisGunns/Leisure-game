@@ -1266,7 +1266,8 @@ class Pet {
                             if (targetItem.type === 'food') inventory.food += Math.round(y.food * petFoodWaterBonus);
                             else inventory.water += Math.round(y.water * petFoodWaterBonus);
 
-                            if (this.level >= 20 && Math.random() < 0.05) {
+                            // 10% chance per forage to lay an egg (Level 20+ only).
+                            if (this.level >= 20 && Math.random() < 0.10) {
                                 let currentRItems = regionalItems[currentRegion];
                                 if (!currentRItems.eggs) currentRItems.eggs = [];
                                 

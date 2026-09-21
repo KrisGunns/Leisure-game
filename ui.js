@@ -297,7 +297,7 @@ function getPetPerkDescriptions(type) {
     if (type === 'dog') {
         perks.push({ level: 20, text: '10% chance per forage to dig for a bonus coin' });
     } else if (type === 'chicken') {
-        perks.push({ level: 20, text: '5% chance per forage to lay a collectible egg' });
+        perks.push({ level: 20, text: '10% chance per forage to lay a collectible egg' });
     } else if (type === 'elephant') {
         perks.push({ level: 20, text: '10% chance to start a "catch me" play minigame (+5 coins)' });
     } else if (type === 'pig') {
