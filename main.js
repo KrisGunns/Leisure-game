@@ -383,7 +383,7 @@ if (regionSelector && typeof currentRegion !== 'undefined') {
     regionSelector.value = String(currentRegion);
 }
 
-if (document.getElementById('joystickContainer')) document.getElementById('joystickContainer').style.display = 'flex';
+// (The joystick is floating now — it stays hidden until the player touches the field; see input.js.)
 if (document.getElementById('interactBtn')) document.getElementById('interactBtn').style.display = 'flex';
 
 requestAnimationFrame(gameLoop);

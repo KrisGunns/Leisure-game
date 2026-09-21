@@ -26,7 +26,7 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 | `state.js` | `inventory`, `character` (level/xp/**perkPoints/perks**), `gainPlayerXP()`, `showLevelUpToast()`, `getLevelRequirement()`, `getCharacterNextXP()`, `FORAGE_TIERS` + `getForageYield()` (pet forage yield table), `saveGameProgress()`, `loadGameProgress()`, core DOM label refs, **perk tree data + rules** (`PERK_TREE`, `getPerkStatus()`, `unlockPerk()`, `normalizeCharacterPerks()`, `getCharacterBonuses()`), **shop data** (`shopBuffs`, `SHOP_ITEMS`, `SELL_ITEMS`), `tickShopBuffs()`, buff multipliers (`getPetSpeedMultiplier()`/`getPetForageMultiplier()`/`getXPMultiplier()`) | none (loads first) |
 | `entities.js` | `Player`, `Item`, `Flower`, `Pet` classes (all pet AI/state-machine logic lives in `Pet.update()`) | `state.js` |
 | `world.js` | The `player` instance, `regionalItems` (food/water/flower/banana/egg pools per region), `petsByRegion` (pet roster per region), `region4Hive`, `createBee()`/`createBear()`/`createMonkey()` factories, `isJungleTierUnlocked()`/`areRegions1to3Tamed()`/`isRegionUnlocked()` (region-lock single source of truth), `spawnCoinPopup()`/`spawnRegionFX()` (floating visual effects), `resizeCanvas()`, `checkCollisions()`, `processSpawns()` | `state.js`, `entities.js` |
-| `input.js` | Virtual joystick, GIVE/PLAY interact button (hold-to-feed with ramping `feedHoldCounter`, pointer-capture for reliability), whistle button (single-tap toggle or multi-pet picker), region selector (+ region-lock check), keyboard controls, `executeContinuousFeed()` | `state.js`, `entities.js`, `world.js` |
+| `input.js` | Floating virtual joystick (appears under the touch, see 2026-09-20 (6)), GIVE/PLAY interact button (hold-to-feed with ramping `feedHoldCounter`, pointer-capture for reliability), whistle button (single-tap toggle or multi-pet picker), region selector (+ region-lock check), keyboard controls, `executeContinuousFeed()` | `state.js`, `entities.js`, `world.js` |
 | `ui.js` | `updateUI()`, `renderMiniPet()`, pet Codex overlay, settings/dev panel, pet renaming, bag overlay, bee-purchase button, whistle-picker overlay (`showWhistlePicker()`/`hideWhistlePicker()`), consolidated MENU overlay (`handleOpenMenu()`/`handleCloseMenu()`), **Shop screen** (`renderShop()`, `buyShopItem()`, `sellShopItem()`), **Perk Tree screen** (`renderPerkTree()`, `renderPerkDetail()`) | `state.js`, `entities.js`, `world.js` |
 | `main.js` | `gameLoop()` (render + update loop), startup sequence (`loadGameProgress()`, initial item spawns, `requestAnimationFrame` kickoff) | all of the above (loads last) |
 
@@ -90,6 +90,19 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 ---
 
 ## Changelog
+
+### 2026-09-20 (6) — Floating joystick: appears wherever the player touches and holds
+
+**Changed:** the joystick is no longer a fixed circle in the bottom-left. It is **hidden** until a finger goes down on the game field; it then appears **centred under that finger** and works from that spot (drag away from it to move, the handle is clamped to the same 35 px radius and 10 px dead-zone as before) until the finger lifts, when it disappears again. It can be started anywhere on the play area, including the spot the old joystick used to occupy.
+- `input.js`: `touchstart`/`touchmove` now listen on the play area (`#canvasWrapper`, `joyArea`) instead of the joystick element. `isJoystickSurface()` only accepts a touch whose target is the bare field (`#gameCanvas` / the wrapper), so a touch that lands on **GIVE/TAKE, the aux GIVE, whistle, buy-bee, hive honey, MENU, settings or a mini-game picker is left to that control** and no joystick appears under it. `placeJoystickAt()` positions the base (relative to the wrapper); `resetJoystick()` now also hides it.
+- Everything about tracking a specific finger is unchanged: the joystick follows its own touch by `identifier`, so holding GIVE with a second finger while walking still works, and `touchend`/`touchcancel`/`blur`/`visibilitychange` still release it (no stuck-direction bug).
+- `style.css`: `#joystickContainer` is `display: none` by default (input.js toggles it to `flex`) and `pointer-events: none` so it can't swallow touches; `#canvasWrapper` gets `touch-action: none`. (The old rule also had a later `display: flex` that silently overrode the new `none` — removed.) `main.js` no longer forces the joystick visible at startup. `style.css?v=1.7`.
+- A long press on the field no longer opens the browser/WebView context menu (`contextmenu` is suppressed on the play area).
+- Touch only, as before; desktop keeps the keyboard controls.
+
+**Verification:** Playwright with real touch events (CDP): hidden at start; appears exactly under the finger (also at a screen edge and in the old bottom-left spot) with no movement until dragged; right/up/down drags set the right directions and the player actually moves; a second finger pressing GIVE while the joystick finger stays down works and feeding stops when all fingers lift; touching GIVE or whistle does not show it; `touchend` and `touchcancel` both hide it and clear all inputs. **Not tested:** a real Android WebView.
+
+---
 
 ### 2026-09-20 (5) — Eggs on the map now survive a page refresh
 

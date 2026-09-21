@@ -82,14 +82,20 @@ body, html {
     right: 0;
     background: #2c3e50;
     overflow: hidden;
+    touch-action: none;   /* the play area is the joystick's touch surface — no browser pan/zoom on it */
 }
 #gameCanvas {
     display: block;
     width: 100%;
     height: 100%;
 }
+/* FLOATING joystick: hidden until a finger goes down on the game field, then input.js shows it
+   centred under that finger (setting left/top) and hides it again on release. pointer-events:
+   none so it can never swallow a touch meant for something underneath it. */
 #joystickContainer {
     position: absolute;
+    display: none;
+    pointer-events: none;
     bottom: 35px;
     left: 40px;
     width: 120px;
@@ -98,7 +104,7 @@ body, html {
     border: 3px solid rgba(255, 255, 255, 0.3);
     border-radius: 50%;
     z-index: 100;
-    display: flex;
+    /* display is toggled by input.js: none until touched, flex while held (centres the handle) */
     justify-content: center;
     align-items: center;
     touch-action: none;

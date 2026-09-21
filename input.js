@@ -1,5 +1,5 @@
 // ============================================================
-// input.js — All player input handling: virtual joystick, the
+// input.js — All player input handling: floating virtual joystick, the
 // GIVE/PLAY interact button (hold-to-feed), whistle button,
 // region selector, and keyboard controls.
 // Depends on: state.js, entities.js, world.js. Load AFTER those.
@@ -7,6 +7,10 @@
 
 const joyContainer = document.getElementById('joystickContainer');
 const joyHandle = document.getElementById('joystickHandle');
+// The whole play area. The joystick is FLOATING: it isn't drawn until the player puts a finger
+// down on the game field, then appears right under that finger and works from there until the
+// finger lifts (it can be started anywhere, not from a fixed corner spot).
+const joyArea = document.getElementById('canvasWrapper');
 
 let joyActive = false;
 let joyTouchId = null; // identifier of the specific touch driving the joystick
@@ -28,23 +32,46 @@ function resetJoystick() {
     input.left = false;
     input.right = false;
     if (joyHandle) joyHandle.style.transform = 'translate(0px, 0px)';
+    if (joyContainer) joyContainer.style.display = 'none'; // floating: only visible while held
 }
 
-if (joyContainer) {
-    joyContainer.addEventListener('touchstart', (e) => {
+// Only a touch that lands on the bare game field starts the joystick. A touch that lands on a
+// button or other control (GIVE/TAKE, whistle, buy bee, MENU, the mini-game pickers, ...) is that
+// control's own business — the joystick must not appear under it or steal the press.
+function isJoystickSurface(target) {
+    return target === joyArea || (target && target.id === 'gameCanvas');
+}
+
+// Centres the joystick base on a screen point (coordinates are relative to the play area,
+// which is the joystick's positioned parent).
+function placeJoystickAt(clientX, clientY) {
+    if (!joyContainer || !joyArea) return;
+    joyContainer.style.display = 'flex'; // must be displayed before its size can be read
+    const areaRect = joyArea.getBoundingClientRect();
+    joyContainer.style.left = (clientX - areaRect.left - joyContainer.offsetWidth / 2) + 'px';
+    joyContainer.style.top = (clientY - areaRect.top - joyContainer.offsetHeight / 2) + 'px';
+    joyContainer.style.bottom = 'auto';
+}
+
+if (joyArea) {
+    joyArea.addEventListener('touchstart', (e) => {
+        if (!isJoystickSurface(e.target)) return; // a control's own touch — leave it alone
         e.preventDefault();
         if (joyActive) return; // already tracking a touch on the joystick, ignore any extra one
         const touch = e.changedTouches[0];
         joyActive = true;
         joyTouchId = touch.identifier;
-        const rect = joyContainer.getBoundingClientRect();
-        joyOriginX = rect.left + rect.width / 2;
-        joyOriginY = rect.top + rect.height / 2;
+        // The joystick's centre is wherever the finger first came down, so nothing moves until
+        // the finger is dragged away from that spot.
+        joyOriginX = touch.clientX;
+        joyOriginY = touch.clientY;
+        placeJoystickAt(touch.clientX, touch.clientY);
         handleJoystickMove(touch.clientX, touch.clientY);
     }, { passive: false });
 
-    joyContainer.addEventListener('touchmove', (e) => {
-        e.preventDefault();
+    // A touch keeps reporting to the element it STARTED on, so the move events arrive on the
+    // play area (they bubble up from the canvas) for as long as that finger is down.
+    joyArea.addEventListener('touchmove', (e) => {
         if (!joyActive) return;
         // Find the joystick's own touch by identifier rather than assuming touches[0] —
         // with a second finger down elsewhere (e.g. holding GIVE), touches[0] can be
@@ -52,8 +79,12 @@ if (joyContainer) {
         // was instead of tracking the finger actually on the joystick.
         const touch = findTouchById(e.touches, joyTouchId);
         if (!touch) return;
+        e.preventDefault();
         handleJoystickMove(touch.clientX, touch.clientY);
     }, { passive: false });
+
+    // A long press on the field would otherwise pop the browser/WebView's context menu.
+    joyArea.addEventListener('contextmenu', (e) => e.preventDefault());
 }
 
 // Listen on window (not just the joystick) so lifting the finger anywhere still
