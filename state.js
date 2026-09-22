@@ -196,6 +196,7 @@ const inventory = {
 // NEW: Core Character Database Profile Properties
 let character = {
     name: 'Player',
+    model: 'female', // which PLAYER_MODELS sprite set to draw (see entities.js); 'female' or 'male'
     level: 1,
     xp: 0,
     perkPoints: 0,   // unspent points — +1 per level gained (see gainPlayerXP)
@@ -756,6 +757,8 @@ function loadGameProgress() {
         if (stateMatrix.characterData) {
             character = stateMatrix.characterData;
             if (!character.name) character.name = 'Player'; // older saves predate the name field
+            if (character.model !== 'male') character.model = 'female'; // older saves predate the model field
+            if (typeof player !== 'undefined') player.model = character.model; // keep the on-screen sprite in sync
             normalizeCharacterPerks();                       // older saves predate the perk tree
             
             const charLevel = document.getElementById('charLevel');

@@ -673,26 +673,9 @@ function renderMiniPet(pet, elementId) {
             // Same sprite as in the world (front-facing sitting pose makes the best portrait).
             drawPetSprite(mctx, 'dog', 'sit', 0, ox, oy, 1);
         } else if (pet.type === 'elephant') {
-            mctx.fillStyle = '#95a5a6'; 
-            mctx.fillRect(ox + 6, oy + 8, 24, 18);  
-            mctx.fillRect(ox + 22, oy + 2, 10, 10);     
-            mctx.fillStyle = '#7f8c8d'; 
-            mctx.fillRect(ox + 18, oy + 4, 6, 10);  
-            mctx.fillStyle = '#000000'; 
-            mctx.fillRect(ox + 28, oy + 4, 2, 2);   
-            mctx.fillStyle = '#7f8c8d'; 
-            mctx.fillRect(ox + 8, oy + 26, 5, 6);   
-            mctx.fillRect(ox + 20, oy + 26, 5, 6);
-            mctx.fillRect(ox + 5, oy + 14, 2, 6);
-            mctx.fillStyle = '#95a5a6';
-            mctx.beginPath();
-            mctx.moveTo(ox + 30, oy + 10);
-            mctx.lineTo(ox + 35, oy + 18);
-            mctx.lineTo(ox + 33, oy + 19);
-            mctx.lineTo(ox + 29, oy + 12);
-            mctx.closePath();
-            mctx.fill();
-            if (pet.bowColor) drawElephantBow(mctx, ox, oy, pet.bowColor);
+            // Same sprite as in the world — idle frame 0 (see PET_SPRITES.elephant /
+            // .elephantBow in entities.js), matching the dog/cat portraits above.
+            drawPetSprite(mctx, pet.bowColor ? 'elephantBow' : 'elephant', 'idle', 0, ox, oy, 1);
         } else if (pet.type === 'squirrel') {
             mctx.fillStyle = pet.color; 
             mctx.fillRect(ox + 8, oy + 14, 16, 12);  
@@ -1313,6 +1296,23 @@ function updateCharacterScreen() {
     if (nameDisplay) nameDisplay.textContent = character.name || 'Player';
     if (levelValue) levelValue.textContent = character.level;
 
+    // Character model (see PLAYER_MODELS in entities.js): a live preview of the idle pose
+    // plus a button that flips character.model and, immediately, player.model — no reload
+    // needed, the next frame just draws with the other sprite set.
+    const modelLabel = document.getElementById('characterModelLabel');
+    const modelPreview = document.getElementById('characterModelPreview');
+    const switchModelBtn = document.getElementById('btnSwitchCharacterModel');
+    const model = character.model === 'male' ? 'male' : 'female';
+    if (modelLabel) modelLabel.textContent = model === 'male' ? 'Boy' : 'Girl';
+    if (switchModelBtn) switchModelBtn.textContent = model === 'male' ? '👧 Switch to Girl' : '👦 Switch to Boy';
+    if (modelPreview && typeof getPlayerSprite === 'function') {
+        const pctx = modelPreview.getContext('2d');
+        pctx.imageSmoothingEnabled = false;
+        pctx.clearRect(0, 0, 48, 48);
+        const sprite = getPlayerSprite('idle', 0, model);
+        pctx.drawImage(sprite, Math.round((48 - sprite.width) / 2), 48 - sprite.height - 1);
+    }
+
     if (bonusList && typeof getCharacterBonuses === 'function') {
         let b = getCharacterBonuses(character.level);
         const pct = (mult) => Math.round((mult - 1) * 100);
@@ -1376,6 +1376,22 @@ if (btnRenameCharacter && characterNameInput) {
         }
     };
     btnRenameCharacter.addEventListener('click', handleCharacterRename);
+}
+
+// Character model switch: flips between the two PLAYER_MODELS. Updates player.model
+// immediately (so the sprite changes on screen the instant you tap it, no reload), and
+// saves it the same way renaming does.
+const btnSwitchCharacterModel = document.getElementById('btnSwitchCharacterModel');
+if (btnSwitchCharacterModel) {
+    const handleSwitchCharacterModel = (e) => {
+        if (e) e.preventDefault();
+        character.model = character.model === 'male' ? 'female' : 'male';
+        if (typeof player !== 'undefined') player.model = character.model;
+        saveGameProgress();
+        updateCharacterScreen();
+    };
+    btnSwitchCharacterModel.addEventListener('click', handleSwitchCharacterModel);
+    btnSwitchCharacterModel.addEventListener('touchstart', handleSwitchCharacterModel, { passive: false });
 }
 
 // ------------------------------------------------------------

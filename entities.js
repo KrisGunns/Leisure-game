@@ -5,14 +5,18 @@
 // ============================================================
 
 // ------------------------------------------------------------------
-// THE PLAYER'S SPRITE — a chibi girl in a white sundress (long black hair, blue hair clips,
-// pink cheeks, tan sandals), drawn from small pixel maps so the art lives in code like everything
-// else. Each frame is 16 columns x 24 rows of palette letters ('.' = transparent); Player.draw()
-// paints them at PLAYER_SPRITE_SCALE (2 => a 32 x 48 px character; the hitbox stays 32 x 32).
-//   idle: front-facing, eyes closed in a happy smile, waving (2 frames, the hand bobs)
-//   walk: 3/4 view facing RIGHT, 4-frame cycle (stride / pass / stride / pass); drawn mirrored
-//         when walking left. Near leg/foot are the light skin tone, the far one the shaded tone.
-// To tweak the look, edit a letter below (see PLAYER_PALETTE) — nothing else needs to change.
+// THE PLAYER'S SPRITE — two selectable models (see character.model / the CHAR window's
+// switch button): the original chibi girl in a white sundress, and a chibi boy in a blue
+// t-shirt and dark pants. Each is a small pixel map so the art lives in code like everything
+// else. Every frame is 16 columns x 24 rows of palette letters ('.' = transparent);
+// Player.draw() paints them at PLAYER_SPRITE_SCALE (2 => a 32 x 48 px character; the hitbox
+// stays 32 x 32) using whichever model's frames/palette match player.model.
+//   idle: front-facing (2 frames — the girl's hand bobs while waving; the boy blinks)
+//   walk: 4-frame cycle facing RIGHT, mirrored when walking left. Near leg/foot uses the
+//         light skin/pants tone, the far one the shaded tone.
+// To tweak a model's look, edit its palette below — nothing else needs to change. To add a
+// third model: add its PLAYER_PALETTE_<NAME>/PLAYER_FRAMES_<NAME>, add it to
+// PLAYER_MODELS below, and it's selectable everywhere (getPlayerSprite, the switch button).
 // ------------------------------------------------------------------
 const PLAYER_SPRITE_SCALE = 2;
 const PLAYER_SPRITE_COLS = 16;
@@ -20,7 +24,7 @@ const PLAYER_SPRITE_ROWS = 24;
 const PLAYER_STEP_PIXELS = 18;   // distance walked per walk-cycle frame (feet stay in step with the ground)
 const PLAYER_WAVE_SECONDS = 0.45; // how long each idle waving pose lasts
 
-const PLAYER_PALETTE = {
+const PLAYER_PALETTE_FEMALE = {
     K: '#141418',   // hair
     h: '#40404e',   // hair shine
     S: '#f9cfae',   // skin
@@ -36,7 +40,22 @@ const PLAYER_PALETTE = {
     t: '#8f5c35'    // sandal soles
 };
 
-const PLAYER_FRAMES = {
+const PLAYER_PALETTE_MALE = {
+    K: '#5a4130',   // hair
+    h: '#7a5a3f',   // hair highlight
+    S: '#f0bd91',   // skin
+    s: '#d99f71',   // skin, shaded (far arm/leg)
+    E: '#241b15',   // eyes
+    M: '#7a3b2e',   // mouth (open, happy)
+    U: '#3f7fe0',   // t-shirt
+    u: '#2f62b8',   // t-shirt shading
+    P: '#26262e',   // pants
+    p: '#1a1a20',   // pants shading (far leg)
+    F: '#e9e9ee',   // shoes
+    f: '#a7a7b0'    // shoe soles
+};
+
+const PLAYER_FRAMES_FEMALE = {
     idle: [
         [
             '...KKKKKKKKKK...',
@@ -199,22 +218,195 @@ const PLAYER_FRAMES = {
     ],
 };
 
-// Each frame is rendered once into its own small offscreen canvas (built on first use), so drawing
-// the player is a single drawImage() per frame instead of ~400 fillRects.
+const PLAYER_FRAMES_MALE = {
+    idle: [
+        [
+            '....KKKKKKKK....',
+            '...KKKhKKhKKK...',
+            '..KKKKKKKKKKK...',
+            '..KKKKKKKKKKKK..',
+            '..KKSSSSSSSKKK..',
+            '..KSSSSSSSSSK...',
+            '..KSSSSSSSSSK...',
+            '..KSSESSSSESK...',
+            '..KSSSSSSSSSK...',
+            '..KSSSMMMSSSK...',
+            '...KSSSSSSSK....',
+            '....SSSSSSS.....',
+            '...UUUUUUUUU....',
+            '..UUUUUUUUUUU...',
+            '..sUUUUUUUUUS...',
+            '..sUUuUUUUUUS...',
+            '..sUUuUUUUUUS...',
+            '...UUUUUUUUU....',
+            '...UUU...UUU....',
+            '...PPP...PPP....',
+            '...PPP...PPP....',
+            '...PPP...PPP....',
+            '...FFF...FFF....',
+            '...fff...fff....',
+        ],
+        [
+            '....KKKKKKKK....',
+            '...KKKhKKhKKK...',
+            '..KKKKKKKKKKK...',
+            '..KKKKKKKKKKKK..',
+            '..KKSSSSSSSKKK..',
+            '..KSSSSSSSSSK...',
+            '..KSSSSSSSSSK...',
+            '..KSSESSSSESK...',
+            '..KSSSSSSSSSK...',
+            '..KSSSMMMSSSK...',
+            '...KSSSSSSSK....',
+            '....SSSSSSS.....',
+            '...UUUUUUUUU....',
+            '..UUUUUUUUUUU...',
+            '..SUUUUUUUUUu...',
+            '..SUUUUUUUuUu...',
+            '..SUUUUUUUuUu...',
+            '...UUUUUUUUU....',
+            '...UUU...UUU....',
+            '...PPP...PPP....',
+            '...PPP...PPP....',
+            '...PPP...PPP....',
+            '...FFF...FFF....',
+            '...fff...fff....',
+        ],
+    ],
+    walk: [
+        [
+            '....KKKKKKKK....',
+            '...KKKhKKhKKK...',
+            '..KKKKKKKKKKK...',
+            '..KKKKKKKKKKKK..',
+            '..KKSSSSSSSKKK..',
+            '..KSSSSSSSSSK...',
+            '..KSSSSSSSSSK...',
+            '..KSSESSSSESK...',
+            '..KSSSSSSSSSK...',
+            '..KSSSMMMSSSK...',
+            '...KSSSSSSSK....',
+            '....SSSSSSS.....',
+            '...UUUUUUUUU....',
+            '..UUUUUUUUUUU...',
+            '..sUUUUUUUUUS...',
+            '..sUUuUUUUUUS...',
+            '..sUUuUUUUUUS...',
+            '...UUUUUUUUU....',
+            '....UUU.UUU.....',
+            '...pPP...PPp....',
+            '..pPP.....PPp...',
+            '.pPP.......PPp..',
+            'FFF.........FFF.',
+            'fff.........fff.',
+        ],
+        [
+            '....KKKKKKKK....',
+            '...KKKhKKhKKK...',
+            '..KKKKKKKKKKK...',
+            '..KKKKKKKKKKKK..',
+            '..KKSSSSSSSKKK..',
+            '..KSSSSSSSSSK...',
+            '..KSSSSSSSSSK...',
+            '..KSSESSSSESK...',
+            '..KSSSSSSSSSK...',
+            '..KSSSMMMSSSK...',
+            '...KSSSSSSSK....',
+            '....SSSSSSS.....',
+            '...UUUUUUUUU....',
+            '..UUUUUUUUUUU...',
+            '..sUUUUUUUUUS...',
+            '..sUUuUUUUUUS...',
+            '..sUUuUUUUUUS...',
+            '...UUUUUUUUU....',
+            '....UUU.UUU.....',
+            '....PPP.PPP.....',
+            '....PPP.PPP.....',
+            '....PPP.PPP.....',
+            '....FFF.FFF.....',
+            '....fff.fff.....',
+        ],
+        [
+            '....KKKKKKKK....',
+            '...KKKhKKhKKK...',
+            '..KKKKKKKKKKK...',
+            '..KKKKKKKKKKKK..',
+            '..KKSSSSSSSKKK..',
+            '..KSSSSSSSSSK...',
+            '..KSSSSSSSSSK...',
+            '..KSSESSSSESK...',
+            '..KSSSSSSSSSK...',
+            '..KSSSMMMSSSK...',
+            '...KSSSSSSSK....',
+            '....SSSSSSS.....',
+            '...UUUUUUUUU....',
+            '..UUUUUUUUUUU...',
+            '..SUUUUUUUUUs...',
+            '..SUUUuUUUUus...',
+            '..SUUUuUUUUus...',
+            '...UUUUUUUUU....',
+            '....UUU.UUU.....',
+            '...Ppp...ppP....',
+            '..Ppp.....ppP...',
+            '.Ppp.......ppP..',
+            'FFF.........FFF.',
+            'fff.........fff.',
+        ],
+        [
+            '....KKKKKKKK....',
+            '...KKKhKKhKKK...',
+            '..KKKKKKKKKKK...',
+            '..KKKKKKKKKKKK..',
+            '..KKSSSSSSSKKK..',
+            '..KSSSSSSSSSK...',
+            '..KSSSSSSSSSK...',
+            '..KSSESSSSESK...',
+            '..KSSSSSSSSSK...',
+            '..KSSSMMMSSSK...',
+            '...KSSSSSSSK....',
+            '....SSSSSSS.....',
+            '...UUUUUUUUU....',
+            '..UUUUUUUUUUU...',
+            '..sUUUUUUUUUS...',
+            '..sUUuUUUUUUS...',
+            '..sUUuUUUUUUS...',
+            '...UUUUUUUUU....',
+            '....UUU.UUU.....',
+            '....PPP.PPP.....',
+            '....PPP.PPP.....',
+            '....PPP.PPP.....',
+            '....FFF.FFF.....',
+            '....fff.fff.....',
+        ],
+    ],
+};
+
+// Which model a name selects — add an entry here (and its PLAYER_PALETTE_<NAME> /
+// PLAYER_FRAMES_<NAME> above) to make a new character model selectable.
+const PLAYER_MODELS = {
+    female: { palette: PLAYER_PALETTE_FEMALE, frames: PLAYER_FRAMES_FEMALE },
+    male: { palette: PLAYER_PALETTE_MALE, frames: PLAYER_FRAMES_MALE }
+};
+
+// Each frame is rendered once per model into its own small offscreen canvas (built on first
+// use), so drawing the player is a single drawImage() per frame instead of ~400 fillRects.
 const playerSpriteCache = {};
-function getPlayerSprite(kind, index) {
-    const key = kind + index;
+function getPlayerSprite(kind, index, model) {
+    const modelKey = PLAYER_MODELS[model] ? model : 'female';
+    const key = modelKey + ':' + kind + index;
     if (playerSpriteCache[key]) return playerSpriteCache[key];
-    const rows = PLAYER_FRAMES[kind][index];
+    const { palette, frames } = PLAYER_MODELS[modelKey];
+    const rows = frames[kind][index];
     const c = document.createElement('canvas');
     c.width = PLAYER_SPRITE_COLS * PLAYER_SPRITE_SCALE;
     c.height = PLAYER_SPRITE_ROWS * PLAYER_SPRITE_SCALE;
     const cx = c.getContext('2d');
     for (let y = 0; y < rows.length; y++) {
         for (let x = 0; x < rows[y].length; x++) {
-            const color = PLAYER_PALETTE[rows[y][x]];
+            const color = palette[rows[y][x]];
             if (!color) continue;
             cx.fillStyle = color;
+
             cx.fillRect(x * PLAYER_SPRITE_SCALE, y * PLAYER_SPRITE_SCALE, PLAYER_SPRITE_SCALE, PLAYER_SPRITE_SCALE);
         }
     }
@@ -253,7 +445,13 @@ const PET_SPRITE_PALETTE = {
     c: '#fadaa0',   // cat cream
     i: '#e796a0',   // cat pink (ears, nose)
     k: '#8a4a1f',   // cat far legs
-    z: '#786054'   // zzz
+    z: '#786054',   // zzz
+    G: '#a9adb0',   // elephant body gray
+    H: '#c9ccd0',   // elephant light gray (belly, trunk highlight, forehead)
+    S: '#7c8185',   // elephant shade gray (ear inner, trunk shadow, legs)
+    Y: '#f4a7ba',   // elephant pink (ears, cheeks)
+    T: '#f0e6d2',   // elephant toenails
+    Q: '#5d6265'    // elephant bow knot/shadow
 };
 
 const PET_SPRITES = {
@@ -535,6 +733,194 @@ const PET_SPRITES = {
             ],
         ],
     },
+    elephant: {
+        idle: [
+            [
+                '........................',
+                '........................',
+                '...GGG............GGG...',
+                '..GGGGG..GHHHHG..GGGGG..',
+                '.GYYYGSGGGGGGGGGGSGYYYG.',
+                'GGYYYSGGGGGGGGGGGGSYYYGG',
+                'GGGGGSGGGGGGGGGGGGSGGGGG',
+                'GGGGGSGGGewGGweGGGSGGGGG',
+                'GGGGGSGGGeeGGeeGGGSGGGGG',
+                'GGGGGSGYYGGGGGGYYGSGGGGG',
+                '.GGGGSSGGGGHSGGGGSSGGGG.',
+                '..GGGSS.GGGHSGGG.SSGGG..',
+                '...GGGS..GGHSGG..SGGG...',
+                '....GGGGGGGHSGGGGGGG....',
+                '......GGGGGHSGGGGG......',
+                '......GGGHHHSHHGGG......',
+                '......GGGHHSSHHGGG......',
+                '.......GGHHSSSHGG.......',
+                '.......GGG..SSGGG.......',
+                '.......TTT....TTT.......',
+            ],
+            [
+                '........................',
+                '........................',
+                '...GGG............GGG...',
+                '..GGGGG..GHHHHG..GGGGG..',
+                '.GYYYGSGGGGGGGGGGSGYYYG.',
+                'GGYYYSGGGGGGGGGGGGSYYYGG',
+                'GGGGGSGGGGGGGGGGGGSGGGGG',
+                'GGGGGSGGGewGGweGGGSGGGGG',
+                'GGGGGSGGGeeGGeeGGGSGGGGG',
+                'GGGGGSGYYGGGGGGYYGSGGGGG',
+                '.GGGGSSGGGGHSGGGGSSGGGG.',
+                '..GGGSS.GGGHSGGG.SSGGG..',
+                '...GGGS..GGHSGG..SGGG...',
+                '....GGGGGGGHSGGGGGGG....',
+                '......GGGGGHSGGGGG......',
+                '......GGGHHS.HHGGG......',
+                '......GGGSS..HHGGG......',
+                '.......GGSHGGHHGG.......',
+                '.......GGG....GGG.......',
+                '.......TTT....TTT.......',
+            ],
+        ],
+        jump: [
+            [
+                '........................',
+                '........................',
+                '...GGG............GGG...',
+                '..GGGGG..GHHHHG..GGGGG..',
+                '.GYYYGSGGGGGGGGGHSGYYYG.',
+                'GGYYYSGGGGGGGGGHSGSYYYGG',
+                'GGGGGSGGGGGGGGHSGGSGGGGG',
+                'GGGGGSGGGewGGHSGGGSGGGGG',
+                'GGGGGSGGGeeGHSeGGGSGGGGG',
+                'GGGGGSGYYGGHSGGYYGSGGGGG',
+                '.GGGGSSGGGGnnGGGGSSGGGG.',
+                '..GGGSS.GGGGGGGG.SSGGG..',
+                '...GGGS..GGGGGG..SGGG...',
+                '....GGGGGGG..GGGGGGG....',
+                '......GGGGG..GGGGG......',
+                '......GGGHH..HHGGG......',
+                '......GGGHH..HHGGG......',
+                '.......GGHHGGHHGG.......',
+                '.......GGG....GGG.......',
+                '.......TTT....TTT.......',
+            ],
+            [
+                '........................',
+                '........................',
+                '...GGG............GGG...',
+                '..GGGGG..GHHHHG..GGGGG..',
+                '.GYYYGSGGGGGGGGGHSGYYYG.',
+                'GGYYYSGGGGGGGGGHSGSYYYGG',
+                'GGGGGSGGGGGGGGHSGGSGGGGG',
+                'GGGGGSGGGSSGGSSGGGSGGGGG',
+                'GGGGGSGGG..GH..GGGSGGGGG',
+                'GGGGGSGYYGGHSGGYYGSGGGGG',
+                '.GGGGSSGGGGnnGGGGSSGGGG.',
+                '..GGGSS.GGGGGGGG.SSGGG..',
+                '...GGGS..GGGGGG..SGGG...',
+                '....GGGGGGG..GGGGGGG....',
+                '......GGGGG..GGGGG......',
+                '......GGGHH..HHGGG......',
+                '......GGGHH..HHGGG......',
+                '.......GGHHGGHHGG.......',
+                '.......GGG....GGG.......',
+                '.......TTT....TTT.......',
+            ],
+        ],
+    },
+    elephantBow: {
+        idle: [
+            [
+                '..........ww....ww......',
+                '.........wwwwQQwwww.....',
+                '...GGG....wQQQQw..GGG...',
+                '..GGGGG..GHHHHG..GGGGG..',
+                '.GYYYGSGGGGGGGGGGSGYYYG.',
+                'GGYYYSGGGGGGGGGGGGSYYYGG',
+                'GGGGGSGGGGGGGGGGGGSGGGGG',
+                'GGGGGSGGGewGGweGGGSGGGGG',
+                'GGGGGSGGGeeGGeeGGGSGGGGG',
+                'GGGGGSGYYGGGGGGYYGSGGGGG',
+                '.GGGGSSGGGGHSGGGGSSGGGG.',
+                '..GGGSS.GGGHSGGG.SSGGG..',
+                '...GGGS..GGHSGG..SGGG...',
+                '....GGGGGGGHSGGGGGGG....',
+                '......GGGGGHSGGGGG......',
+                '......GGGHHHSHHGGG......',
+                '......GGGHHSSHHGGG......',
+                '.......GGHHSSSHGG.......',
+                '.......GGG..SSGGG.......',
+                '.......TTT....TTT.......',
+            ],
+            [
+                '..........ww....ww......',
+                '.........wwwwQQwwww.....',
+                '...GGG....wQQQQw..GGG...',
+                '..GGGGG..GHHHHG..GGGGG..',
+                '.GYYYGSGGGGGGGGGGSGYYYG.',
+                'GGYYYSGGGGGGGGGGGGSYYYGG',
+                'GGGGGSGGGGGGGGGGGGSGGGGG',
+                'GGGGGSGGGewGGweGGGSGGGGG',
+                'GGGGGSGGGeeGGeeGGGSGGGGG',
+                'GGGGGSGYYGGGGGGYYGSGGGGG',
+                '.GGGGSSGGGGHSGGGGSSGGGG.',
+                '..GGGSS.GGGHSGGG.SSGGG..',
+                '...GGGS..GGHSGG..SGGG...',
+                '....GGGGGGGHSGGGGGGG....',
+                '......GGGGGHSGGGGG......',
+                '......GGGHHS.HHGGG......',
+                '......GGGSS..HHGGG......',
+                '.......GGSHGGHHGG.......',
+                '.......GGG....GGG.......',
+                '.......TTT....TTT.......',
+            ],
+        ],
+        jump: [
+            [
+                '..........ww....ww......',
+                '.........wwwwQQwwww.....',
+                '...GGG....wQQQQw..GGG...',
+                '..GGGGG..GHHHHG..GGGGG..',
+                '.GYYYGSGGGGGGGGGHSGYYYG.',
+                'GGYYYSGGGGGGGGGHSGSYYYGG',
+                'GGGGGSGGGGGGGGHSGGSGGGGG',
+                'GGGGGSGGGewGGHSGGGSGGGGG',
+                'GGGGGSGGGeeGHSeGGGSGGGGG',
+                'GGGGGSGYYGGHSGGYYGSGGGGG',
+                '.GGGGSSGGGGnnGGGGSSGGGG.',
+                '..GGGSS.GGGGGGGG.SSGGG..',
+                '...GGGS..GGGGGG..SGGG...',
+                '....GGGGGGG..GGGGGGG....',
+                '......GGGGG..GGGGG......',
+                '......GGGHH..HHGGG......',
+                '......GGGHH..HHGGG......',
+                '.......GGHHGGHHGG.......',
+                '.......GGG....GGG.......',
+                '.......TTT....TTT.......',
+            ],
+            [
+                '..........ww....ww......',
+                '.........wwwwQQwwww.....',
+                '...GGG....wQQQQw..GGG...',
+                '..GGGGG..GHHHHG..GGGGG..',
+                '.GYYYGSGGGGGGGGGHSGYYYG.',
+                'GGYYYSGGGGGGGGGHSGSYYYGG',
+                'GGGGGSGGGGGGGGHSGGSGGGGG',
+                'GGGGGSGGGSSGGSSGGGSGGGGG',
+                'GGGGGSGGG..GH..GGGSGGGGG',
+                'GGGGGSGYYGGHSGGYYGSGGGGG',
+                '.GGGGSSGGGGnnGGGGSSGGGG.',
+                '..GGGSS.GGGGGGGG.SSGGG..',
+                '...GGGS..GGGGGG..SGGG...',
+                '....GGGGGGG..GGGGGGG....',
+                '......GGGGG..GGGGG......',
+                '......GGGHH..HHGGG......',
+                '......GGGHH..HHGGG......',
+                '.......GGHHGGHHGG.......',
+                '.......GGG....GGG.......',
+                '.......TTT....TTT.......',
+            ],
+        ],
+    },
 };
 
 const petSpriteCache = {};
@@ -601,6 +987,12 @@ class Player {
         this.moving = false;
         this.stepDistance = 0;   // total distance walked, drives the walk cycle
         this.idleTime = 0;       // seconds standing still, drives the idle wave
+
+        // Which sprite set to draw (see PLAYER_MODELS): 'female' or 'male'. Kept in sync with
+        // character.model — loadGameProgress() (state.js) sets this after restoring a save,
+        // and the CHAR window's switch button (ui.js) sets it immediately on click. Defaults
+        // to 'female' here purely so the player is never spriteless before that sync runs.
+        this.model = 'female';
     }
 
     update(dt) {
@@ -664,10 +1056,10 @@ class Player {
         if (this.moving) {
             // 4-frame walk cycle advanced by distance; the two "passing" frames also lift the body a pixel.
             const step = Math.floor(this.stepDistance / PLAYER_STEP_PIXELS) % 4;
-            sprite = getPlayerSprite('walk', step);
+            sprite = getPlayerSprite('walk', step, this.model);
             if (step % 2 === 1) bob = -PLAYER_SPRITE_SCALE;
         } else {
-            sprite = getPlayerSprite('idle', Math.floor(this.idleTime / PLAYER_WAVE_SECONDS) % 2);
+            sprite = getPlayerSprite('idle', Math.floor(this.idleTime / PLAYER_WAVE_SECONDS) % 2, this.model);
         }
 
         // The sprite is centred on the 32 x 32 hitbox (so it stands 8px taller above and 8px below it),
@@ -768,40 +1160,16 @@ class Flower {
     }
 }
 
-// The elephant's head bow: two triangular loops plus a knot (same construction as the
-// monkey's and the female bear's), sat on top of the head. Takes the drawing context and
-// the elephant's top-left origin so ONE implementation serves both the in-world model
-// (Pet.draw, with ctx and this.x/this.y) and the codex portrait (renderMiniPet in ui.js,
-// with its own context and offset) — the codex keeps a separate copy of every model, and
-// this way the bow can't end up different between the two. The thin outline keeps a white
-// bow readable against the sandy Region 2 background.
-function drawElephantBow(c, x, y, color) {
-    const cx = x + 27;   // middle of the head (head spans x+22..x+32)
-    const cy = y + 1;    // just above the top of the head (y+2)
-    c.save();
-    c.fillStyle = color;
-    c.strokeStyle = '#7f8c8d';
-    c.lineWidth = 1;
-    c.lineJoin = 'round';
-    [-1, 1].forEach(side => {
-        c.beginPath();
-        c.moveTo(cx, cy);
-        c.lineTo(cx + side * 7, cy - 5);
-        c.lineTo(cx + side * 7, cy + 4);
-        c.closePath();
-        c.fill();
-        c.stroke();
-    });
-    c.fillStyle = '#b2bec3';   // knot, a shade darker than the loops
-    c.fillRect(cx - 2, cy - 3, 4, 4);
-    c.strokeRect(cx - 2, cy - 3, 4, 4);
-    c.restore();
-}
+// The elephant's white bow is no longer a separate overlay function — now that both
+// elephants are PET_SPRITES pixel art (see 'elephant' / 'elephantBow' below), the Bow
+// Elephant's bow is simply baked into its own frame set, the same way the dog's collar
+// or the cat's stripes are baked into theirs. drawPetSprite() picks the right frame set
+// via this.bowColor (Pet.draw()) / pet.bowColor (renderMiniPet in ui.js).
 
-// The sugar glider model, front-facing with its gliding membrane spread. Like
-// drawElephantBow above, it takes a drawing context + the pet's top-left origin so ONE
-// implementation serves both the in-world model (Pet.draw) and the codex portrait
-// (renderMiniPet in ui.js), which keeps its own separate copy of every other model. Fits the
+// The sugar glider model, front-facing with its gliding membrane spread. Takes a drawing
+// context + the pet's top-left origin so ONE implementation serves both the in-world model
+// (Pet.draw) and the codex portrait (renderMiniPet in ui.js), which keeps its own separate
+// copy of every other model. Fits the
 // pet's 36x36 box (the tail curls a couple of px below it).
 //   opts.bowColor  — draws a small bow on the head (Miss Glider's red one)
 //   opts.sleeping  — closed eyes, used while resting inside a tree
@@ -2163,26 +2531,22 @@ class Pet {
                 drawPetSprite(ctx, 'dog', 'sit', Math.floor(Date.now() / 400) % 2, this.x, this.y, 1);
             }
         } else if (this.type === 'elephant') {
-            ctx.fillStyle = '#95a5a6'; 
-            ctx.fillRect(this.x + 6, this.y + 8, 24, 18);  
-            ctx.fillRect(this.x + 22, this.y + 2, 10, 10);     
-            ctx.fillStyle = '#7f8c8d'; 
-            ctx.fillRect(this.x + 18, this.y + 4, 6, 10);  
-            ctx.fillStyle = '#000000'; 
-            ctx.fillRect(this.x + 28, this.y + 4, 2, 2);   
-            ctx.fillStyle = '#7f8c8d'; 
-            ctx.fillRect(this.x + 8, this.y + 26, 5, 6);   
-            ctx.fillRect(this.x + 20, this.y + 26, 5, 6);
-            ctx.fillRect(this.x + 5, this.y + 14, 2, 6);
-            ctx.fillStyle = '#95a5a6';
-            ctx.beginPath();
-            ctx.moveTo(this.x + 30, this.y + 10);
-            ctx.lineTo(this.x + 35, this.y + 18);
-            ctx.lineTo(this.x + 33, this.y + 19);
-            ctx.lineTo(this.x + 29, this.y + 12);
-            ctx.closePath();
-            ctx.fill();
-            if (this.bowColor) drawElephantBow(ctx, this.x, this.y, this.bowColor);
+            // Sprite animation (see PET_SPRITES): 'idle' sways/blinks while standing still,
+            // 'jump' (trunk raised, a little hop) plays while wandering/foraging AND during
+            // the Lv20 "catch me" tag minigame (playing_approach/retreat/chase), so the
+            // elephant visibly perks up for the whole game rather than just the geometry
+            // moving underneath a static pose. bowColor picks the separate elephantBow
+            // sprite set (baked-in white bow) instead of drawing an overlay — the Bow
+            // Elephant is always created with bowColor: '#ffffff' (see world.js), so the
+            // actual color value isn't read, only whether one is set.
+            const spriteType = this.bowColor ? 'elephantBow' : 'elephant';
+            const walking = this.trackSpriteMotion();
+            const playingTag = this.state && this.state.indexOf('playing') === 0;
+            if (walking || playingTag) {
+                drawPetSprite(ctx, spriteType, 'jump', Math.floor(Date.now() / 220) % 2, this.x, this.y, this.facing || 1);
+            } else {
+                drawPetSprite(ctx, spriteType, 'idle', Math.floor(Date.now() / 500) % 2, this.x, this.y, this.facing || 1);
+            }
         } else if (this.type === 'squirrel') {
             ctx.fillStyle = this.color; 
             ctx.fillRect(this.x + 8, this.y + 14, 16, 12);  
