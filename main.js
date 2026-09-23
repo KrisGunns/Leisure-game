@@ -261,9 +261,10 @@ function gameLoop(timestamp) {
                     let rWater = regionalItems[r] ? regionalItems[r].waters : [];
                     let rFlower = regionalItems[r] ? regionalItems[r].flowers : [];
                     
-                    // Squirrel's speed boost and the bird's excursion-visit boost both
-                    // apply to whatever pets are in this region right now.
-                    pet._regionSpeedMult = getRegionSpeedBoost(r) * getBirdVisitSpeedBoost(r);
+                    // Squirrel's speed boost, the bird's excursion-visit boost, and any
+                    // Lv10+ gliders dropped here all apply to whatever pets are in this
+                    // region right now.
+                    pet._regionSpeedMult = getRegionSpeedBoost(r) * getBirdVisitSpeedBoost(r) * getGliderSpeedBoost(r);
                     pet.update(dt, rFood, rWater, rFlower);
                     
                     if (r === currentRegion) {
@@ -288,7 +289,7 @@ function gameLoop(timestamp) {
             let gWater = regionalItems[gr] ? regionalItems[gr].waters : [];
             let gFlower = regionalItems[gr] ? regionalItems[gr].flowers : [];
 
-            g._regionSpeedMult = getRegionSpeedBoost(gr) * getBirdVisitSpeedBoost(gr);
+            g._regionSpeedMult = getRegionSpeedBoost(gr) * getBirdVisitSpeedBoost(gr) * getGliderSpeedBoost(gr);
             g.update(dt, gFood, gWater, gFlower);
 
             if (gr === currentRegion) {

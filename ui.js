@@ -371,6 +371,7 @@ function getPetPerkDescriptions(type) {
         perks.push({ level: 1, text: 'Dropped in Region 5: bears fish 25% faster (1 stamina per 2 seconds)' });
         perks.push({ level: 1, text: 'Dropped in Region 8: monkeys forage +50% more (1 stamina per 2 seconds)' });
         perks.push({ level: 1, text: 'Dropped in Region 9: rests in a tree to recharge (+1 stamina per 2 seconds)' });
+        perks.push({ level: GLIDER_SPEED_BOOST_MIN_LEVEL, text: `Speeds up every pet in whatever region it's dropped in by +${Math.round(GLIDER_SPEED_BOOST_PER_GLIDER * 100)}%` });
         if (typeof GLIDER_STAMINA_TIERS !== 'undefined') {
             GLIDER_STAMINA_TIERS.forEach(tier => {
                 let [lvl, maxStamina] = tier;
@@ -2086,8 +2087,8 @@ if (spawnBeeBtn) {
         if (!petsByRegion[4]) petsByRegion[4] = [];
         
         // 2. Strict Capacity Threshold Lock
-        if (countHiveBees() >= 3) {
-            alert("🍯 The Hive structure has reached its maximum capacity of 3 total bees!");
+        if (countHiveBees() >= HIVE_MAX_BEES) {
+            alert(`🍯 The Hive structure has reached its maximum capacity of ${HIVE_MAX_BEES} total bees!`);
             spawnBeeBtn.style.display = 'none';
             return;
         }
@@ -2117,7 +2118,7 @@ if (spawnBeeBtn) {
         saveGameProgress();
         
         // Auto-hide the button immediately if this purchase hits the maximum capacity ceiling limit
-        if (countHiveBees() >= 3) {
+        if (countHiveBees() >= HIVE_MAX_BEES) {
             spawnBeeBtn.style.display = 'none';
         }
     };

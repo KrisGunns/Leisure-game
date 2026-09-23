@@ -627,6 +627,23 @@ function getGliderBuff(region) {
     return 1 + per * countActiveGliders(region);
 }
 
+// Lv10+ gliders speed up every pet in whatever region they're currently dropped in by +25%
+// each (stacks the same way getGliderBuff above does). Unlike getGliderBuff, this isn't
+// limited to the drain regions (4/5/8) — it works in ANY region a Lv10+ glider is sitting in,
+// whether it's foraging, draining stamina for its usual buff, or resting at home in Region 9.
+// Folds into the same _regionSpeedMult the squirrel's and bird's boosts use (main.js's
+// per-frame stamping loop), so it's one multiplication, not a separate system.
+const GLIDER_SPEED_BOOST_MIN_LEVEL = 10;
+const GLIDER_SPEED_BOOST_PER_GLIDER = 0.25;
+function getGliderSpeedBoost(region) {
+    let n = 0;
+    gliderPets.forEach(g => {
+        if (!g.held && g.regionNow === region && g.stamina > 0 && g.level >= GLIDER_SPEED_BOOST_MIN_LEVEL) n++;
+    });
+    return n > 0 ? 1 + GLIDER_SPEED_BOOST_PER_GLIDER * n : 1;
+}
+
+
 function getHeldGlider() {
     for (let i = 0; i < gliderPets.length; i++) {
         if (gliderPets[i].held) return gliderPets[i];
@@ -1190,7 +1207,7 @@ function checkCollisions() {
         let dist = Math.sqrt(dx * dx + dy * dy);
 
         if (dist < 65) {
-            if (countHiveBees() < 3) {
+            if (countHiveBees() < HIVE_MAX_BEES) {
                 spawnBeeBtn.style.display = 'block';
             } else {
                 spawnBeeBtn.style.display = 'none';
@@ -1225,17 +1242,17 @@ function checkCollisions() {
 let regionRefillTimers = {};
 
 function processSpawns(dt) {
-    // Region 4 (bees): flowers, capped at 5 — same model as food/water/bananas below,
-    // just its own smaller cap (unchanged from before; only the *rate* changed).
+    // Region 4 (bees): flowers, capped at 12 — same model as food/water/bananas below,
+    // just its own bigger cap now (room for the hive's now-5 bees to all find one).
     let flowerPool = regionalItems[4].flowers;
-    if (flowerPool.length >= 5) {
+    if (flowerPool.length >= 12) {
         regionRefillTimers[4] = undefined;
     } else if (regionRefillTimers[4] === undefined) {
         regionRefillTimers[4] = 2.0;
     } else {
         regionRefillTimers[4] -= dt;
         if (regionRefillTimers[4] <= 0) {
-            while (flowerPool.length < 5) flowerPool.push(new Flower());
+            while (flowerPool.length < 12) flowerPool.push(new Flower());
             regionRefillTimers[4] = undefined;
         }
     }

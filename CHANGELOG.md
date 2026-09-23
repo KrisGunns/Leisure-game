@@ -91,6 +91,18 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Changelog
 
+### 2026-09-23 (14) — Lv10 glider speed boost; hive capacity 3→5, flower cap 5→12
+
+**Sugar gliders: new Lv10 perk.** A Lv10+ glider now speeds up every pet in whatever region it's currently dropped in by +25% (`GLIDER_SPEED_BOOST_MIN_LEVEL`/`GLIDER_SPEED_BOOST_PER_GLIDER`, `getGliderSpeedBoost()` — world.js). Unlike its existing region-specific buffs (`getGliderBuff()` — honey/fishing-speed/forage-yield, limited to Regions 4/5/8), this one works in *any* region the glider is sitting in — foraging in 1/2/3/6/7, draining stamina for its usual buff in 4/5/8, or resting at home in 9 — and stacks per qualifying glider the same way `getGliderBuff()` does. Folded into the same `_regionSpeedMult` the squirrel's and bird's boosts already use (main.js's per-frame stamping), so it's one multiplication alongside those, not a separate system. Added to the glider's Pet Detail description.
+
+**Hive capacity 3 → 5** (so 1 free + 4 purchasable, was 1 free + 2 purchasable): new `HIVE_MAX_BEES` constant (state.js) replaces four separate hardcoded `3`s that had to already agree with each other — the buy-button's capacity lock and its alert text, the button's show/hide-on-approach toggle, and the auto-hide-on-purchase check (ui.js/world.js) — plus the Region 4 shop listing's own description text.
+
+**Region 4 flower cap 5 → 12**, so there's enough for a now-5-bee hive to all find one — `processSpawns()`'s Region 4 branch (world.js), same refill-timer model as everywhere else, just a bigger number.
+
+**Verification:** `node --check` on every edited file; loaded state.js+entities.js+world.js together in Node (stubbed DOM) and called `getGliderSpeedBoost()` directly against a simulated glider — confirmed it returns 1.25 for a Lv10+, active (not held, stamina > 0) glider, and correctly falls back to 1 when the glider is under Lv10, out of stamina, or held. Confirmed `HIVE_MAX_BEES` reads as 5 everywhere. **Not tested:** an actual browser/Playwright run (unavailable in this session).
+
+---
+
 ### 2026-09-22 (13) — Squirrel/dog/pig/chicken/bear fixes; full sparrow (bird) excursion rework; shop heading cleanup
 
 **Squirrel speed boost (Lv20+ perk):** a proc while the region is already boosted now **refreshes** `SQUIRREL_BOOST_SECONDS` (10s) back to full instead of being silently ignored — back-to-back procs keep a region boosted longer, but the boost itself still never stacks past `SQUIRREL_BOOST_MULT` (1.5x). `startRegionSpeedBoost()` (world.js).

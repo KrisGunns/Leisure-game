@@ -438,7 +438,7 @@ const UNLOCKABLES = [
     { id: 'pet_bowElephant', kind: 'pet',    region: 2, icon: '🐘', name: 'Bow Elephant', cost: 50,  desc: 'Joins Region 2 (white bow). Arrives wild (Lv1).' },
     { id: 'pet_bird',        kind: 'pet',    region: 3, icon: '🐦', name: 'Bird',         cost: 100, desc: 'Joins Region 3. Arrives wild (Lv1).' },
 
-    { id: 'region_4',        kind: 'region', region: 4, icon: '🐝', name: 'Region 4 — Beehive',    cost: 60,  desc: 'Unlocks Region 4 and comes with your first Bee. More bees can be bought at the hive (30 🪙 each, max 3).' },
+    { id: 'region_4',        kind: 'region', region: 4, icon: '🐝', name: 'Region 4 — Beehive',    cost: 60,  desc: 'Unlocks Region 4 and comes with your first Bee. More bees can be bought at the hive (30 🪙 each, max 5).' },
 
     { id: 'region_5',        kind: 'region', region: 5, icon: '🐻', name: 'Region 5 — Bear Lake',  cost: 150, desc: 'Unlocks Region 5 and comes with the Bear (Lv1 — needs Lv2 to be tamed).' },
     { id: 'pet_bowBear',     kind: 'pet',    region: 5, icon: '🐻', name: 'Bow Bear',     cost: 100, desc: 'Joins Region 5. Arrives wild (Lv1).' },
@@ -501,8 +501,11 @@ function buyUnlockable(id) {
 }
 
 // Bees bought at the hive (Region 4): the first one comes with the region for free, the
-// other two cost this each.
+// rest cost this each, up to HIVE_MAX_BEES total (see countHiveBees()/spawnBeeBtn wiring
+// in world.js and ui.js — all four read this one constant, so the cap can't drift between
+// the buy-button lock, its display toggle, and the shop's own description text below).
 const BEE_COST = 30;
+const HIVE_MAX_BEES = 5;
 
 // The OLD unlock rules — regions used to open by pet levels. Kept ONLY so a save made
 // before the shop existed can be grandfathered in (see loadGameProgress): a player who had
