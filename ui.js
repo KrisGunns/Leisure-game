@@ -306,7 +306,16 @@ function getPetPerkDescriptions(type) {
     };
 
     if (type === 'dog') {
-        addChance('dogDig', c => `${c} chance per forage to dig for a bonus coin`, c => `Digging chance increases to ${c}`);
+        // Written by hand (not addChance) so the Lv25 coin-bump line can sit between the
+        // two dogDig chance tiers in level order. Every number still comes straight from
+        // PERK_CHANCES.dogDig / DOG_DIG_BONUS_COIN_LEVEL / DOG_DIG_BONUS_COIN_AMOUNT
+        // (state.js) — same "can't disagree with what actually happens" guarantee as addChance.
+        const digTiers = PERK_CHANCES.dogDig || [];
+        const [digLvl1, digChance1] = digTiers[0] || [20, 0];
+        const [digLvl2, digChance2] = digTiers[1] || [30, 0];
+        perks.push({ level: digLvl1, text: `${Math.round(digChance1 * 100)}% chance per forage to dig for a bonus coin` });
+        perks.push({ level: DOG_DIG_BONUS_COIN_LEVEL, text: `Digging now awards ${DOG_DIG_BONUS_COIN_AMOUNT} coins instead of 1` });
+        perks.push({ level: digLvl2, text: `Digging chance doubles to ${Math.round(digChance2 * 100)}%` });
     } else if (type === 'chicken') {
         addChance('chickenEgg', c => `${c} chance per forage to lay a collectible egg`, c => `Egg chance increases to ${c}`);
         perks.push({ level: CHAIN_EGG_MIN_LEVEL, text: `Chain egg: after laying an egg, the next forage gets +${Math.round(CHAIN_EGG_STEP * 100)}% egg chance, growing another +${Math.round(CHAIN_EGG_STEP * 100)}% with each egg in a row (up to +${Math.round(CHAIN_EGG_MAX * 100)}%). A forage with no egg resets it` });
@@ -315,12 +324,17 @@ function getPetPerkDescriptions(type) {
     } else if (type === 'squirrel') {
         addChance('squirrelBoost', c => `${c} chance per forage to make every pet in this region ${Math.round((SQUIRREL_BOOST_MULT - 1) * 100)}% faster for ${SQUIRREL_BOOST_SECONDS}s`, c => `Speed-boost chance increases to ${c}`);
     } else if (type === 'pig') {
-        addChance('pigMud', c => `${c} chance per forage to play in mud +2 coins`, c => `Mud-play chance increases to ${c}`);
+        addChance('pigMud', c => `${c} chance per forage to play in mud +2 coins (only while standing in the mud patch)`, c => `Mud-play chance increases to ${c}`);
     } else if (type === 'cat') {
         addChance('catDouble', c => `${c} chance per forage to double the food/water gained`, c => `Double-forage chance increases to ${c}`);
         addChance('catSchrodinger', c => `${c} chance per forage to enter Schr\u00F6dinger's state`, c => `Schr\u00F6dinger's state chance increases to ${c}`);
     } else if (type === 'bird') {
-        addChance('birdFly', c => `${c} chance per forage to fly off to a random region`, c => `Chance to fly off increases to ${c}`);
+        addChance('birdFly', c => `${c} chance per forage to fly off on a ${BIRD_EXCURSION_SECONDS}s excursion to a random unlocked region`, c => `Chance to fly off increases to ${c}`);
+        perks.push({ level: 20, text: `Regions 1, 2, 6, 7: forages there like normal (its own yield plus your usual bonuses) and speeds up every pet already there by ${Math.round((BIRD_VISIT_PET_SPEED_MULT - 1) * 100)}%` });
+        perks.push({ level: 20, text: `Region 4: speeds up the bees by ${Math.round((BIRD_VISIT_BEE_SPEED_MULT - 1) * 100)}% and boosts honey gained per hive trip by ${Math.round((BIRD_VISIT_HONEY_GAIN_MULT - 1) * 100)}%` });
+        perks.push({ level: 20, text: `Region 5: boosts the bear's catch by ${Math.round((BIRD_VISIT_FISH_YIELD_MULT - 1) * 100)}% and speeds up its whole fishing cycle by ${Math.round((BIRD_VISIT_FISH_SPEED_MULT - 1) * 100)}%` });
+        perks.push({ level: 20, text: `Region 8: speeds up the monkeys by ${Math.round((BIRD_VISIT_PET_SPEED_MULT - 1) * 100)}%` });
+        perks.push({ level: 20, text: `Region 9: speeds up sugar gliders' stamina regen while resting by ${Math.round((BIRD_VISIT_GLIDER_STAMINA_MULT - 1) * 100)}%` });
     } else if (type === 'panda') {
         addChance('pandaFever', c => `${c} chance per forage (while you're in Region 7) to start "Bamboo Fever" -- choose Play to collect bamboo for coins while it naps, or Starve and it flees you for 30s`, c => `Bamboo Fever chance increases to ${c}`);
     } else if (type === 'bee') {
@@ -335,9 +349,9 @@ function getPetPerkDescriptions(type) {
         addChance('beeDoubleHoney', c => `${c} chance of double honey`, c => `Double-honey chance increases to ${c}`);
         addChance('beeDoubleExp', c => `${c} chance for a flower to give double exp`, c => `Double-exp chance increases to ${c}`);
     } else if (type === 'bear') {
-        perks.push({ level: 5, text: `Starts fishing at the lake, catching ${getBearFishPerCycle(5)} fish per cycle` });
-        perks.push({ level: 10, text: `Fishing cycle speeds up, and catch increases to ${getBearFishPerCycle(10)} fish per cycle` });
-        perks.push({ level: 15, text: 'Fishing cycle speeds up further' });
+        perks.push({ level: 5, text: `Starts fishing at the lake: catches ${getBearFishPerCycle(5)} fish per cycle, then waits ${getBearWaitRange(5).base}-${getBearWaitRange(5).base + getBearWaitRange(5).spread}s before the next trip (fishing itself takes ${BEAR_FISHING_ACTION_SECONDS}s)` });
+        perks.push({ level: 10, text: `Wait between trips shortens to ${getBearWaitRange(10).base}-${getBearWaitRange(10).base + getBearWaitRange(10).spread}s, and catch increases to ${getBearFishPerCycle(10)} fish per cycle` });
+        perks.push({ level: 15, text: `Wait between trips shortens further, to ${getBearWaitRange(15).base}-${getBearWaitRange(15).base + getBearWaitRange(15).spread}s` });
         perks.push({ level: 20, text: `Catch is ${getBearFishPerCycle(20)} fish per cycle` });
         perks.push({ level: 25, text: `Catch is ${getBearFishPerCycle(25)} fish per cycle` });
         addChance('bearDoubleFish', c => `${c} chance of a double catch`, c => `Double-catch chance increases to ${c}`);
@@ -1544,15 +1558,15 @@ function renderShop() {
             shopContent.appendChild(makeShopRow(item.icon, item.name, desc, meta, [btn], active ? item.id : null));
         });
     } else if (shopTab === 'unlockables') {
-        // Grouped by region. Regions 1-3 are open from the start, so they only get a heading
-        // (naming the pets they start with) and the pets sold for them; Regions 4-9 are
-        // themselves for sale, followed by any extra pet sold for that region.
-        const STARTERS = { 1: 'Dog', 2: 'Elephant', 3: 'Squirrel & Chicken' };
+        // Grouped by region. Regions 1-3 are open from the start, so they only get a plain
+        // "Region N" heading (no "starts with ..." blurb — the player can just see the pet
+        // rows below it) and the pets sold for them; Regions 4-9 are themselves for sale,
+        // followed by any extra pet sold for that region.
         for (let r = 1; r <= 9; r++) {
             if (r <= 3) {
                 let heading = document.createElement('div');
                 heading.className = 'shopSectionHeading';
-                heading.textContent = `Region ${r} · starts with ${STARTERS[r]}`;
+                heading.textContent = `Region ${r}`;
                 shopContent.appendChild(heading);
             }
             UNLOCKABLES.filter(u => u.region === r).forEach(u => {

@@ -110,24 +110,24 @@ function gameLoop(timestamp) {
                 ctx.fillRect(x, 20, 8, 10);
                 ctx.fillRect(x, canvas.height - 30, 8, 10);
             }
-            // Small muddy area in the middle of the sty — purely visual flavor; pigs'
-            // mud-play state can trigger anywhere in the region, not just here.
-            let mudX = canvas.width / 2 - 60;
-            let mudY = canvas.height / 2 - 35;
+            // Small muddy area in the middle of the sty. Geometry comes from getMudPatch()
+            // (world.js) — the same ellipse the pig's mud-play perk checks the pig against,
+            // so what's drawn here IS the playable trigger area, not just flavor.
+            const mudPatch = getMudPatch();
             ctx.fillStyle = '#5c4326';
             ctx.beginPath();
-            ctx.ellipse(mudX + 60, mudY + 35, 65, 38, 0, 0, Math.PI * 2);
+            ctx.ellipse(mudPatch.cx, mudPatch.cy, mudPatch.rx, mudPatch.ry, 0, 0, Math.PI * 2);
             ctx.fill();
             ctx.fillStyle = '#3e2f1c';
             ctx.beginPath();
-            ctx.ellipse(mudX + 60, mudY + 35, 65, 38, 0, 0, Math.PI * 2);
+            ctx.ellipse(mudPatch.cx, mudPatch.cy, mudPatch.rx, mudPatch.ry, 0, 0, Math.PI * 2);
             ctx.stroke();
             ctx.fillStyle = 'rgba(0,0,0,0.15)';
             ctx.beginPath();
-            ctx.ellipse(mudX + 40, mudY + 25, 18, 10, 0, 0, Math.PI * 2);
+            ctx.ellipse(mudPatch.cx - 20, mudPatch.cy - 10, 18, 10, 0, 0, Math.PI * 2);
             ctx.fill();
             ctx.beginPath();
-            ctx.ellipse(mudX + 85, mudY + 45, 14, 8, 0, 0, Math.PI * 2);
+            ctx.ellipse(mudPatch.cx + 25, mudPatch.cy + 10, 14, 8, 0, 0, Math.PI * 2);
             ctx.fill();
         } else if (currentRegion === 7) {
             // Panda habitat: soft forest green ground, bamboo groves, and a couple of
@@ -261,8 +261,9 @@ function gameLoop(timestamp) {
                     let rWater = regionalItems[r] ? regionalItems[r].waters : [];
                     let rFlower = regionalItems[r] ? regionalItems[r].flowers : [];
                     
-                    // Squirrel's speed boost applies to whatever pets are in this region right now.
-                    pet._regionSpeedMult = getRegionSpeedBoost(r);
+                    // Squirrel's speed boost and the bird's excursion-visit boost both
+                    // apply to whatever pets are in this region right now.
+                    pet._regionSpeedMult = getRegionSpeedBoost(r) * getBirdVisitSpeedBoost(r);
                     pet.update(dt, rFood, rWater, rFlower);
                     
                     if (r === currentRegion) {
@@ -287,7 +288,7 @@ function gameLoop(timestamp) {
             let gWater = regionalItems[gr] ? regionalItems[gr].waters : [];
             let gFlower = regionalItems[gr] ? regionalItems[gr].flowers : [];
 
-            g._regionSpeedMult = getRegionSpeedBoost(gr);
+            g._regionSpeedMult = getRegionSpeedBoost(gr) * getBirdVisitSpeedBoost(gr);
             g.update(dt, gFood, gWater, gFlower);
 
             if (gr === currentRegion) {

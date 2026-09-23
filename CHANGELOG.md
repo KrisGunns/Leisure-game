@@ -91,6 +91,35 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Changelog
 
+### 2026-09-22 (13) — Squirrel/dog/pig/chicken/bear fixes; full sparrow (bird) excursion rework; shop heading cleanup
+
+**Squirrel speed boost (Lv20+ perk):** a proc while the region is already boosted now **refreshes** `SQUIRREL_BOOST_SECONDS` (10s) back to full instead of being silently ignored — back-to-back procs keep a region boosted longer, but the boost itself still never stacks past `SQUIRREL_BOOST_MULT` (1.5x). `startRegionSpeedBoost()` (world.js).
+
+**Dog's dig perk:** two real bugs — the Lv25 "+2 coins" behavior the description implied never actually existed in code (dig always paid a flat 1 coin), and Lv30 only raised the chance from 10% to 15% (not a double). Both fixed: new `DOG_DIG_BONUS_COIN_LEVEL`/`DOG_DIG_BONUS_COIN_AMOUNT` (state.js) make a Lv25+ dig actually pay 2 coins (`Pet.update()`'s `'digging'` payout, entities.js); `PERK_CHANCES.dogDig`'s Lv30 tier is now 0.20 (a true double of Lv20's 0.10). The Pet Detail description (`getPetPerkDescriptions`, ui.js) is rewritten by hand (not the usual `addChance` helper) so the Lv25 coin line sits between the two chance tiers in level order, and every number in it is read from those same constants.
+
+**Shop → Unlockables:** removed the "Region 1 starts with Dog / Region 2 starts with Elephant / Region 3 starts with Squirrel & Chicken" heading text — headings for Regions 1-3 now just read "Region N". (The pet boxes under those headings were already Cat / Bow Elephant / Bird — no data change needed there.)
+
+**Pig:** its floating state label read `[MUD_PLAY]` (raw `state.toUpperCase()`, underscore and all) — added a proper case so it now reads `[MUD PLAY]`, matching every other bracketed label. Its mud-play perk could previously trigger anywhere in Region 6; it's now gated to actually standing in the mud patch. Added a shared `getMudPatch()`/`isInMudPatch()` (world.js) — main.js's decorative mud-pit drawing and the pig's mud-play check (entities.js) both read the *same* ellipse now, so the playable area can never drift from what's drawn.
+
+**Chicken's chain egg:** `CHAIN_EGG_STEP` 0.05→0.10, `CHAIN_EGG_MAX` 0.50→0.60 (state.js) — chain now starts at +10% and climbs +10% per egg in a row, capping at +60%. The description text already reads these constants, so it updated automatically.
+
+**Bear's fishing:** the wait-before-a-trip timer's level-based ranges (70-90s → 60-85s at Lv10 → 50-80s at Lv15) and the fixed 20s active-fishing duration were hardcoded inline with no description to match. Extracted into `BEAR_FISHING_ACTION_SECONDS`/`BEAR_WAIT_TIERS`/`getBearWaitRange()` (state.js), used by both `setNextFishingCooldown()` (entities.js, same numbers as before — this was a refactor, not a balance change) and a rewritten bear Pet Detail description that now states the actual wait ranges and the Lv10/Lv15 reductions.
+
+**Floating joystick vs. other buttons — investigated, no bug found.** Read through the joystick's touch handling (input.js) and the GIVE/whistle buttons' own listeners: the joystick tracks its own touch by identifier, only ever activates on a touchstart whose target is the play area itself (`isJoystickSurface()` — a touch starting on a button never reaches it), and the joystick's on-screen container has `pointer-events: none` (style.css) so even if it visually overlaps a button while being dragged, a second finger tapping that button hit-tests straight through to the button, not the joystick. This looks like it was already specifically hardened for holding GIVE while moving. **Not verified in an actual browser** (none available in this session) — worth a quick real-device check, but nothing in the code points to a bug.
+
+**Sparrow (bird) excursion — effects rewritten from scratch.** Previously: away from home it foraged food/water regions at a flat +20%, rolled a 10%-per-second chance to catch its own fish while visiting Region 5, and gave Region 4's bees a one-time +20% speed mutation reverted on return. Replaced with a single live-multiplier system, `birdExcursionRegion` + `BIRD_VISIT_*` (world.js), read directly wherever it applies (nothing to apply/revert, so it can't get out of sync):
+- **Regions 1, 2, 6, 7:** forages exactly like it would at home — its own yield plus the player's normal bonuses, no special excursion bonus any more — and every pet already in the region (bird included) moves **+25%** faster (`BIRD_VISIT_PET_SPEED_MULT`), folded into the same `_regionSpeedMult` the squirrel's boost uses (main.js's per-frame stamping).
+- **Region 4:** bees move **+50%** faster (`BIRD_VISIT_BEE_SPEED_MULT`, also via `_regionSpeedMult`) and each hive deposit banks **+25%** more honey (`BIRD_VISIT_HONEY_GAIN_MULT`, stacks with the sugar-glider honey buff — `Pet.update()`'s bee-return branch, entities.js).
+- **Region 5:** the bear's catch per cycle is **+25%** (`BIRD_VISIT_FISH_YIELD_MULT`) and its whole fishing cycle — both the wait-before-a-trip timer and the active-fishing timer — runs **+50%** faster (`BIRD_VISIT_FISH_SPEED_MULT`, stacks with the sugar-glider fishing buff).
+- **Region 8:** monkeys move **+25%** faster (same `_regionSpeedMult` mechanism as 1/2/6/7).
+- **Region 9:** sugar gliders' stamina regenerates **2x** as fast while resting (`BIRD_VISIT_GLIDER_STAMINA_MULT` multiplies `restTimer`'s fill rate, not the per-tick amount, so it's still +1 stamina per tick, just twice as often).
+
+`ALL_REGIONS` (the excursion's destination pool) now spans all 9 regions instead of stopping at 6 — the bird can fly to any unlocked region except its own home (Region 3). The Pet Detail description (ui.js) lists all five effects, every number read from the `BIRD_VISIT_*` constants above.
+
+**Verification:** `node --check` on every edited file; loaded `state.js`+`entities.js`+`world.js` together in Node (stubbed DOM) and exercised every new/changed function directly — `ALL_REGIONS`, all five `getBirdVisit*()` boost getters (confirmed each only fires for its own region and returns the right multiplier), the squirrel boost refresh, the dog/chicken/bear constants, and `getMudPatch()`/`isInMudPatch()` (confirmed the canvas-center point is inside the ellipse and a far corner isn't) — all matched expectations. **Not tested:** an actual browser/Playwright run (unavailable in this session) — the usual caveat applies, especially for the joystick finding above.
+
+---
+
 ### 2026-09-22 (12) — Region 2 elephants redrawn as pixel-art sprites; selectable male player character
 
 **Changed:** the Region 2 **Elephant** and **Bow Elephant** are no longer built from rectangles; they use the same `PET_SPRITES` letter-map pixel art as the dog and cat, modelled on the two reference sheets (big rounded ears, a hanging/curling trunk, pink cheeks and cream toenails; the Bow Elephant's white bow is baked into its own frame set rather than drawn as a separate overlay).

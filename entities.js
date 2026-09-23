@@ -1340,7 +1340,6 @@ class Pet {
         this.excursionActive = false;
         this.excursionRegion = null;
         this.excursionTimer = 0;
-        this.excursionFishTimer = 0;
 
         // Panda-only fields, same reasoning — the Lv20 "Bamboo Fever" event.
         // stateTimer (already declared above for other pets) is reused for the
@@ -1391,9 +1390,8 @@ class Pet {
     // other bear created another way (e.g. a future "buy a bear" feature, or save/load
     // reconstruction) wouldn't have this method at all. Now a real class method.
     setNextFishingCooldown() {
-        if (this.level >= 15) this.fishingTimer = Math.random() * 30 + 50;
-        else if (this.level >= 10) this.fishingTimer = Math.random() * 25 + 60;
-        else this.fishingTimer = Math.random() * 20 + 70;
+        const w = getBearWaitRange(this.level);
+        this.fishingTimer = Math.random() * w.spread + w.base;
     }
 
     // ------------------------------------------------------------------
@@ -1462,7 +1460,10 @@ class Pet {
                 this.x = tree.hollowX - this.size / 2;
                 this.y = tree.hollowY - this.size / 2;
 
-                this.restTimer += clock;
+                // The bird's Lv20 excursion, while visiting Region 9, doubles how fast
+                // restTimer fills (BIRD_VISIT_GLIDER_STAMINA_MULT, world.js) — the stamina
+                // gained per tick (+1) is unchanged, the tick just arrives twice as often.
+                this.restTimer += clock * getBirdVisitGliderStaminaBoost();
                 while (this.restTimer >= GLIDER_REST_SECONDS && this.stamina < maxStamina) {
                     this.restTimer -= GLIDER_REST_SECONDS;
                     this.stamina += 1;
@@ -1723,6 +1724,11 @@ class Pet {
                     // boost even at tiny loads (a plain round of 1 x 1.5 would always be 2).
                     let gliderHoneyBuff = getGliderBuff(4);
                     if (gliderHoneyBuff > 1) honeyDeposited = roundStochastic(honeyDeposited * gliderHoneyBuff);
+                    // The bird's Lv20 excursion, while visiting Region 4, adds another +25%
+                    // (BIRD_VISIT_HONEY_GAIN_MULT, world.js) — independent of, and stacks
+                    // with, the glider buff above.
+                    let birdHoneyBuff = getBirdVisitHoneyGainBoost();
+                    if (birdHoneyBuff > 1) honeyDeposited = roundStochastic(honeyDeposited * birdHoneyBuff);
                     region4Hive.honey += honeyDeposited;
                     this.honeyCarried = 0;
                     updateUI();
@@ -1767,15 +1773,18 @@ class Pet {
                     this.y += (dy / dist) * (this.effectiveSpeed * 1.2) * dt;
                 } else {
                     this.state = 'fishing';
-                    this.fishingActionTimer = 20.0;
+                    this.fishingActionTimer = BEAR_FISHING_ACTION_SECONDS;
                 }
                 return;
             }
 
             if (this.state === 'fishing') {
                 // Cake buff: fishing is the bear's foraging, so it ticks down faster too.
-                // Sugar gliders in Region 5 (with stamina) speed fishing up by 25% each.
-                this.fishingActionTimer -= dt * getPetForageMultiplier() * getGliderBuff(5);
+                // Sugar gliders in Region 5 (with stamina) speed fishing up by 25% each, and
+                // the bird's Lv20 excursion, while visiting Region 5, adds another flat +50%
+                // (BIRD_VISIT_FISH_SPEED_MULT, world.js) — independent of, and stacks with,
+                // the glider buff.
+                this.fishingActionTimer -= dt * getPetForageMultiplier() * getGliderBuff(5) * getBirdVisitFishSpeedBoost();
                 
                 // Continuous Splash Generation Loop: Fires while the bear is actively fishing
                 if (this.fishingActionTimer > 0) {
@@ -1835,7 +1844,9 @@ class Pet {
                     // (PERK_CHANCES.bearDoubleFish), both in state.js.
                     let fishCaught = Math.max(1, getBearFishPerCycle(this.level));
                     if (Math.random() < getPerkChance('bearDoubleFish', this.level)) fishCaught *= 2;
-                    inventory.fish += Math.round(fishCaught * petFishBonus);
+                    // The bird's Lv20 excursion, while visiting Region 5, adds a further +25%
+                    // (BIRD_VISIT_FISH_YIELD_MULT, world.js) on top of the normal petFishBonus.
+                    inventory.fish += Math.round(fishCaught * petFishBonus * getBirdVisitFishYieldBoost());
                     updateUI();
                     saveGameProgress();
                     this.setNextFishingCooldown();
@@ -1848,7 +1859,7 @@ class Pet {
             // Fishing itself doesn't start until Level 5 — below that the bear is tame
             // (Level 2+) and wanders normally, but never queues up a fishing trip.
             if (this.level >= 5) {
-                this.fishingTimer -= dt * getPetForageMultiplier() * getGliderBuff(5); // Cake buff + sugar gliders
+                this.fishingTimer -= dt * getPetForageMultiplier() * getGliderBuff(5) * getBirdVisitFishSpeedBoost(); // Cake buff + sugar gliders + visiting bird
                 if (this.fishingTimer <= 0) {
                     this.state = 'fishing_travel';
                     return;
@@ -1909,8 +1920,11 @@ class Pet {
             }
 
             if (this.stateTimer <= 0 && this.digParticles.length === 0) {
-                // Award the coin exactly once, after the timer AND the particle animation both finish
-                let dogCoinsEarned = Math.round(1 * coinBonus);
+                // Award the coin exactly once, after the timer AND the particle animation both finish.
+                // Lv25+ (DOG_DIG_BONUS_COIN_LEVEL, state.js): the dig awards DOG_DIG_BONUS_COIN_AMOUNT
+                // coins instead of 1.
+                let dogCoinsBase = (this.level >= DOG_DIG_BONUS_COIN_LEVEL) ? DOG_DIG_BONUS_COIN_AMOUNT : 1;
+                let dogCoinsEarned = Math.round(dogCoinsBase * coinBonus);
                 inventory.coins += dogCoinsEarned;
                 if (typeof spawnCoinPopup === 'function') spawnCoinPopup(this.homeRegion, this.x + this.size / 2, this.y, dogCoinsEarned);
                 updateUI();
@@ -1921,42 +1935,22 @@ class Pet {
             return;
         }
 
-                // --- BIRD EXCURSION IN PROGRESS (Lv20 perk): away from home region 3 for
-        // 30s (BIRD_EXCURSION_SECONDS). Region 5: rolls a 10% fish-catch chance every whole second it's present.
-        // Region 4: a one-time +20% bee speed boost was already applied on arrival (see
-        // the trigger below) and reverted here on return. Food/water regions (1/2/6):
-        // no special-case needed here — falls through to the normal wander/forage
-        // pipeline below, which already grants a +20% excursion bonus (see that branch). ---
+                // --- BIRD EXCURSION IN PROGRESS (Lv20 perk): away from home Region 3 for
+        // 30s (BIRD_EXCURSION_SECONDS). All of the actual region-specific buffs (pet speed,
+        // bee speed/honey, bear fish yield/speed, glider stamina) are LIVE multipliers keyed
+        // off birdExcursionRegion (world.js) and read directly wherever they apply, so there's
+        // nothing to apply/revert here any more — birdExcursionRegion just needs to track
+        // where the bird currently is, cleared the moment it leaves. Regions 1/2/6/7 need no
+        // special-case here at all — the bird just falls through to the normal wander/forage
+        // pipeline below like any other visitor, and the speed buff is folded into
+        // _regionSpeedMult (main.js) the same way every pet there gets it. ---
         if (this.type === 'bird' && this.excursionActive) {
-            // The trip's 30 seconds (and Region 5's once-a-second fish rolls) run on the REAL clock,
-            // not the game loop's `dt` — that over-counts on some devices (see tickShopBuffs in
-            // state.js), which used to make a "60 second" trip last about half that.
+            // The trip's 30 seconds run on the REAL clock, not the game loop's `dt` — that
+            // over-counts on some devices (see tickShopBuffs in state.js), which used to make
+            // a "60 second" trip last about half that.
             this.excursionTimer -= gliderRealDt;
 
-            if (this.excursionRegion === 5) {
-                this.excursionFishTimer += gliderRealDt;
-                while (this.excursionFishTimer >= 1.0) {
-                    this.excursionFishTimer -= 1.0;
-                    if (Math.random() < 0.10) {
-                        // Same "Fishy Business" pet-fish perk the bears' fish get; roundStochastic so
-                        // the +25% shows up on average even though a catch is a single fish.
-                        inventory.fish += roundStochastic(petFishBonus);
-                        updateUI();
-                    }
-                }
-            }
-
             if (this.excursionTimer <= 0) {
-                // Revert the bee speed boost if this trip was to the hive.
-                if (this.excursionRegion === 4 && petsByRegion[4]) {
-                    petsByRegion[4].forEach(bee => {
-                        if (bee.type === 'bee' && bee._birdBoosted) {
-                            bee.speed /= 1.20;
-                            bee._birdBoosted = false;
-                        }
-                    });
-                }
-
                 // Leave the away region — show the fly-away visual there if the player
                 // is currently looking at it.
                 let awayArr = petsByRegion[this.excursionRegion];
@@ -1969,9 +1963,11 @@ class Pet {
                 }
 
                 // Arrive back home — show the landing visual there if the player is
-                // currently looking at region 3.
+                // currently looking at region 3. Clearing birdExcursionRegion here is what
+                // switches every visit buff above back off.
                 this.excursionActive = false;
                 this.excursionRegion = null;
+                birdExcursionRegion = null;
                 petsByRegion[this.homeRegion].push(this);
                 this.pickNewWanderTarget();
                 this.x = this.targetX;
@@ -2324,8 +2320,12 @@ class Pet {
                             else inventory.water += Math.round(y.water * petFoodWaterBonus);
 
                             // 5% chance to play in the mud for 5s after a successful forage
-                            // (Level 20+ only — matches the dog/chicken rare-bonus pattern).
-                            if (Math.random() < getPerkChance('pigMud', this.level)) {
+                            // (Level 20+ only — matches the dog/chicken rare-bonus pattern),
+                            // but only while the pig is actually standing in the mud patch
+                            // in the middle of the sty (getMudPatch()/isInMudPatch(), world.js —
+                            // the same ellipse main.js draws, so this can't drift from it).
+                            if (isInMudPatch(this.x + this.size / 2, this.y + this.size / 2) &&
+                                Math.random() < getPerkChance('pigMud', this.level)) {
                                 this.state = 'mud_play';
                                 this.stateTimer = 5.0;
                                 return;
@@ -2379,23 +2379,22 @@ class Pet {
                         } else if (this.type === 'bird') {
                             let y = getForageYield('bird', this.level);
                             let gain = (targetItem.type === 'food') ? y.food : y.water;
-                            // +20% while away on an excursion (stacks with the normal
-                            // character-level petFoodWaterBonus, same as everywhere else).
-                            // The excursion's +20% uses roundStochastic so it averages exactly +20% (a
-                            // plain round turned Lv20's 4 food / 3 water into 5 / 4, i.e. +25% / +33%);
-                            // at home the yield stays the usual plain rounded number.
-                            let finalGain = this.excursionActive
-                                ? roundStochastic(gain * petFoodWaterBonus * 1.20)
-                                : Math.round(gain * petFoodWaterBonus);
+                            // Its own forage yield plus whatever the player's character-level
+                            // bonuses are (petFoodWaterBonus) — same formula whether the bird
+                            // is home in Region 3 or visiting one of the other food/water
+                            // regions (1, 2, 6, 7) on an excursion. No extra excursion-only
+                            // bonus any more — see BIRD_VISIT_* (world.js) for what visiting
+                            // actually does instead (region-specific buffs, not its own yield).
+                            let finalGain = Math.round(gain * petFoodWaterBonus);
                             if (targetItem.type === 'food') inventory.food += finalGain;
                             else inventory.water += finalGain;
 
                             // Lv20+: 5% chance per successful forage (from its home region
                             // only — can't trigger a new trip mid-excursion) to fly off to a
-                            // random other *unlocked* region for BIRD_EXCURSION_SECONDS (30s). Filtering to unlocked
-                            // regions matters because the bird only needs to be Lv20 itself
-                            // — the other Region 1-3 pets, and therefore Regions 4-6/7, can
-                            // still be locked for the player at that point.
+                            // random other *unlocked* region for BIRD_EXCURSION_SECONDS (30s).
+                            // Filtering to unlocked regions matters because the bird only needs
+                            // to be Lv20 itself — every other region can still be locked for
+                            // the player at that point.
                             if (!this.excursionActive && Math.random() < getPerkChance('birdFly', this.level)) {
                                 let choices = ALL_REGIONS.filter(r => r !== this.homeRegion &&
                                     (typeof isRegionUnlocked !== 'function' || isRegionUnlocked(r)));
@@ -2414,23 +2413,16 @@ class Pet {
                                     this.excursionActive = true;
                                     this.excursionRegion = target;
                                     this.excursionTimer = BIRD_EXCURSION_SECONDS;
-                                    this.excursionFishTimer = 0;
+                                    // Switches on whichever BIRD_VISIT_* buff applies to this
+                                    // region (world.js) — bee speed/honey in 4, bear fish
+                                    // yield/speed in 5, glider stamina in 9, or just the flat
+                                    // pet-speed bonus everywhere else via _regionSpeedMult.
+                                    birdExcursionRegion = target;
                                     this.pickNewWanderTarget();
                                     this.x = this.targetX;
                                     this.y = this.targetY;
                                     this.state = 'wander';
                                     petsByRegion[target].push(this);
-
-                                    if (target === 4 && petsByRegion[4]) {
-                                        petsByRegion[4].forEach(bee => {
-                                            // Bees only — the bird itself is in this array by now and
-                                            // must not speed itself up.
-                                            if (bee.type === 'bee' && !bee._birdBoosted) {
-                                                bee.speed *= 1.20;
-                                                bee._birdBoosted = true;
-                                            }
-                                        });
-                                    }
 
                                     if (typeof currentRegion !== 'undefined' && currentRegion === target) {
                                         spawnRegionFX(target, this.x, this.y, 'arrive');
@@ -2902,6 +2894,8 @@ class Pet {
             } else if (this.type === 'bear' && this.state === 'fishing_travel') {
                 // Heading to the lake is still just "fishing" from the player's view.
                 text += ' [FISHING]';
+            } else if (this.state === 'mud_play') {
+                text += ' [MUD PLAY]';
             } else {
                 text += ` [${this.state.toUpperCase()}]`;
             }

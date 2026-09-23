@@ -29,11 +29,11 @@ const regionalItems = {
 // way flowers are for Region 4 — see processSpawns() below).
 const FOOD_WATER_REGIONS = [1, 2, 3, 6, 7];
 
-// All regions the bird's Lv20 excursion perk can randomly fly to — deliberately does NOT
-// include Regions 7, 8 or 9 (the upper-tier regions; a bird wandering in from Region 3 to
-// those would be a strange fit). The picker also only considers regions the player has
-// actually bought — see isRegionUnlocked().
-const ALL_REGIONS = [1, 2, 3, 4, 5, 6];
+// All regions the bird's Lv20 excursion perk can randomly fly to (its home Region 3 is
+// filtered out separately — see the picker in entities.js). Every other region now has its
+// own visit effect (see BIRD_VISIT_* below), so nothing is excluded here any more. The picker
+// also only considers regions the player has actually bought — see isRegionUnlocked().
+const ALL_REGIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 // ------------------------------------------------------------------
 // SUGAR GLIDERS (Region 9) — shared constants. The AI itself is Pet.updateGlider() in
@@ -80,11 +80,26 @@ function tickGliderClock() {
 // seconds since the last frame", not glider-specific) — see the excursion branch of
 // Pet.update(). The name is historical.
 
+// Region 6's mud patch — one definition shared by the visual (main.js draws the pit) and the
+// gameplay check (entities.js only lets the pig's mud-play perk trigger while it's standing
+// in this ellipse), so the playable area can never drift from what's actually drawn. Centered
+// on the canvas, same as the pit main.js paints over the sty floor.
+function getMudPatch() {
+    return { cx: canvas.width / 2, cy: canvas.height / 2, rx: 65, ry: 38 };
+}
+function isInMudPatch(x, y) {
+    const m = getMudPatch();
+    const dx = (x - m.cx) / m.rx;
+    const dy = (y - m.cy) / m.ry;
+    return (dx * dx + dy * dy) <= 1;
+}
+
 // ------------------------------------------------------------------
 // SQUIRREL SPEED BOOST (Lv20+ perk): a forage can start a boost that makes every pet currently
 // in the squirrel's region move SQUIRREL_BOOST_MULT (+50%) faster for SQUIRREL_BOOST_SECONDS
-// (5 real seconds). region -> seconds left. A proc while a boost is already running is IGNORED —
-// it neither stacks nor extends it — so the squirrel can't chain boosts into a permanent one.
+// (10 real seconds). region -> seconds left. A proc while a boost is already running REFRESHES
+// the timer back to the full SQUIRREL_BOOST_SECONDS rather than adding to it — so back-to-back
+// procs keep the region boosted longer, but the boost itself never stacks (still just +50%).
 // Not saved — like every other timed state it simply ends on a reload.
 // main.js stamps each pet with getRegionSpeedBoost(its region) before updating it, and
 // Pet.effectiveSpeed multiplies it in, so pets that are only visiting (the bird) or that were
@@ -95,9 +110,53 @@ function getRegionSpeedBoost(region) {
     return (regionSpeedBoosts[region] > 0) ? SQUIRREL_BOOST_MULT : 1;
 }
 function startRegionSpeedBoost(region) {
-    if (regionSpeedBoosts[region] > 0) return; // already boosted: no extending, no stacking
-    regionSpeedBoosts[region] = SQUIRREL_BOOST_SECONDS;
+    regionSpeedBoosts[region] = SQUIRREL_BOOST_SECONDS; // (re)start — refreshes if already running, never stacks
 }
+
+// ------------------------------------------------------------------
+// BIRD (SPARROW) EXCURSION VISIT EFFECTS (Lv20+ perk — see entities.js for the trip itself):
+// while away from home Region 3, the bird doesn't just forage or idle in the region it lands
+// in — it actively buffs whatever lives there, differently per region. birdExcursionRegion
+// mirrors the visiting bird's own `excursionRegion` (set on departure, cleared on return —
+// see the excursion trigger/resolution in entities.js) so every system below can check "is
+// the bird visiting my region right now?" in O(1) without scanning for it. Not saved — like
+// the rest of the excursion, it simply ends (reverts to no boost) on a reload, same as before.
+//   Regions 1, 2, 6, 7 (food/water) and 8 (monkeys): the bird just makes the pets already
+//     there move BIRD_VISIT_PET_SPEED_MULT faster — folded into the same _regionSpeedMult
+//     that carries the squirrel's boost (see getRegionSpeedBoost above / main.js), so it's
+//     one multiplication, not a second system.
+//   Region 4 (bees): BIRD_VISIT_BEE_SPEED_MULT bee speed (bigger than the flat pet-speed
+//     bonus — also folded into _regionSpeedMult, see getBirdVisitSpeedBoost) AND
+//     BIRD_VISIT_HONEY_GAIN_MULT more honey per hive deposit (entities.js, alongside the
+//     glider honey buff).
+//   Region 5 (bear): BIRD_VISIT_FISH_YIELD_MULT more fish per catch and
+//     BIRD_VISIT_FISH_SPEED_MULT faster fishing cycle (both timers — entities.js, alongside
+//     the glider fishing buff).
+//   Region 9 (gliders): BIRD_VISIT_GLIDER_STAMINA_MULT faster stamina regen while resting
+//     (entities.js).
+// ------------------------------------------------------------------
+let birdExcursionRegion = null;
+
+const BIRD_VISIT_PET_SPEED_MULT = 1.25;      // Regions 1, 2, 6, 7, 8 — every pet already there
+const BIRD_VISIT_BEE_SPEED_MULT = 1.50;      // Region 4 — bees themselves (bigger than the flat bonus)
+const BIRD_VISIT_HONEY_GAIN_MULT = 1.25;     // Region 4 — honey banked per hive deposit
+const BIRD_VISIT_FISH_YIELD_MULT = 1.25;     // Region 5 — bear's catch per cycle
+const BIRD_VISIT_FISH_SPEED_MULT = 1.50;     // Region 5 — bear's fishing cycle (wait + active fishing)
+const BIRD_VISIT_GLIDER_STAMINA_MULT = 2.00; // Region 9 — stamina regen while resting
+const BIRD_VISIT_SPEED_REGIONS = [1, 2, 6, 7, 8]; // get the flat pet-speed bonus above
+
+// Folds into the same _regionSpeedMult that carries the squirrel's boost (see
+// getRegionSpeedBoost / main.js's stamping loop) — one multiplication covers both.
+function getBirdVisitSpeedBoost(region) {
+    if (birdExcursionRegion !== region) return 1;
+    if (region === 4) return BIRD_VISIT_BEE_SPEED_MULT;
+    return BIRD_VISIT_SPEED_REGIONS.includes(region) ? BIRD_VISIT_PET_SPEED_MULT : 1;
+}
+function getBirdVisitHoneyGainBoost() { return birdExcursionRegion === 4 ? BIRD_VISIT_HONEY_GAIN_MULT : 1; }
+function getBirdVisitFishYieldBoost() { return birdExcursionRegion === 5 ? BIRD_VISIT_FISH_YIELD_MULT : 1; }
+function getBirdVisitFishSpeedBoost() { return birdExcursionRegion === 5 ? BIRD_VISIT_FISH_SPEED_MULT : 1; }
+function getBirdVisitGliderStaminaBoost() { return birdExcursionRegion === 9 ? BIRD_VISIT_GLIDER_STAMINA_MULT : 1; }
+
 
 // Bird excursion fly-away/landing visual effects — simple one-shot expanding+fading poof
 // bursts. Not attached to any pet object, since the bird literally isn't present in a

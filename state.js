@@ -91,7 +91,7 @@ const FORAGE_TIERS = {
 // qualifies for" lookup as FORAGE_TIERS (see getPerkChance). The code that rolls a perk and the
 // Pet Detail text that describes it both read this, so a number can't drift between them.
 const PERK_CHANCES = {
-    dogDig:         [ [20, 0.10], [30, 0.15] ],   // dog: dig for a bonus coin
+    dogDig:         [ [20, 0.10], [30, 0.20] ],   // dog: dig for a bonus coin (Lv30 chance doubles the Lv20 one)
     catDouble:      [ [15, 0.10], [25, 0.12] ],   // cat: double the food/water gained
     catSchrodinger: [ [20, 0.03], [30, 0.04] ],   // cat: enter Schrodinger's box
     elephantPlay:   [ [20, 0.10] ],               // elephants: "catch me" minigame
@@ -128,11 +128,18 @@ const BIRD_EXCURSION_SECONDS = 30;
 const SQUIRREL_BOOST_SECONDS = 10;
 const SQUIRREL_BOOST_MULT = 1.5;
 
+// Dog's dig perk (PERK_CHANCES.dogDig above): from Lv25 onward a successful dig awards this
+// many coins instead of 1. See the 'digging' state payout in entities.js and the dog's Pet
+// Detail perk list (getPetPerkDescriptions in ui.js) — both read these two constants so the
+// level, the amount, and the description can't drift apart.
+const DOG_DIG_BONUS_COIN_LEVEL = 25;
+const DOG_DIG_BONUS_COIN_AMOUNT = 2;
+
 // Chicken "chain egg" (Lv30): after a forage lays an egg, the NEXT forage gets this much extra
 // egg chance on top of the base; every further egg in a row adds it again, up to the cap. A
 // forage that lays no egg resets it. See the chicken branch of Pet.update().
-const CHAIN_EGG_STEP = 0.05;
-const CHAIN_EGG_MAX = 0.50;
+const CHAIN_EGG_STEP = 0.10;
+const CHAIN_EGG_MAX = 0.60;
 const CHAIN_EGG_MIN_LEVEL = 30;
 
 // Bee tiers: [minLevel, honeyCapacity, secondsToForageAFlower].
@@ -154,6 +161,22 @@ function getBearFishPerCycle(level) {
         if (level >= BEAR_FISH_TIERS[i][0]) fish = BEAR_FISH_TIERS[i][1];
     }
     return fish;
+}
+
+// How long the bear actively fishes once it reaches the lake (the 'fishing' state) — fixed,
+// doesn't change by level.
+const BEAR_FISHING_ACTION_SECONDS = 20;
+
+// How long the bear waits between fishing trips: a random range of [base, base+spread]
+// seconds that gets shorter at Lv10 and Lv15. Read by setNextFishingCooldown() (entities.js)
+// and the bear's Pet Detail description (ui.js) so the numbers can't drift apart.
+const BEAR_WAIT_TIERS = [ [1, 70, 20], [10, 60, 25], [15, 50, 30] ]; // [minLevel, base, spread]
+function getBearWaitRange(level) {
+    let range = BEAR_WAIT_TIERS[0];
+    for (let i = 0; i < BEAR_WAIT_TIERS.length; i++) {
+        if (level >= BEAR_WAIT_TIERS[i][0]) range = BEAR_WAIT_TIERS[i];
+    }
+    return { base: range[1], spread: range[2] };
 }
 
 // Sugar glider max stamina by level: [minLevel, maxStamina]. Same lookup idea as
