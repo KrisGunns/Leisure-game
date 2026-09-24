@@ -253,11 +253,16 @@ function getCharacterNextXP(currentLevel) {
 const PERK_TREE_COLS = 5;
 
 const PERK_TYPES = {
-    basicResource: { name: 'Basic Resource', icon: '🍪💧', cost: 5,  stat: 'petFoodWater', add: 0.30, text: '+30% food & water gained from pets' },
-    glazed:        { name: 'Glazed',         icon: '🍯',   cost: 10, stat: 'petHoney',     add: 0.25, text: '+25% honey gained from pets' },
-    fishyBusiness: { name: 'Fishy Business', icon: '🐟',   cost: 8,  stat: 'petFish',      add: 0.25, text: '+25% fish gained from pets' },
-    riches:        { name: 'Riches',         icon: '🪙',   cost: 20, stat: 'coin',         add: 0.25, text: '+25% coin gained' },
-    bananas:       { name: 'Bananas!',       icon: '🍌',   cost: 6,  stat: 'petBanana',    add: 0.20, text: '+20% bananas gained from pets' }
+    // `desc` (no number) is what the Character screen's bulked perk summary uses — see
+    // updateCharacterScreen() in ui.js — since that view combines every unlocked node of a
+    // type into one line with a SUMMED percentage, so it can't just reuse `text`, which is
+    // one specific node's own fixed +NN%. The Perk Tree screen itself still shows each
+    // node's own individual `text` unchanged — this doesn't touch that.
+    basicResource: { name: 'Basic Resource', icon: '🍪💧', cost: 5,  stat: 'petFoodWater', add: 0.30, text: '+30% food & water gained from pets', desc: 'food & water gained from pets' },
+    glazed:        { name: 'Glazed',         icon: '🍯',   cost: 10, stat: 'petHoney',     add: 0.25, text: '+25% honey gained from pets',        desc: 'honey gained from pets' },
+    fishyBusiness: { name: 'Fishy Business', icon: '🐟',   cost: 8,  stat: 'petFish',      add: 0.25, text: '+25% fish gained from pets',         desc: 'fish gained from pets' },
+    riches:        { name: 'Riches',         icon: '🪙',   cost: 20, stat: 'coin',         add: 0.25, text: '+25% coin gained',                   desc: 'coin gained' },
+    bananas:       { name: 'Bananas!',       icon: '🍌',   cost: 6,  stat: 'petBanana',    add: 0.20, text: '+20% bananas gained from pets',      desc: 'bananas gained from pets' }
 };
 
 // Ids are `<type>_c<col>t<tier>` (by the node's ORIGINAL position). They're stored in

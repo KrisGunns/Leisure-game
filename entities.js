@@ -2057,6 +2057,41 @@ class Pet {
             return; // no movement, no foraging — stays put until the player observes it
         }
 
+                // --- PIG MUD-PLAY VISUAL SYSTEM: the pig walks to the mud patch in the
+        // middle of the sty first (mirrors the bear's fishing_travel -> fishing pattern
+        // exactly), THEN plays for 5s once it actually arrives. Doing it this way — rather
+        // than only rolling the chance at the instant the pig happens to already be
+        // standing in the (small) patch — is what makes "only in the mud area" both TRUE
+        // and not extremely rare: the pig's forage targets are scattered across the whole
+        // sty, so waiting for a coincidental overlap made mud-play fire far less often than
+        // PERK_CHANCES.pigMud implies. Now the roll (still pigMud, unchanged) just decides
+        // WHETHER to go, and getMudPatch()/isInMudPatch() (world.js) still gets the final
+        // say on whether it's actually standing in the patch before flipping to mud_play. ---
+        if (this.state === 'mud_travel') {
+            const mud = getMudPatch();
+            let mudTargetX = mud.cx - this.size / 2;
+            let mudTargetY = mud.cy - this.size / 2;
+            let dx = mudTargetX - this.x;
+            let dy = mudTargetY - this.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist > 5) {
+                this.x += (dx / dist) * (this.effectiveSpeed * 1.2) * dt;
+                this.y += (dy / dist) * (this.effectiveSpeed * 1.2) * dt;
+            } else if (isInMudPatch(this.x + this.size / 2, this.y + this.size / 2)) {
+                this.state = 'mud_play';
+                this.stateTimer = 5.0;
+            } else {
+                // Edge case: arrived at the target point but somehow isn't inside the
+                // ellipse (e.g. the canvas was resized mid-trip). Snap onto the patch
+                // center exactly rather than getting stuck circling just outside it.
+                this.x = mudTargetX;
+                this.y = mudTargetY;
+                this.state = 'mud_play';
+                this.stateTimer = 5.0;
+            }
+            return;
+        }
+
                 // --- PIG MUD-PLAY VISUAL SYSTEM (5s timer, mirrors the dog dig system above) ---
         if (this.state === 'mud_play') {
             this.stateTimer -= dt;
@@ -2319,15 +2354,15 @@ class Pet {
                             if (targetItem.type === 'food') inventory.food += Math.round(y.food * petFoodWaterBonus);
                             else inventory.water += Math.round(y.water * petFoodWaterBonus);
 
-                            // 5% chance to play in the mud for 5s after a successful forage
-                            // (Level 20+ only — matches the dog/chicken rare-bonus pattern),
-                            // but only while the pig is actually standing in the mud patch
-                            // in the middle of the sty (getMudPatch()/isInMudPatch(), world.js —
-                            // the same ellipse main.js draws, so this can't drift from it).
-                            if (isInMudPatch(this.x + this.size / 2, this.y + this.size / 2) &&
-                                Math.random() < getPerkChance('pigMud', this.level)) {
-                                this.state = 'mud_play';
-                                this.stateTimer = 5.0;
+                            // 5% chance after a successful forage (Level 20+ only — matches
+                            // the dog/chicken rare-bonus pattern) to head to the mud patch in
+                            // the middle of the sty and play for 5s. Walks there first
+                            // ('mud_travel', just above) rather than only checking whether
+                            // it's already standing in the patch right now — see that state's
+                            // comment for why (this used to make mud-play drastically rarer
+                            // than PERK_CHANCES.pigMud implies).
+                            if (Math.random() < getPerkChance('pigMud', this.level)) {
+                                this.state = 'mud_travel';
                                 return;
                             }
                         } else if (this.type === 'monkey') {
@@ -2894,7 +2929,9 @@ class Pet {
             } else if (this.type === 'bear' && this.state === 'fishing_travel') {
                 // Heading to the lake is still just "fishing" from the player's view.
                 text += ' [FISHING]';
-            } else if (this.state === 'mud_play') {
+            } else if (this.state === 'mud_play' || this.state === 'mud_travel') {
+                // Heading to the mud patch reads the same as playing in it — same idea as
+                // the bear's fishing_travel just above.
                 text += ' [MUD PLAY]';
             } else {
                 text += ` [${this.state.toUpperCase()}]`;
