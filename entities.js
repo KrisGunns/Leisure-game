@@ -423,6 +423,9 @@ function getPlayerSprite(kind, index, model) {
 //        dig (2 frames: scratching with a front paw, used with the dirt particles)
 //   cat: walk (4 frames), sleep (curled loaf + zzz, 2 frames — what it does whenever it's
 //        standing still, so a wild cat that isn't moving yet is asleep)
+//   elephant / elephantBow: idle (front-facing sway+blink, 2 frames — also the Codex
+//        portrait), walk (side-profile 4-frame leg cycle, used for ordinary movement),
+//        jump (front-facing hop, 2 frames — reserved for the Lv20 tag minigame)
 // To add another pet: add a palette letter if needed, add its frames to PET_SPRITES, and draw it
 // with drawPetSprite() from Pet.draw() / renderMiniPet() the way the dog and cat do.
 // ------------------------------------------------------------------
@@ -780,6 +783,100 @@ const PET_SPRITES = {
                 '.......TTT....TTT.......',
             ],
         ],
+        // Side-profile 4-frame walk cycle (see PET_STEP_PIXELS) — legs swing through two
+        // contact poses (frames 0 and 2) either side of a shared "passing" mid-pose (frames
+        // 1 and 3, identical), same 4-frame convention as the dog/cat walk cycles above.
+        // Upper body (ear/head/trunk/tail) stays fixed; only the four legs move per frame.
+        walk: [
+            [
+                '........................',
+                '............GGGG........',
+                '..........GGGGGGGG......',
+                '..........GGYYYYGG......',
+                '.........GGYYYYYGGG.....',
+                '.........GGYYYYYGGGGG...',
+                '......GGGGGGGGYGGHHHHG..',
+                '....GGGGGGGGGGGGHHHHHHG.',
+                '...GGGGGGGGGGGGGHHHeHHG.',
+                '..GGGGGGGGGGGGGGYYHHHGG.',
+                '.SSGGGGHHHHHHGGYYYYGGGG.',
+                'SSGGGGHHHHHHHHGYYYYGGGG.',
+                'SSGGGHHHHHHHHHHGYYGGGG..',
+                '...GGHHHHHHHHHHGGGGGGG..',
+                '....GGHHHHHHHHGG...GG...',
+                '.....SSGGGHGGGSS...GG...',
+                '.....SSGGG.GGGSS...GGG..',
+                '.....SSGGG.GGGSS........',
+                '.....TTGGG.GGGTT........',
+                '.......TTT.TTT..........',
+            ],
+            [
+                '........................',
+                '............GGGG........',
+                '..........GGGGGGGG......',
+                '..........GGYYYYGG......',
+                '.........GGYYYYYGGG.....',
+                '.........GGYYYYYGGGGG...',
+                '......GGGGGGGGYGGHHHHG..',
+                '....GGGGGGGGGGGGHHHHHHG.',
+                '...GGGGGGGGGGGGGHHHeHHG.',
+                '..GGGGGGGGGGGGGGYYHHHGG.',
+                '.SSGGGGHHHHHHGGYYYYGGGG.',
+                'SSGGGGHHHHHHHHGYYYYGGGG.',
+                'SSGGGHHHHHHHHHHGYYGGGG..',
+                '...GGHHHHHHHHHHGGGGGGG..',
+                '....GGHHHHHHHHGG...GG...',
+                '......SSGGGHSSGGG..GG...',
+                '......SSGGG.SSGGG..GGG..',
+                '......SSGGG.SSGGG.......',
+                '......TTTTT.TTTTT.......',
+                '........................',
+            ],
+            [
+                '........................',
+                '............GGGG........',
+                '..........GGGGGGGG......',
+                '..........GGYYYYGG......',
+                '.........GGYYYYYGGG.....',
+                '.........GGYYYYYGGGGG...',
+                '......GGGGGGGGYGGHHHHG..',
+                '....GGGGGGGGGGGGHHHHHHG.',
+                '...GGGGGGGGGGGGGHHHeHHG.',
+                '..GGGGGGGGGGGGGGYYHHHGG.',
+                '.SSGGGGHHHHHHGGYYYYGGGG.',
+                'SSGGGGHHHHHHHHGYYYYGGGG.',
+                'SSGGGHHHHHHHHHHGYYGGGG..',
+                '...GGHHHHHHHHHHGGGGGGG..',
+                '....GGHHHHHHHHGG...GG...',
+                '.....GGGSSHSSGGG...GG...',
+                '.....GGGSS.SSGGG...GGG..',
+                '.....GGGSS.SSGGG........',
+                '.....GGGTT.TTGGG........',
+                '.....TTT.....TTT........',
+            ],
+            [
+                '........................',
+                '............GGGG........',
+                '..........GGGGGGGG......',
+                '..........GGYYYYGG......',
+                '.........GGYYYYYGGG.....',
+                '.........GGYYYYYGGGGG...',
+                '......GGGGGGGGYGGHHHHG..',
+                '....GGGGGGGGGGGGHHHHHHG.',
+                '...GGGGGGGGGGGGGHHHeHHG.',
+                '..GGGGGGGGGGGGGGYYHHHGG.',
+                '.SSGGGGHHHHHHGGYYYYGGGG.',
+                'SSGGGGHHHHHHHHGYYYYGGGG.',
+                'SSGGGHHHHHHHHHHGYYGGGG..',
+                '...GGHHHHHHHHHHGGGGGGG..',
+                '....GGHHHHHHHHGG...GG...',
+                '......SSGGGHSSGGG..GG...',
+                '......SSGGG.SSGGG..GGG..',
+                '......SSGGG.SSGGG.......',
+                '......TTTTT.TTTTT.......',
+                '........................',
+            ],
+        ],
         jump: [
             [
                 '........................',
@@ -828,6 +925,98 @@ const PET_SPRITES = {
         ],
     },
     elephantBow: {
+        // Same side-profile walk cycle as the plain elephant above, with the bow baked
+        // onto the head (two white wings + a dark knot) so it stays on through every frame.
+        walk: [
+            [
+                '........................',
+                '............GGwww..www..',
+                '..........GGGGwwwQQQwww.',
+                '..........GGYYYwwG..ww..',
+                '.........GGYYYYYGGG.....',
+                '.........GGYYYYYGGGGG...',
+                '......GGGGGGGGYGGHHHHG..',
+                '....GGGGGGGGGGGGHHHHHHG.',
+                '...GGGGGGGGGGGGGHHHeHHG.',
+                '..GGGGGGGGGGGGGGYYHHHGG.',
+                '.SSGGGGHHHHHHGGYYYYGGGG.',
+                'SSGGGGHHHHHHHHGYYYYGGGG.',
+                'SSGGGHHHHHHHHHHGYYGGGG..',
+                '...GGHHHHHHHHHHGGGGGGG..',
+                '....GGHHHHHHHHGG...GG...',
+                '.....SSGGGHGGGSS...GG...',
+                '.....SSGGG.GGGSS...GGG..',
+                '.....SSGGG.GGGSS........',
+                '.....TTGGG.GGGTT........',
+                '.......TTT.TTT..........',
+            ],
+            [
+                '........................',
+                '............GGwww..www..',
+                '..........GGGGwwwQQQwww.',
+                '..........GGYYYwwG..ww..',
+                '.........GGYYYYYGGG.....',
+                '.........GGYYYYYGGGGG...',
+                '......GGGGGGGGYGGHHHHG..',
+                '....GGGGGGGGGGGGHHHHHHG.',
+                '...GGGGGGGGGGGGGHHHeHHG.',
+                '..GGGGGGGGGGGGGGYYHHHGG.',
+                '.SSGGGGHHHHHHGGYYYYGGGG.',
+                'SSGGGGHHHHHHHHGYYYYGGGG.',
+                'SSGGGHHHHHHHHHHGYYGGGG..',
+                '...GGHHHHHHHHHHGGGGGGG..',
+                '....GGHHHHHHHHGG...GG...',
+                '......SSGGGHSSGGG..GG...',
+                '......SSGGG.SSGGG..GGG..',
+                '......SSGGG.SSGGG.......',
+                '......TTTTT.TTTTT.......',
+                '........................',
+            ],
+            [
+                '........................',
+                '............GGwww..www..',
+                '..........GGGGwwwQQQwww.',
+                '..........GGYYYwwG..ww..',
+                '.........GGYYYYYGGG.....',
+                '.........GGYYYYYGGGGG...',
+                '......GGGGGGGGYGGHHHHG..',
+                '....GGGGGGGGGGGGHHHHHHG.',
+                '...GGGGGGGGGGGGGHHHeHHG.',
+                '..GGGGGGGGGGGGGGYYHHHGG.',
+                '.SSGGGGHHHHHHGGYYYYGGGG.',
+                'SSGGGGHHHHHHHHGYYYYGGGG.',
+                'SSGGGHHHHHHHHHHGYYGGGG..',
+                '...GGHHHHHHHHHHGGGGGGG..',
+                '....GGHHHHHHHHGG...GG...',
+                '.....GGGSSHSSGGG...GG...',
+                '.....GGGSS.SSGGG...GGG..',
+                '.....GGGSS.SSGGG........',
+                '.....GGGTT.TTGGG........',
+                '.....TTT.....TTT........',
+            ],
+            [
+                '........................',
+                '............GGwww..www..',
+                '..........GGGGwwwQQQwww.',
+                '..........GGYYYwwG..ww..',
+                '.........GGYYYYYGGG.....',
+                '.........GGYYYYYGGGGG...',
+                '......GGGGGGGGYGGHHHHG..',
+                '....GGGGGGGGGGGGHHHHHHG.',
+                '...GGGGGGGGGGGGGHHHeHHG.',
+                '..GGGGGGGGGGGGGGYYHHHGG.',
+                '.SSGGGGHHHHHHGGYYYYGGGG.',
+                'SSGGGGHHHHHHHHGYYYYGGGG.',
+                'SSGGGHHHHHHHHHHGYYGGGG..',
+                '...GGHHHHHHHHHHGGGGGGG..',
+                '....GGHHHHHHHHGG...GG...',
+                '......SSGGGHSSGGG..GG...',
+                '......SSGGG.SSGGG..GGG..',
+                '......SSGGG.SSGGG.......',
+                '......TTTTT.TTTTT.......',
+                '........................',
+            ],
+        ],
         idle: [
             [
                 '..........ww....ww......',
@@ -2057,41 +2246,6 @@ class Pet {
             return; // no movement, no foraging — stays put until the player observes it
         }
 
-                // --- PIG MUD-PLAY VISUAL SYSTEM: the pig walks to the mud patch in the
-        // middle of the sty first (mirrors the bear's fishing_travel -> fishing pattern
-        // exactly), THEN plays for 5s once it actually arrives. Doing it this way — rather
-        // than only rolling the chance at the instant the pig happens to already be
-        // standing in the (small) patch — is what makes "only in the mud area" both TRUE
-        // and not extremely rare: the pig's forage targets are scattered across the whole
-        // sty, so waiting for a coincidental overlap made mud-play fire far less often than
-        // PERK_CHANCES.pigMud implies. Now the roll (still pigMud, unchanged) just decides
-        // WHETHER to go, and getMudPatch()/isInMudPatch() (world.js) still gets the final
-        // say on whether it's actually standing in the patch before flipping to mud_play. ---
-        if (this.state === 'mud_travel') {
-            const mud = getMudPatch();
-            let mudTargetX = mud.cx - this.size / 2;
-            let mudTargetY = mud.cy - this.size / 2;
-            let dx = mudTargetX - this.x;
-            let dy = mudTargetY - this.y;
-            let dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist > 5) {
-                this.x += (dx / dist) * (this.effectiveSpeed * 1.2) * dt;
-                this.y += (dy / dist) * (this.effectiveSpeed * 1.2) * dt;
-            } else if (isInMudPatch(this.x + this.size / 2, this.y + this.size / 2)) {
-                this.state = 'mud_play';
-                this.stateTimer = 5.0;
-            } else {
-                // Edge case: arrived at the target point but somehow isn't inside the
-                // ellipse (e.g. the canvas was resized mid-trip). Snap onto the patch
-                // center exactly rather than getting stuck circling just outside it.
-                this.x = mudTargetX;
-                this.y = mudTargetY;
-                this.state = 'mud_play';
-                this.stateTimer = 5.0;
-            }
-            return;
-        }
-
                 // --- PIG MUD-PLAY VISUAL SYSTEM (5s timer, mirrors the dog dig system above) ---
         if (this.state === 'mud_play') {
             this.stateTimer -= dt;
@@ -2354,15 +2508,15 @@ class Pet {
                             if (targetItem.type === 'food') inventory.food += Math.round(y.food * petFoodWaterBonus);
                             else inventory.water += Math.round(y.water * petFoodWaterBonus);
 
-                            // 5% chance after a successful forage (Level 20+ only — matches
-                            // the dog/chicken rare-bonus pattern) to head to the mud patch in
-                            // the middle of the sty and play for 5s. Walks there first
-                            // ('mud_travel', just above) rather than only checking whether
-                            // it's already standing in the patch right now — see that state's
-                            // comment for why (this used to make mud-play drastically rarer
-                            // than PERK_CHANCES.pigMud implies).
-                            if (Math.random() < getPerkChance('pigMud', this.level)) {
-                                this.state = 'mud_travel';
+                            // 5% chance to play in the mud for 5s after a successful forage
+                            // (Level 20+ only — matches the dog/chicken rare-bonus pattern),
+                            // but only while the pig is actually standing in the mud patch
+                            // in the middle of the sty (getMudPatch()/isInMudPatch(), world.js —
+                            // the same ellipse main.js draws, so this can't drift from it).
+                            if (isInMudPatch(this.x + this.size / 2, this.y + this.size / 2) &&
+                                Math.random() < getPerkChance('pigMud', this.level)) {
+                                this.state = 'mud_play';
+                                this.stateTimer = 5.0;
                                 return;
                             }
                         } else if (this.type === 'monkey') {
@@ -2559,18 +2713,21 @@ class Pet {
             }
         } else if (this.type === 'elephant') {
             // Sprite animation (see PET_SPRITES): 'idle' sways/blinks while standing still,
-            // 'jump' (trunk raised, a little hop) plays while wandering/foraging AND during
-            // the Lv20 "catch me" tag minigame (playing_approach/retreat/chase), so the
-            // elephant visibly perks up for the whole game rather than just the geometry
-            // moving underneath a static pose. bowColor picks the separate elephantBow
-            // sprite set (baked-in white bow) instead of drawing an overlay — the Bow
-            // Elephant is always created with bowColor: '#ffffff' (see world.js), so the
-            // actual color value isn't read, only whether one is set.
+            // 'walk' is the real side-profile 4-frame leg cycle (driven by distance, same
+            // PET_STEP_PIXELS convention as the dog/cat) while wandering/foraging, and
+            // 'jump' (trunk raised, a little hop) is reserved for the Lv20 "catch me" tag
+            // minigame (playing_approach/retreat/chase) so that chase still reads as an
+            // excited hop rather than an ordinary walk. bowColor picks the separate
+            // elephantBow sprite set (baked-in white bow) instead of drawing an overlay —
+            // the Bow Elephant is always created with bowColor: '#ffffff' (see world.js),
+            // so the actual color value isn't read, only whether one is set.
             const spriteType = this.bowColor ? 'elephantBow' : 'elephant';
             const walking = this.trackSpriteMotion();
             const playingTag = this.state && this.state.indexOf('playing') === 0;
-            if (walking || playingTag) {
+            if (playingTag) {
                 drawPetSprite(ctx, spriteType, 'jump', Math.floor(Date.now() / 220) % 2, this.x, this.y, this.facing || 1);
+            } else if (walking) {
+                drawPetSprite(ctx, spriteType, 'walk', Math.floor((this._spriteStep || 0) / PET_STEP_PIXELS) % 4, this.x, this.y, this.facing || 1);
             } else {
                 drawPetSprite(ctx, spriteType, 'idle', Math.floor(Date.now() / 500) % 2, this.x, this.y, this.facing || 1);
             }
@@ -2929,9 +3086,7 @@ class Pet {
             } else if (this.type === 'bear' && this.state === 'fishing_travel') {
                 // Heading to the lake is still just "fishing" from the player's view.
                 text += ' [FISHING]';
-            } else if (this.state === 'mud_play' || this.state === 'mud_travel') {
-                // Heading to the mud patch reads the same as playing in it — same idea as
-                // the bear's fishing_travel just above.
+            } else if (this.state === 'mud_play') {
                 text += ' [MUD PLAY]';
             } else {
                 text += ` [${this.state.toUpperCase()}]`;
