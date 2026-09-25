@@ -430,6 +430,9 @@ function getPlayerSprite(kind, index, model) {
 //        (4-frame leap cycle — the only movement animation; used instead of a walk cycle)
 //   chicken: idle (2 frames, blink), walk (4-frame side-profile cycle), hop (2 frames,
 //        the JUMP + FLAP reference poses — a periodic 2/10 stand-in for walk while moving)
+//   bird: idle (2 frames, blink), fly (4-frame side-profile flap cycle — its only movement
+//        animation, in place of a walk cycle), hop (2 frames, the JUMP + FLAP reference
+//        poses — same periodic 2/10 stand-in as the chicken's hop, used while flying)
 // To add another pet: add a palette letter if needed, add its frames to PET_SPRITES, and draw it
 // with drawPetSprite() from Pet.draw() / renderMiniPet() the way the dog and cat do.
 // ------------------------------------------------------------------
@@ -468,7 +471,10 @@ const PET_SPRITE_PALETTE = {
     A: '#e3e3e3',   // chicken shade gray
     O: '#ffd14a',   // chicken beak / feet
     R: '#f6252a',   // chicken comb / wattle
-    P: '#ffb3c1'    // chicken cheek blush
+    P: '#ffb3c1',   // chicken cheek blush
+    K: '#191919',   // bird body black
+    J: '#3d3d3f',   // bird shade dark gray
+    X: '#d19f40'    // bird beak / legs gold
 };
 
 const PET_SPRITES = {
@@ -1176,18 +1182,21 @@ const PET_SPRITES = {
                 '......FFF..FFF..........',
             ],
         ],
+        // Tail arches over the BACK (left side, behind the squirrel) in every frame —
+        // kept well clear of the head/ear on the right so it never reads as sitting on
+        // top of the head.
         scamper: [
         // scamper f0
             [
-                '...........FFFFF........',
-                '..........FFBBBBFF......',
-                '.........FBBFFFFBFF.....',
-                '.........FBFFFFFFBF.....',
-                '.........FBFFFFFFBF.....',
-                '.........FFBFFFFBFF.....',
-                '..........FFBBBBFBBB....',
-                '............FFFFBFFFB...',
-                '...............BBFFFFB..',
+                '....FFFFF...............',
+                '..FFBBBBBFF.............',
+                '..FBFFFFFBF.............',
+                '.FBFFFFFFFBF............',
+                '.FBFFFFFFFBF............',
+                '.FBFFFFFFFBF............',
+                '..FBFFFFFBF......BBB....',
+                '..FFBBBBBFF.....BFFFB...',
+                '....FFFFF......BBFFFFB..',
                 '......BBBBBBBB.BBCCeBB..',
                 '....BBBBBBBBBBBBCCCCBmm.',
                 '...BBBBCCCCCBBBBCCCCBB..',
@@ -1202,15 +1211,15 @@ const PET_SPRITES = {
             ],
         // scamper f1
             [
-                '...........FFFFF........',
-                '..........FFBBBBFF......',
-                '.........FBBFFFFBFF.....',
-                '.........FBFFFFFFBF.....',
-                '.........FBFFFFFFBF.....',
-                '.........FFBFFFFBFF.....',
-                '..........FFBBBBFBBB....',
-                '............FFFFBFFFB...',
-                '...............BBFFFFB..',
+                '....FFFFF...............',
+                '..FFBBBBBFF.............',
+                '..FBFFFFFBF.............',
+                '.FBFFFFFFFBF............',
+                '.FBFFFFFFFBF............',
+                '.FBFFFFFFFBF............',
+                '..FBFFFFFBF......BBB....',
+                '..FFBBBBBFF.....BFFFB...',
+                '....FFFFF......BBFFFFB..',
                 '......BBBBBBBB.BBCCeBB..',
                 '....BBBBBBBBBBBBCCCCBmm.',
                 '...BBBBCCCCCBBBBCCCCBB..',
@@ -1225,15 +1234,15 @@ const PET_SPRITES = {
             ],
         // scamper f2
             [
-                '...........FFFFF........',
-                '..........FFBBBBFF......',
-                '.........FBBFFFFBFF.....',
-                '.........FBFFFFFFBF.....',
-                '.........FBFFFFFFBF.....',
-                '.........FFBFFFFBFF.....',
-                '..........FFBBBBFBBB....',
-                '............FFFFBFFFB...',
-                '...............BBFFFFB..',
+                '....FFFFF...............',
+                '..FFBBBBBFF.............',
+                '..FBFFFFFBF.............',
+                '.FBFFFFFFFBF............',
+                '.FBFFFFFFFBF............',
+                '.FBFFFFFFFBF............',
+                '..FBFFFFFBF......BBB....',
+                '..FFBBBBBFF.....BFFFB...',
+                '....FFFFF......BBFFFFB..',
                 '......BBBBBBBB.BBCCeBB..',
                 '....BBBBBBBBBBBBCCCCBmm.',
                 '...BBBBCCCCCBBBBCCCCBB..',
@@ -1248,15 +1257,15 @@ const PET_SPRITES = {
             ],
         // scamper f3
             [
-                '...........FFFFF........',
-                '..........FFBBBBFF......',
-                '.........FBBFFFFBFF.....',
-                '.........FBFFFFFFBF.....',
-                '.........FBFFFFFFBF.....',
-                '.........FFBFFFFBFF.....',
-                '..........FFBBBBFBBB....',
-                '............FFFFBFFFB...',
-                '...............BBFFFFB..',
+                '....FFFFF...............',
+                '..FFBBBBBFF.............',
+                '..FBFFFFFBF.............',
+                '.FBFFFFFFFBF............',
+                '.FBFFFFFFFBF............',
+                '.FBFFFFFFFBF............',
+                '..FBFFFFFBF......BBB....',
+                '..FFBBBBBFF.....BFFFB...',
+                '....FFFFF......BBFFFFB..',
                 '......BBBBBBBB.BBCCeBB..',
                 '....BBBBBBBBBBBBCCCCBmm.',
                 '...BBBBCCCCCBBBBCCCCBB..',
@@ -1465,6 +1474,204 @@ const PET_SPRITES = {
                 '......OO......OO......',
                 '......OO......OO......',
                 '......OO......OO......',
+            ],
+        ],
+    },
+    bird: {
+        // Idle (2 frames, blink) is the standing pose. fly (4-frame side-profile flap
+        // cycle) is the main movement animation, replacing the walk-cycle convention the
+        // ground pets use, since this pet actually flies everywhere. jump/flap (each 1
+        // frame, paired into a 2-frame animation) are the reference sheet's JUMP and FLAP
+        // poses -- used the same way chicken uses hop: a periodic, purely cosmetic 2/10
+        // swap-in for a stretch while moving, per Pet.draw().
+        idle: [
+        // idle v0
+            [
+                '......................',
+                '......................',
+                '......................',
+                '........KKKKK.........',
+                '.......KKKKKKKK.......',
+                '......KKKKKKKKKK......',
+                '......KKeweKeeKK......',
+                '......KKeeeKeeKK......',
+                '.....KKKeeeKKKKKK.....',
+                '.....KKKKKXXXKKKKJ....',
+                '..KKKKKKKKXXXKKKKK....',
+                'JJJKKJJJKKKKKKKKKKJ...',
+                'JJJKKJJJJKKKKKKKKKJ...',
+                'JJJKKJJJJKKKKJKKKJJ...',
+                '..KKJJJJJKKKKKJJJJ....',
+                '....JJJJJKKKKKJJJ.....',
+                '....JJJJJKKKKKKK......',
+                '.....JJXXXKKXXX.......',
+                '.......XXX..XXX.......',
+                '.......XXX..XXX.......',
+            ],
+        // idle v1
+            [
+                '......................',
+                '......................',
+                '......................',
+                '........KKKKK.........',
+                '.......KKKKKKKK.......',
+                '......KKKKKKKKKK......',
+                '......KKeweKeeKK......',
+                '......KKeeeKeeKK......',
+                '.....KKKeeeKKKKKK.....',
+                '.....KKKKKXXXKKKKJ....',
+                '..KKKKKKKKXXXKKKKK....',
+                'JJJKKJJJKKKKKKKKKKJ...',
+                'JJJKKJJJJKKKKKKKKKJ...',
+                'JJJKKJJJJKKKKJKKKJJ...',
+                '..KKJJJJJKKKKKJJJJ....',
+                '....JJJJJKKKKKJJJ.....',
+                '....JJJJJKKKKKKK......',
+                '.....JJXXXKKXXX.......',
+                '.......XXX..XXX.......',
+                '.......XXX..XXX.......',
+            ],
+        ],
+        hop: [
+        // jump
+            [
+                '......................',
+                '......................',
+                '......................',
+                '.........KKKK.........',
+                '........KKKKKK........',
+                '..KKK..KKKKKKKK..KKK..',
+                '.KKKKK.KeweKeeK.KKKKK.',
+                'KKJJJKKKeeeKeeKKKJJJKK',
+                'KJJJJJKKeeeKKKKKJJJJJK',
+                'KJJJJJKKKXXXXKKKJJJJJK',
+                '.KJJJKKKKXXXXKKKKJJJK.',
+                '..KKK.KJJKKKKKKK.KKK..',
+                '......JJJJKKKKKK......',
+                '......JJJJKKKKKK......',
+                '......JJJJKKKKK.......',
+                '......JJJKKKKK........',
+                '.......JJKKKK.........',
+                '........XX..XX........',
+                '........XX..XX........',
+                '......................',
+            ],
+        // flap
+            [
+                '......................',
+                '......................',
+                '......................',
+                '..KKK....KKKK....KKK..',
+                '.KKKKK..KKKKKK..KKKKK.',
+                'KKJJJKKKKKKKKKKKKJJJKK',
+                'KJJJJJKKeweKeeKKJJJJJK',
+                'KJJJJJKKeeeKeeKKJJJJJK',
+                'KJJJJJKKeeeKKKKKJJJJJK',
+                '.KJJJKKKKXXXXKKKKJJJK.',
+                '..KKK.KKKXXXXKKK.KKK..',
+                '......KJJKKKKKKK......',
+                '......JJJJKKKKKK......',
+                '......JJJJKKKKKK......',
+                '......JJJJKKKKK.......',
+                '......JJJKKKKK........',
+                '.......JJKKKK.........',
+                '......XX......XX......',
+                '......XX......XX......',
+                '......XX......XX......',
+            ],
+        ],
+        fly: [
+        // fly f0
+            [
+                '........KKKKJ.........',
+                '.......KKKKKKK........',
+                '......JKKKKKKKJ.......',
+                '......JKKKKKKKJ.......',
+                '......JKKKKKKJJKKKK...',
+                '......JJJKKKJJJKKKKK..',
+                '.......JJJJJJJKKKKKKK.',
+                '......KKJJJJJKKeweKKK.',
+                '.....KKKKKKKKKKeeeKXX.',
+                '.KKKKKKKKKKKKKKeeeKXX.',
+                'JJJKJJJKKKKKKKKKKKKK..',
+                'JJJJJJJJKKKKKKKKKKK...',
+                'JJJJJJJJKKKKKKKK......',
+                '.KKJJJJJKKKKKKK.......',
+                '...JJJJJKKKKKK........',
+                '....JJJXXKXX..........',
+                '.......XX.XX..........',
+                '.......XX.XX..........',
+                '..........XX..........',
+                '......................',
+            ],
+        // fly f1
+            [
+                '......................',
+                '......................',
+                '........JKKKKJ........',
+                '.......KKKKKKKK.......',
+                '......JKKKKKKKKJKKK...',
+                '......JKKKKKKKKJKKKK..',
+                '......JJJKKKKJJJKKKKK.',
+                '......KJJJJJJJJeweKKK.',
+                '.....KKKJJJJJKKeeeKXX.',
+                '.KKKKKKKKKKKKKKeeeKXX.',
+                'JJJKJJJKKKKKKKKKKKKK..',
+                'JJJJJJJJKKKKKKKKKKK...',
+                'JJJJJJJJKKKKKKKK......',
+                '.KKJJJJJKKKKKKK.......',
+                '...JJJJJKKKKKK........',
+                '....JJJXXKXX..........',
+                '.......XX.XX..........',
+                '.......XX.XX..........',
+                '..........XX..........',
+                '......................',
+            ],
+        // fly f2
+            [
+                '......................',
+                '......................',
+                '......................',
+                '......................',
+                '...............KKKK...',
+                '..............KKKKKK..',
+                '.............KKKKKKKK.',
+                '......KKJJJJJKKeweKKK.',
+                '.....KJJKKKKKJJeeeKXX.',
+                '.KKKKJKKKKKKKKKJeeKXX.',
+                'JJJKJJKKKKKKKKKJKKKK..',
+                'JJJJJJKKKKKKKKKJKKK...',
+                'JJJJJJJJKKKKKJJK......',
+                '.KKJJJJJJJJJJKK.......',
+                '...JJJJJKKKKKK........',
+                '....JJJXXKXX..........',
+                '.......XX.XX..........',
+                '.......XX.XX..........',
+                '..........XX..........',
+                '......................',
+            ],
+        // fly f3
+            [
+                '......................',
+                '......................',
+                '........JKKKKJ........',
+                '.......KKKKKKKK.......',
+                '......JKKKKKKKKJKKK...',
+                '......JKKKKKKKKJKKKK..',
+                '......JJJKKKKJJJKKKKK.',
+                '......KJJJJJJJJeweKKK.',
+                '.....KKKJJJJJKKeeeKXX.',
+                '.KKKKKKKKKKKKKKeeeKXX.',
+                'JJJKJJJKKKKKKKKKKKKK..',
+                'JJJJJJJJKKKKKKKKKKK...',
+                'JJJJJJJJKKKKKKKK......',
+                '.KKJJJJJKKKKKKK.......',
+                '...JJJJJKKKKKK........',
+                '....JJJXXKXX..........',
+                '.......XX.XX..........',
+                '.......XX.XX..........',
+                '..........XX..........',
+                '......................',
             ],
         ],
     },
@@ -3314,35 +3521,28 @@ class Pet {
                 ctx.stroke();
             }
         } else if (this.type === 'bird') {
-            let bob = Math.sin(Date.now() / 180) * 2; // small idle bob, purely cosmetic
-            let by = this.y + bob;
-            ctx.fillStyle = this.color;                  // body
-            ctx.beginPath();
-            ctx.ellipse(this.x + 16, by + 20, 12, 9, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();                              // head
-            ctx.arc(this.x + 26, by + 12, 7, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#f39c12';                    // beak
-            ctx.beginPath();
-            ctx.moveTo(this.x + 32, by + 12);
-            ctx.lineTo(this.x + 38, by + 14);
-            ctx.lineTo(this.x + 32, by + 16);
-            ctx.closePath();
-            ctx.fill();
-            ctx.fillStyle = '#000000';                    // eye
-            ctx.fillRect(this.x + 27, by + 9, 2, 2);
-            ctx.fillStyle = '#2c2c2c';                     // wing
-            ctx.beginPath();
-            ctx.ellipse(this.x + 12, by + 18, 7, 5, -0.4, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = this.color;                   // tail
-            ctx.beginPath();
-            ctx.moveTo(this.x + 4, by + 18);
-            ctx.lineTo(this.x - 6, by + 12);
-            ctx.lineTo(this.x - 6, by + 24);
-            ctx.closePath();
-            ctx.fill();
+            // Idle (2-frame blink) while standing; fly (4-frame side-profile flap cycle) is
+            // the movement animation, replacing the ground-pet walk-cycle convention since
+            // this pet actually flies everywhere it goes (including its Lv20 excursions to
+            // other regions). While flying, the same 2/10-bout mechanic as the chicken's hop
+            // swaps in 'hop' (the reference sheet's JUMP + FLAP poses) for a stretch,
+            // purely cosmetic. No more per-frame sine bob — the flap cycle carries the motion.
+            const walking = this.trackSpriteMotion();
+            if (walking) {
+                const now = Date.now();
+                if (!this._birdHopRollAt || now > this._birdHopRollAt) {
+                    this._birdHopping = Math.random() < 0.2;
+                    this._birdHopRollAt = now + 1200 + Math.random() * 800;
+                }
+                if (this._birdHopping) {
+                    drawPetSprite(ctx, 'bird', 'hop', Math.floor(Date.now() / 220) % 2, this.x, this.y, this.facing || 1);
+                } else {
+                    drawPetSprite(ctx, 'bird', 'fly', Math.floor((this._spriteStep || 0) / PET_STEP_PIXELS) % 4, this.x, this.y, this.facing || 1);
+                }
+            } else {
+                this._birdHopRollAt = 0; // fresh roll next time it starts moving again
+                drawPetSprite(ctx, 'bird', 'idle', Math.floor(Date.now() / 500) % 2, this.x, this.y, this.facing || 1);
+            }
         } else if (this.type === 'panda') {
             ctx.fillStyle = '#ffffff';                    // body
             ctx.beginPath();

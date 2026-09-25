@@ -808,26 +808,8 @@ function renderMiniPet(pet, elementId) {
         } else if (pet.type === 'cat') {
             drawPetSprite(mctx, 'cat', 'walk', 1, ox, oy, 1);
         } else if (pet.type === 'bird') {
-            mctx.fillStyle = pet.color;
-            mctx.beginPath();
-            mctx.ellipse(ox + 16, oy + 20, 12, 9, 0, 0, Math.PI * 2);
-            mctx.fill();
-            mctx.beginPath();
-            mctx.arc(ox + 26, oy + 12, 7, 0, Math.PI * 2);
-            mctx.fill();
-            mctx.fillStyle = '#f39c12';
-            mctx.beginPath();
-            mctx.moveTo(ox + 32, oy + 12);
-            mctx.lineTo(ox + 38, oy + 14);
-            mctx.lineTo(ox + 32, oy + 16);
-            mctx.closePath();
-            mctx.fill();
-            mctx.fillStyle = '#000000';
-            mctx.fillRect(ox + 27, oy + 9, 2, 2);
-            mctx.fillStyle = '#2c2c2c';
-            mctx.beginPath();
-            mctx.ellipse(ox + 12, oy + 18, 7, 5, -0.4, 0, Math.PI * 2);
-            mctx.fill();
+            // Same sprite as in the world — idle frame 0 (see PET_SPRITES.bird).
+            drawPetSprite(mctx, 'bird', 'idle', 0, ox, oy, 1);
         } else if (pet.type === 'panda') {
             mctx.fillStyle = '#ffffff';
             mctx.beginPath();
