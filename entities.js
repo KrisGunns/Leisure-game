@@ -424,11 +424,13 @@ function getPlayerSprite(kind, index, model) {
 // first in drawPetSprite(), falling back to this letter-grid art automatically when no image
 // is registered or it hasn't loaded. The letter-grid data below is kept for every pet either
 // way, as that fallback and for anim/frame combos (like dog's dig) no reference art covers.
-//   dog: walk (4 frames) and sit (front-facing, tail wags, 2 frames) are real images now
-//        (PET_IMAGE_PATHS.dog — walk/sit here are the letter-grid fallback + still what
-//        dig's neighbouring code expects a same-shaped array for); dig (2 frames: scratching
-//        with a front paw, used with the dirt particles) has no reference art and stays
-//        letter-grid-only. The Codex portrait is also a real image (PET_IMAGE_PATHS.dog.portrait).
+//   dog: walk (6 frames) and sit (front-facing, 4 frames) are real images now
+//        (PET_IMAGE_PATHS.dog — the PET_SPRITES walk/sit arrays below are just the
+//        letter-grid fallback now, 4/2 frames respectively, safely wrapped to their own
+//        length by getPetSprite() regardless of the 6/4-frame index range Pet.draw() uses);
+//        dig (2 frames: scratching with a front paw, used with the dirt particles) has no
+//        reference art and stays letter-grid-only. The Codex portrait is also a real image
+//        (PET_IMAGE_PATHS.dog.portrait).
 //   cat: walk (4 frames), sleep (curled loaf + zzz, 2 frames — what it does whenever it's
 //        standing still, so a wild cat that isn't moving yet is asleep)
 //   elephant / elephantBow: idle (front-facing sway+blink, 2 frames — also the Codex
@@ -1795,9 +1797,16 @@ const PET_SPRITES = {
 
 const petSpriteCache = {};
 function getPetSprite(type, anim, index) {
-    const key = type + ':' + anim + ':' + index;
+    const frames = PET_SPRITES[type][anim];
+    // Wrap against this array's OWN length, not whatever the caller's index range was
+    // computed for. Needed since a real-image entry (PET_IMAGE_PATHS) can have more
+    // frames than its letter-grid fallback -- e.g. dog's walk is now driven as a 6-frame
+    // cycle for the real images, but the fallback art only ever had 4 frames; without
+    // this, index 4 or 5 would be undefined here and throw the moment the fallback path
+    // was actually needed (assets not yet deployed, still loading, mid-404, etc).
+    const rows = frames[index % frames.length];
+    const key = type + ':' + anim + ':' + (index % frames.length);
     if (petSpriteCache[key]) return petSpriteCache[key];
-    const rows = PET_SPRITES[type][anim][index];
     const c = document.createElement('canvas');
     c.width = rows[0].length * PET_SPRITE_SCALE;
     c.height = rows.length * PET_SPRITE_SCALE;
@@ -1826,8 +1835,13 @@ function getPetSprite(type, anim, index) {
 // calling code written for a 4-frame animation (dog's walk, driven by PET_STEP_PIXELS).
 const PET_IMAGE_PATHS = {
     dog: {
-        sit: ['assets/pets/dog/sit_0.png', 'assets/pets/dog/sit_1.png'],
-        walk: ['assets/pets/dog/walk_0.png', 'assets/pets/dog/walk_1.png'],
+        // 4 frames (was 2) — a second reference sheet with a fuller IDLE set replaced the
+        // pilot's first pass; see the Pet.draw() dog branch below for the %4 that now
+        // matches this instead of the old %2.
+        sit: ['assets/pets/dog/sit_0.png', 'assets/pets/dog/sit_1.png', 'assets/pets/dog/sit_2.png', 'assets/pets/dog/sit_3.png'],
+        // 6 frames (was 2) — likewise replaced with a fuller WALK CYCLE sheet for a
+        // smoother stride; Pet.draw() now walks it with %6 instead of %4.
+        walk: ['assets/pets/dog/walk_0.png', 'assets/pets/dog/walk_1.png', 'assets/pets/dog/walk_2.png', 'assets/pets/dog/walk_3.png', 'assets/pets/dog/walk_4.png', 'assets/pets/dog/walk_5.png'],
         // Not a Pet.draw() animation — a single larger portrait image for the Codex/detail
         // views only (see renderMiniPet() in ui.js), sized to its own aspect ratio rather
         // than the 36px in-world sprite box.
@@ -3419,15 +3433,18 @@ class Pet {
             return;
         }
         if (this.type === 'dog') {
-            // Sprite animation (see PET_SPRITES): digging = scratching, walking = 4-frame walk cycle
-            // driven by distance, otherwise sitting with a wagging tail.
+            // Sprite animation: digging = scratching (letter-grid only, no reference art for
+            // it). walking = 6-frame walk cycle driven by distance (real images — see
+            // PET_IMAGE_PATHS.dog.walk — replaced the pilot's original 2-frame/4-frame one
+            // for a smoother stride). sitting = 4-frame idle (also real images now, was a
+            // 2-frame wag; %4 here matches that, not the old %2).
             const walking = this.trackSpriteMotion();
             if (this.state === 'digging') {
                 drawPetSprite(ctx, 'dog', 'dig', Math.floor(Date.now() / 250) % 2, this.x, this.y, this.facing || 1);
             } else if (walking) {
-                drawPetSprite(ctx, 'dog', 'walk', Math.floor((this._spriteStep || 0) / PET_STEP_PIXELS) % 4, this.x, this.y, this.facing || 1);
+                drawPetSprite(ctx, 'dog', 'walk', Math.floor((this._spriteStep || 0) / PET_STEP_PIXELS) % 6, this.x, this.y, this.facing || 1);
             } else {
-                drawPetSprite(ctx, 'dog', 'sit', Math.floor(Date.now() / 400) % 2, this.x, this.y, 1);
+                drawPetSprite(ctx, 'dog', 'sit', Math.floor(Date.now() / 400) % 4, this.x, this.y, 1);
             }
         } else if (this.type === 'elephant') {
             // Sprite animation (see PET_SPRITES): 'idle' sways/blinks while standing still,
