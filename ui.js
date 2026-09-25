@@ -685,8 +685,23 @@ function renderMiniPet(pet, elementId) {
     let oy = 17;
 
         if (pet.type === 'dog') {
-            // Same sprite as in the world (front-facing sitting pose makes the best portrait).
-            drawPetSprite(mctx, 'dog', 'sit', 0, ox, oy, 1);
+            // Portrait art (PET_IMAGE_PATHS.dog.portrait in entities.js): the same real
+            // reference image, scaled to fit this 70x70 canvas and bottom-aligned like the
+            // in-world sprite. Falls back to the in-world sitting sprite if the image
+            // hasn't loaded yet — same safety net drawPetSprite() itself already has, just
+            // done by hand here since a bigger portrait doesn't fit the 36px sprite box.
+            const portrait = typeof getPetImage === 'function' ? getPetImage('dog', 'portrait', 0) : null;
+            if (portrait) {
+                const pad = 4;
+                const scale = Math.min((70 - pad * 2) / portrait.width, (70 - pad * 2) / portrait.height);
+                const pw = portrait.width * scale, ph = portrait.height * scale;
+                const smoothing = mctx.imageSmoothingEnabled;
+                mctx.imageSmoothingEnabled = false;
+                mctx.drawImage(portrait, (70 - pw) / 2, 70 - pad - ph, pw, ph);
+                mctx.imageSmoothingEnabled = smoothing;
+            } else {
+                drawPetSprite(mctx, 'dog', 'sit', 0, ox, oy, 1);
+            }
         } else if (pet.type === 'elephant') {
             // Same sprite as in the world — idle frame 0 (see PET_SPRITES.elephant /
             // .elephantBow in entities.js), matching the dog/cat portraits above.

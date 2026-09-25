@@ -419,8 +419,16 @@ function getPlayerSprite(kind, index, model) {
 // per pixel, '.' = transparent) painted at PET_SPRITE_SCALE and cached as offscreen canvases.
 // Every frame FACES RIGHT and is mirrored for left-moving pets. Each type has a few named
 // animations; frames can be different sizes (the sprite is anchored by its bottom-centre).
-//   dog: walk (4 frames), sit (front-facing, tail wags, 2 frames — also the Codex portrait),
-//        dig (2 frames: scratching with a front paw, used with the dirt particles)
+// As of the dog pilot (see PET_IMAGE_PATHS above getPetSprite), a type/anim pair can instead
+// be backed by a real image file cropped straight from the user's reference sheet — checked
+// first in drawPetSprite(), falling back to this letter-grid art automatically when no image
+// is registered or it hasn't loaded. The letter-grid data below is kept for every pet either
+// way, as that fallback and for anim/frame combos (like dog's dig) no reference art covers.
+//   dog: walk (4 frames) and sit (front-facing, tail wags, 2 frames) are real images now
+//        (PET_IMAGE_PATHS.dog — walk/sit here are the letter-grid fallback + still what
+//        dig's neighbouring code expects a same-shaped array for); dig (2 frames: scratching
+//        with a front paw, used with the dirt particles) has no reference art and stays
+//        letter-grid-only. The Codex portrait is also a real image (PET_IMAGE_PATHS.dog.portrait).
 //   cat: walk (4 frames), sleep (curled loaf + zzz, 2 frames — what it does whenever it's
 //        standing still, so a wild cat that isn't moving yet is asleep)
 //   elephant / elephantBow: idle (front-facing sway+blink, 2 frames — also the Codex
@@ -1806,10 +1814,47 @@ function getPetSprite(type, anim, index) {
     return c;
 }
 
+// Real-image pet art (see /assets/pets/<type>/<file>.png in the repo, alongside index.html
+// — same relative-path convention as the <script src="..."> tags). Cropped, background-
+// removed PNGs straight from the user's own reference sheets, used in place of the hand-
+// drawn PET_SPRITES letter-grid data below wherever they're registered here. Any (type,
+// anim) pair NOT listed here — or listed but the file hasn't finished loading yet, or
+// isn't there because the user hasn't deployed the assets/ folder to their repo yet —
+// falls straight back to the letter-grid art with no error and no blank pet; see
+// getPetImage() and drawPetSprite() below. A frame index beyond an entry's own array
+// length wraps (index % length), so e.g. a 2-image entry naturally cycles A-B-A-B under
+// calling code written for a 4-frame animation (dog's walk, driven by PET_STEP_PIXELS).
+const PET_IMAGE_PATHS = {
+    dog: {
+        sit: ['assets/pets/dog/sit_0.png', 'assets/pets/dog/sit_1.png'],
+        walk: ['assets/pets/dog/walk_0.png', 'assets/pets/dog/walk_1.png'],
+        // Not a Pet.draw() animation — a single larger portrait image for the Codex/detail
+        // views only (see renderMiniPet() in ui.js), sized to its own aspect ratio rather
+        // than the 36px in-world sprite box.
+        portrait: ['assets/pets/dog/portrait.png'],
+    },
+};
+const petImageCache = {}; // path -> Image, shared across every (type, anim, index) that names it
+function getPetImage(type, anim, index) {
+    const paths = PET_IMAGE_PATHS[type] && PET_IMAGE_PATHS[type][anim];
+    if (!paths || !paths.length) return null;
+    const path = paths[index % paths.length];
+    let img = petImageCache[path];
+    if (!img) {
+        img = new Image();
+        img.src = path; // if this 404s, img just never completes -- getPetImage keeps
+        petImageCache[path] = img; // returning null and the letter-grid fallback keeps drawing
+    }
+    return (img.complete && img.naturalWidth > 0) ? img : null;
+}
+
 // Draws one frame of a pet's sprite into the 36 x 36 box whose top-left is (boxX, boxY), on any
 // 2D context (the game canvas, or the Codex portrait canvas). facing: 1 = right, -1 = left.
+// Prefers a real image (getPetImage / PET_IMAGE_PATHS) over the hand-drawn letter-grid
+// (getPetSprite / PET_SPRITES) whenever one is registered and has finished loading;
+// otherwise this is exactly the letter-grid draw it's always been.
 function drawPetSprite(c, type, anim, index, boxX, boxY, facing) {
-    const sprite = getPetSprite(type, anim, index);
+    const sprite = getPetImage(type, anim, index) || getPetSprite(type, anim, index);
     const w = sprite.width;
     const h = sprite.height;
     const dx = Math.round(boxX + 18 - w / 2);
