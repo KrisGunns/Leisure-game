@@ -91,6 +91,20 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Changelog
 
+### 2026-09-25 (20) — Fixed the "Tamers" section: index.html/ui.js had drifted apart
+
+**Root cause found: `ui.js` and `index.html` had gone out of sync with each other.** The user's actual `index.html` (confirmed via a fresh upload) has a `characterTamersSection` — a `🎭 Tamers` heading over an empty `characterTamersList` container, meant to be filled entirely in JS with both selectable character models. The `ui.js`/`index.html` pair I'd been working from instead had an older single-preview-plus-toggle-button design (`characterModelRow` / `characterModelPreview` / `btnSwitchCharacterModel`) — elements that don't exist in the user's real page. Since every DOM lookup in that old code was through an `if (element)` guard, `getElementById()` returning `null` for the missing IDs was silently swallowed rather than throwing — so the "Tamers" heading (static HTML) rendered fine while everything meant to go under it quietly never did. This is why the character/bonuses/perks sections worked (confirmed in the previous session's testing) while this one row stayed empty — there was no crash to find.
+
+**Fixed by replacing the dead code with logic that actually targets `characterTamersList`.** In `updateCharacterScreen()` (`ui.js`), the old model-preview block is replaced with a loop over `PLAYER_MODELS` (`entities.js`) that builds one card per model into `characterTamersList`: a 48×48 idle-pose preview (`getPlayerSprite`) plus a label ("Girl"/"Boy"), the currently-selected model's card visually marked (see CSS below). Tapping a non-selected card sets `character.model` and, immediately, `player.model` (no reload — next frame draws the other sprite set), saves, and re-renders the list so the highlight moves. The old standalone `btnSwitchCharacterModel` click-listener block (now unreachable — nothing in the real page has that ID) was removed; per-card click/touchstart handlers replace it.
+
+**Added the CSS the cards needed** (`style.css`), since the old file had none for this: `.tamerCard` (clickable, bordered box), `.tamerCardSelected` (gold border + glow, same visual language as `.perkNodeUnlocked`), `.tamerCanvasView` (pixelated 48×48 preview), `.tamerLabel`.
+
+**Synced my working copy of `index.html` to the user's real one** (previously stale from the original upload) so future edits don't drift again. While doing that, cross-checked every `getElementById()` call across all six JS files against the real `index.html`'s actual `id` attributes — the only mismatch found was this one; the 8 others that looked "missing" (`levelUpToast`, `whistlePicker`, etc.) are all elements built dynamically in JS with `.id = '...'`, not page-declared, which is the existing, working pattern for toasts/pickers.
+
+**Verification:** `node --check` on `ui.js`. Loaded all 5 non-main JS files together in a Node `vm` context with a DOM stub, called `updateCharacterScreen()`, and confirmed — via a stub that actually tracks appended children (the previous session's stub discarded them) — that it now builds exactly 2 cards into `characterTamersList`, labeled "Girl" and "Boy", with "Girl" (the default `character.model`) carrying the `tamerCardSelected` class and "Boy" not. **Not tested:** an actual browser/Playwright run (unavailable in this session) — worth confirming the tap-to-switch interaction and that the save round-trips `character.model` correctly in a real browser before considering this fully closed.
+
+---
+
 ### 2026-09-25 (19) — Region 4 Bee real pixel-art sprites (idle + walk, no jump/flap — covers every worker bee too)
 
 **Region 4's Bee now uses real pixel-art sprites, replacing the raw canvas-shape placeholder** (a plain yellow ellipse + two strokes for stripes + two translucent wing ellipses), following the same `PET_SPRITES`/`drawPetSprite()` architecture as every other converted pet, built from the user's attached reference sprite sheet:

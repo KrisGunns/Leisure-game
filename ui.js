@@ -1244,21 +1244,49 @@ function updateCharacterScreen() {
     if (nameDisplay) nameDisplay.textContent = character.name || 'Player';
     if (levelValue) levelValue.textContent = character.level;
 
-    // Character model (see PLAYER_MODELS in entities.js): a live preview of the idle pose
-    // plus a button that flips character.model and, immediately, player.model — no reload
-    // needed, the next frame just draws with the other sprite set.
-    const modelLabel = document.getElementById('characterModelLabel');
-    const modelPreview = document.getElementById('characterModelPreview');
-    const switchModelBtn = document.getElementById('btnSwitchCharacterModel');
-    const model = character.model === 'male' ? 'male' : 'female';
-    if (modelLabel) modelLabel.textContent = model === 'male' ? 'Boy' : 'Girl';
-    if (switchModelBtn) switchModelBtn.textContent = model === 'male' ? '👧 Switch to Girl' : '👦 Switch to Boy';
-    if (modelPreview && typeof getPlayerSprite === 'function') {
-        const pctx = modelPreview.getContext('2d');
-        pctx.imageSmoothingEnabled = false;
-        pctx.clearRect(0, 0, 48, 48);
-        const sprite = getPlayerSprite('idle', 0, model);
-        pctx.drawImage(sprite, Math.round((48 - sprite.width) / 2), 48 - sprite.height - 1);
+    // Tamers (see PLAYER_MODELS in entities.js): one selectable card per character model,
+    // built into characterTamersList — a live idle-pose preview plus a label, the
+    // currently-active one highlighted. Tapping a card that isn't already selected flips
+    // character.model and, immediately, player.model — no reload needed, the next frame
+    // just draws with the other sprite set.
+    const tamersList = document.getElementById('characterTamersList');
+    if (tamersList && typeof getPlayerSprite === 'function' && typeof PLAYER_MODELS !== 'undefined') {
+        while (tamersList.firstChild) tamersList.removeChild(tamersList.firstChild);
+        const currentModel = character.model === 'male' ? 'male' : 'female';
+        const TAMER_LABELS = { female: 'Girl', male: 'Boy' };
+        Object.keys(PLAYER_MODELS).forEach(modelKey => {
+            const selected = modelKey === currentModel;
+            const card = document.createElement('div');
+            card.className = 'tamerCard' + (selected ? ' tamerCardSelected' : '');
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 48;
+            canvas.height = 48;
+            canvas.className = 'tamerCanvasView';
+            const tctx = canvas.getContext('2d');
+            tctx.imageSmoothingEnabled = false;
+            const sprite = getPlayerSprite('idle', 0, modelKey);
+            tctx.drawImage(sprite, Math.round((48 - sprite.width) / 2), 48 - sprite.height - 1);
+            card.appendChild(canvas);
+
+            const label = document.createElement('div');
+            label.className = 'tamerLabel';
+            label.textContent = TAMER_LABELS[modelKey] || (modelKey.charAt(0).toUpperCase() + modelKey.slice(1));
+            card.appendChild(label);
+
+            if (!selected) {
+                const selectTamer = (e) => {
+                    if (e) e.preventDefault();
+                    character.model = modelKey;
+                    if (typeof player !== 'undefined') player.model = modelKey;
+                    if (typeof saveGameProgress === 'function') saveGameProgress();
+                    updateCharacterScreen();
+                };
+                card.addEventListener('click', selectTamer);
+                card.addEventListener('touchstart', selectTamer, { passive: false });
+            }
+            tamersList.appendChild(card);
+        });
     }
 
     if (bonusList && typeof getCharacterBonuses === 'function') {
@@ -1326,21 +1354,10 @@ if (btnRenameCharacter && characterNameInput) {
     btnRenameCharacter.addEventListener('click', handleCharacterRename);
 }
 
-// Character model switch: flips between the two PLAYER_MODELS. Updates player.model
-// immediately (so the sprite changes on screen the instant you tap it, no reload), and
-// saves it the same way renaming does.
-const btnSwitchCharacterModel = document.getElementById('btnSwitchCharacterModel');
-if (btnSwitchCharacterModel) {
-    const handleSwitchCharacterModel = (e) => {
-        if (e) e.preventDefault();
-        character.model = character.model === 'male' ? 'female' : 'male';
-        if (typeof player !== 'undefined') player.model = character.model;
-        saveGameProgress();
-        updateCharacterScreen();
-    };
-    btnSwitchCharacterModel.addEventListener('click', handleSwitchCharacterModel);
-    btnSwitchCharacterModel.addEventListener('touchstart', handleSwitchCharacterModel, { passive: false });
-}
+// Character model switch: see the Tamers cards built in updateCharacterScreen() above
+// (characterTamersList) — clicking a non-selected card handles this directly now, so
+// there's no separate toggle button/listener needed here any more.
+
 
 // ------------------------------------------------------------
 // SHOP — opened from the MENU overlay (🛒 SHOP). Three tabs: Buy (SHOP_ITEMS in state.js,
