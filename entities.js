@@ -432,6 +432,8 @@ function getPlayerSprite(kind, index, model) {
 //        the JUMP + FLAP reference poses — a periodic 2/10 stand-in for walk while moving)
 //   bird: idle (2 frames, blink), fly (4-frame side-profile flap cycle — its only movement
 //        animation, in place of a walk cycle)
+//   bee: idle (2 frames, blink), walk (4-frame side-profile flap cycle — its only movement
+//        animation). Covers every bee, starter and purchased worker bees alike.
 // To add another pet: add a palette letter if needed, add its frames to PET_SPRITES, and draw it
 // with drawPetSprite() from Pet.draw() / renderMiniPet() the way the dog and cat do.
 // ------------------------------------------------------------------
@@ -473,7 +475,10 @@ const PET_SPRITE_PALETTE = {
     P: '#ffb3c1',   // chicken cheek blush
     K: '#191919',   // bird body black
     J: '#3d3d3f',   // bird shade dark gray
-    X: '#d19f40'    // bird beak / legs gold
+    X: '#d19f40',   // bird beak / legs gold
+    Z: '#fac014',   // bee body gold
+    V: '#26180d',   // bee head / stripes (near-black brown)
+    U: '#904e1c'    // bee legs / stinger / antennae
 };
 
 const PET_SPRITES = {
@@ -1619,6 +1624,155 @@ const PET_SPRITES = {
                 '.......XX.XX..........',
                 '.......XX.XX..........',
                 '..........XX..........',
+                '......................',
+            ],
+        ],
+    },
+    bee: {
+        // Idle (2 frames, blink) is the standing/hovering-in-place pose. walk (4-frame
+        // side-profile wing-flap cycle) is the only movement animation, same as the
+        // sparrow -- no jump/flap poses wired up here. Applies to every bee: the free
+        // starter and every purchased worker bee alike, since all are type "bee" and
+        // Pet.draw() branches on type, not on individual bee instances.
+        idle: [
+        // idle v0
+            [
+                '......U.......U.......',
+                '......UU.....UU.......',
+                '.......U.....U........',
+                '.......UVVVVVU........',
+                '.......VVVVVVVV.......',
+                '......VwVVVVwVVV......',
+                '......VeeVVVeeVV......',
+                '......VeeVVVeeVV......',
+                '......VUVVVVVUwwww....',
+                '.......VZZZZZwwwwww...',
+                '......ZZZZZZZwwwwww...',
+                '....VVVVVVVVVwwwwww...',
+                '...ZZVVVVVVVVwwwwwww..',
+                '...ZZZZZZZZZZZwwwwww..',
+                '...ZZZZZZZZZZZZwwwww..',
+                '....VVVVVVVVVVVwwwww..',
+                '....VVVVVVVVVVVwwwww..',
+                '......ZZZZZZZZZZwww...',
+                '........ZZUUZZ........',
+                '..........UU..........',
+            ],
+        // idle v1
+            [
+                '......U.......U.......',
+                '......UU.....UU.......',
+                '.......U.....U........',
+                '.......UVVVVVU........',
+                '.......VVVVVVVV.......',
+                '......VwVVVVwVVV......',
+                '......VVVVVVVVVV......',
+                '......VeeVVVeeVV......',
+                '......VUVVVVVUwwww....',
+                '.......VZZZZZwwwwww...',
+                '......ZZZZZZZwwwwww...',
+                '....VVVVVVVVVwwwwww...',
+                '...ZZVVVVVVVVwwwwwww..',
+                '...ZZZZZZZZZZZwwwwww..',
+                '...ZZZZZZZZZZZZwwwww..',
+                '....VVVVVVVVVVVwwwww..',
+                '....VVVVVVVVVVVwwwww..',
+                '......ZZZZZZZZZZwww...',
+                '........ZZUUZZ........',
+                '..........UU..........',
+            ],
+        ],
+        walk: [
+        // walk f0
+            [
+                '.......wwwww..........',
+                '......wwwwwww.........',
+                '.....wwwwwwwww........',
+                '.....wwwwwwwww........',
+                '.....wwwwwwwww...UU...',
+                '......wwwwwww..VVUU...',
+                '.......wwwww..VVVVVV..',
+                '.......ZZZZZZVVVVwVVV.',
+                '.....ZZZZZZZZVVVVeeVV.',
+                '...VVVVVVVVVVVVVVeeVV.',
+                '...VVVVVVVVVVVVVVVVVV.',
+                '...ZZZZZZZZZZZVVVVVV..',
+                '...ZZZZZZZZZZZZVVVV...',
+                '...VVVVVVVVVVVVVV.....',
+                '...VVVVVVVVVVVVVV.....',
+                '.......UUZZUU.........',
+                '.......UU..UU.........',
+                '.......UU..UU.........',
+                '...........UU.........',
+                '......................',
+            ],
+        // walk f1
+            [
+                '......................',
+                '......................',
+                '.......wwwwww.........',
+                '......wwwwwwww........',
+                '.....wwwwwwwwww..UU...',
+                '.....wwwwwwwwwwVVUU...',
+                '......wwwwwwwwVVVVVV..',
+                '.......wwwwwwVVVVwVVV.',
+                '.....ZZZZZZZZVVVVeeVV.',
+                '...VVVVVVVVVVVVVVeeVV.',
+                '...VVVVVVVVVVVVVVVVVV.',
+                '...ZZZZZZZZZZZVVVVVV..',
+                '...ZZZZZZZZZZZZVVVV...',
+                '...VVVVVVVVVVVVVV.....',
+                '...VVVVVVVVVVVVVV.....',
+                '.......UUZZUU.........',
+                '.......UU..UU.........',
+                '.......UU..UU.........',
+                '...........UU.........',
+                '......................',
+            ],
+        // walk f2
+            [
+                '......................',
+                '......................',
+                '......................',
+                '......................',
+                '.................UU...',
+                '...............VVUU...',
+                '......wwwwwww.VVVVVV..',
+                '.....wwwwwwwwwVVVwVVV.',
+                '....wwwwwwwwwwwVVeeVV.',
+                '...VwwwwwwwwwwwVVeeVV.',
+                '...VVwwwwwwwwwVVVVVVV.',
+                '...ZZZZwwwwwZZVVVVVV..',
+                '...ZZZZZZZZZZZZVVVV...',
+                '...VVVVVVVVVVVVVV.....',
+                '...VVVVVVVVVVVVVV.....',
+                '.......UUZZUU.........',
+                '.......UU..UU.........',
+                '.......UU..UU.........',
+                '...........UU.........',
+                '......................',
+            ],
+        // walk f3
+            [
+                '......................',
+                '......................',
+                '.......wwwwww.........',
+                '......wwwwwwww........',
+                '.....wwwwwwwwww..UU...',
+                '.....wwwwwwwwwwVVUU...',
+                '......wwwwwwwwVVVVVV..',
+                '.......wwwwwwVVVVwVVV.',
+                '.....ZZZZZZZZVVVVeeVV.',
+                '...VVVVVVVVVVVVVVeeVV.',
+                '...VVVVVVVVVVVVVVVVVV.',
+                '...ZZZZZZZZZZZVVVVVV..',
+                '...ZZZZZZZZZZZZVVVV...',
+                '...VVVVVVVVVVVVVV.....',
+                '...VVVVVVVVVVVVVV.....',
+                '.......UUZZUU.........',
+                '.......UU..UU.........',
+                '.......UU..UU.........',
+                '...........UU.........',
                 '......................',
             ],
         ],
@@ -3277,23 +3431,16 @@ class Pet {
                 drawPetSprite(ctx, 'chicken', 'idle', Math.floor(Date.now() / 500) % 2, this.x, this.y, this.facing || 1);
             }
         } else if (this.type === 'bee') {
-            ctx.fillStyle = '#f1c40f';
-            ctx.beginPath();
-            ctx.ellipse(this.x + 18, this.y + 18, 12, 8, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = '#2c3e50';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(this.x + 14, this.y + 10); ctx.lineTo(this.x + 14, this.y + 26);
-            ctx.moveTo(this.x + 22, this.y + 10); ctx.lineTo(this.x + 22, this.y + 26);
-            ctx.stroke();
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-            ctx.beginPath();
-            ctx.ellipse(this.x + 14, this.y + 8, 4, 6, -Math.PI / 4, 0, Math.PI * 2);
-            ctx.ellipse(this.x + 22, this.y + 8, 4, 6, Math.PI / 4, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(this.x + 26, this.y + 15, 2, 2);
+            // Idle (2-frame blink) while stationary; walk (4-frame side-profile flap cycle)
+            // is the only movement animation, same treatment as the bird — no jump/flap.
+            // Covers every bee (the free starter and every purchased worker bee alike),
+            // since this branches on type, not on individual bee instances.
+            const walking = this.trackSpriteMotion();
+            if (walking) {
+                drawPetSprite(ctx, 'bee', 'walk', Math.floor((this._spriteStep || 0) / PET_STEP_PIXELS) % 4, this.x, this.y, this.facing || 1);
+            } else {
+                drawPetSprite(ctx, 'bee', 'idle', Math.floor(Date.now() / 500) % 2, this.x, this.y, this.facing || 1);
+            }
         } else if (this.type === 'bear' || (typeof pet !== 'undefined' && pet.type === 'bear')) {
             let bx = this.type === 'bear' ? this.x : ox;
             let by = this.type === 'bear' ? this.y : oy;

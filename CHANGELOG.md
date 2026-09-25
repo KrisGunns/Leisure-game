@@ -91,6 +91,20 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Changelog
 
+### 2026-09-25 (19) — Region 4 Bee real pixel-art sprites (idle + walk, no jump/flap — covers every worker bee too)
+
+**Region 4's Bee now uses real pixel-art sprites, replacing the raw canvas-shape placeholder** (a plain yellow ellipse + two strokes for stripes + two translucent wing ellipses), following the same `PET_SPRITES`/`drawPetSprite()` architecture as every other converted pet, built from the user's attached reference sprite sheet:
+
+- **`PET_SPRITES.bee`**: `idle` (2 frames, blink — front-facing, striped abdomen, raised wing, waving arm) and `walk` (4-frame side-profile wing-flap cycle, built from the sheet's WALK CYCLE row). Per the user's instruction ("ignore the jump and flap for this one, similar to the sparrow"), the sheet's JUMP/FLAP-equivalent poses were not implemented at all — just the two animations, same scope as the bird after last session's hop removal.
+- Applied the eye-symmetry lesson from the bird fix up front this time: both eyes in `idle` are identical 2×2 blocks at mirrored positions, with the highlight glint as a separate pixel above each eye rather than cutting into one of them.
+- **Covers every bee, not just the starter.** `Pet.draw()` branches on `this.type === 'bee'`, and `createBee()` (`world.js`) builds every purchased worker bee with that same type — so this one sprite swap applies to the free starter bee and all purchased worker bees (the hive's `HIVE_MAX_BEES` slots) automatically, with no per-instance changes needed. Confirmed by reading `createBee()` and the Region 4 shop's bee-purchase path: neither sets anything that would make a purchased bee render differently from the starter.
+- Added 3 new palette letters (`Z` body gold, `V` head/stripes near-black, `U` legs/stinger/antennae brown) — no collisions with any existing letter (the reference sheet's actual gold and near-black were close enough to the existing elephant-pink `Y` and bird-black `K` to require fresh letters rather than reuse). Reuses `w` (white, wings) and `e` (eye) exactly as-is.
+- Replaced the old raw-shape drawing in `Pet.draw()`'s bee branch and the matching duplicate in `ui.js`'s `renderMiniPet()` (Codex portrait, now `idle` frame 0) with `drawPetSprite()` calls.
+
+**Verification:** `node --check` on `entities.js` and `ui.js`. Loaded `PET_SPRITES.bee` via Node's `vm` module and confirmed both idle frames and all four walk frames are 20×22 with no unmapped palette characters. Rendered every frame from the live file's actual `PET_SPRITE_PALETTE` values and visually confirmed both eyes show clearly and symmetrically in idle, and the walk cycle reads as a small flying bee with a visible wing-flap progression across all 4 frames. **Not tested:** an actual browser/Playwright run (unavailable in this session) — worth confirming a purchased second/third worker bee in Region 4 renders identically to the starter.
+
+---
+
 ### 2026-09-25 (18) — Bird: removed the hop animation; fixed a one-eyed-looking idle pose
 
 **Removed `hop` from `PET_SPRITES.bird` entirely, per the user's request.** Last session's bird sprite work had reused the chicken's "periodic 2/10 bout" pattern for the reference sheet's JUMP/FLAP poses; the user asked for it gone, so `PET_SPRITES.bird` is back down to just `idle` and `fly` — the two animations actually asked for originally ("instead of a walk cycle, he should have a fly cycle"). Deleted the `hop` frame array, the `_birdHopRollAt`/`_birdHopping` bout-timer logic in `Pet.draw()`'s bird branch (now a plain walking-or-not check like the dog/squirrel), and the now-stale mentions of it in the top-of-file animation comment and last session's own inline comments.

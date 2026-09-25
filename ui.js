@@ -698,23 +698,8 @@ function renderMiniPet(pet, elementId) {
             // Same sprite as in the world — idle frame 0 (see PET_SPRITES.chicken).
             drawPetSprite(mctx, 'chicken', 'idle', 0, ox, oy, 1);
         } else if (pet.type === 'bee') {
-            mctx.fillStyle = '#f1c40f';
-            mctx.beginPath();
-            mctx.ellipse(ox + 18, oy + 18, 12, 8, 0, 0, Math.PI * 2);
-            mctx.fill();
-            mctx.strokeStyle = '#2c3e50';
-            mctx.lineWidth = 3;
-            mctx.beginPath();
-            mctx.moveTo(ox + 14, oy + 10); mctx.lineTo(ox + 14, oy + 26);
-            mctx.moveTo(ox + 22, oy + 10); mctx.lineTo(ox + 22, oy + 26);
-            mctx.stroke();
-            mctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-            mctx.beginPath();
-            mctx.ellipse(ox + 14, oy + 8, 4, 6, -Math.PI / 4, 0, Math.PI * 2);
-            mctx.ellipse(ox + 22, oy + 8, 4, 6, Math.PI / 4, 0, Math.PI * 2);
-            mctx.fill();
-            mctx.fillStyle = '#000000';
-            mctx.fillRect(ox + 26, oy + 15, 2, 2);
+            // Same sprite as in the world — idle frame 0 (see PET_SPRITES.bee).
+            drawPetSprite(mctx, 'bee', 'idle', 0, ox, oy, 1);
         } else if (pet.type === 'bear') {
             let isFemale = !!pet.isFemaleBear;
             mctx.save();
