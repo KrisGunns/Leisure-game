@@ -91,6 +91,22 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Changelog
 
+### 2026-09-25 (21) — Sparrow redesign: cleaner idle (3/4-view, single eye) + fixed fly cycle, from a new reference sheet
+
+**Reworked `PET_SPRITES.bird` from scratch, per the user's feedback that the previous pixel-art version looked "packed" and worse than the old raw-shape placeholder.** The user attached a new, higher-quality reference sheet (IDLE / JUMP / FLAP / FLY CYCLE, richer 4-tone palette: black, dark gray, light gray, plus gold beak and brown legs) and asked for the idle redone cleaner and the fly cycle rebuilt from it, jump/flap ignored again (same scope as last time).
+
+**`idle` is a different pose now, not just a recolor.** The old version was front-facing with two symmetric eyes and a wing that either overlapped the head or (in early drafts this session) floated off to the side looking like a separate blob — several iterations were needed to get this right; overlapping ellipses without deliberate anchoring kept reading as disconnected shapes or a messy ring. Landed on: a 3/4-view pose with a single eye (matching how the reference sheet actually draws it, and sidestepping the symmetric-eye problem entirely), and a wing built to visibly overlap and emerge from the body's back (drawn on top of the body's upper silhouette rather than floating beside it) so the two read as one connected bird. Also fixed the blink frame, which previously only cleared the pupil and left stray corner pixels from the eye ellipse showing — it now blacks out the full eye bounding box.
+
+**`fly` (4 frames) rebuilt from the new sheet's FLY CYCLE row** — wing positions: raised-high, raised-back, swept-tucked against the body, and full downstroke — same side-profile, distance-driven frame-advance as before (`_spriteStep`/`PET_STEP_PIXELS`).
+
+**Palette:** redefined the bird's existing `K`/`J`/`X` letters in place (body black, shade gray, beak gold) to the new sheet's sampled hex values — safe since nothing but the bird ever used them — and added two new letters, `L` (light-gray highlight) and `I` (leg brown), since the new design needed a third feather tone and a beak/leg color distinction the old version didn't have. Canvas width grew from 22 to 24 columns to fit the new proportions; height stays 20, so the bottom-center anchor (`PET_SPRITE_BOTTOM`) is unaffected.
+
+**Verification:** `node --check` on `entities.js`. Loaded `PET_SPRITES.bird` via Node's `vm` module and confirmed every frame (both idle, all four fly) is 20×24 with no unmapped palette characters, and that `PET_SPRITES.bee` (untouched this round) still checks out too. Rendered every frame from the live file's actual `PET_SPRITE_PALETTE` values — the idle pose reads as a single connected bird with a clearly separated head/eye/beak and a wing that emerges from the back rather than floating, and the fly cycle shows a clean 4-stage flap progression. **Not tested:** an actual browser/Playwright run (unavailable in this session).
+
+**Flagged, not yet actioned:** the user also said the bee sprite doesn't look pleasing, but gave no new reference sheet or specific direction for it (unlike the bird, which got both this session and last). Left the current bee sprite as-is pending either a reference sheet or confirmation to apply the same clean-connected-silhouette approach worked out here.
+
+---
+
 ### 2026-09-25 (20) — Fixed the "Tamers" section: index.html/ui.js had drifted apart
 
 **Root cause found: `ui.js` and `index.html` had gone out of sync with each other.** The user's actual `index.html` (confirmed via a fresh upload) has a `characterTamersSection` — a `🎭 Tamers` heading over an empty `characterTamersList` container, meant to be filled entirely in JS with both selectable character models. The `ui.js`/`index.html` pair I'd been working from instead had an older single-preview-plus-toggle-button design (`characterModelRow` / `characterModelPreview` / `btnSwitchCharacterModel`) — elements that don't exist in the user's real page. Since every DOM lookup in that old code was through an `if (element)` guard, `getElementById()` returning `null` for the missing IDs was silently swallowed rather than throwing — so the "Tamers" heading (static HTML) rendered fine while everything meant to go under it quietly never did. This is why the character/bonuses/perks sections worked (confirmed in the previous session's testing) while this one row stayed empty — there was no crash to find.
