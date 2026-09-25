@@ -431,8 +431,7 @@ function getPlayerSprite(kind, index, model) {
 //   chicken: idle (2 frames, blink), walk (4-frame side-profile cycle), hop (2 frames,
 //        the JUMP + FLAP reference poses — a periodic 2/10 stand-in for walk while moving)
 //   bird: idle (2 frames, blink), fly (4-frame side-profile flap cycle — its only movement
-//        animation, in place of a walk cycle), hop (2 frames, the JUMP + FLAP reference
-//        poses — same periodic 2/10 stand-in as the chicken's hop, used while flying)
+//        animation, in place of a walk cycle)
 // To add another pet: add a palette letter if needed, add its frames to PET_SPRITES, and draw it
 // with drawPetSprite() from Pet.draw() / renderMiniPet() the way the dog and cat do.
 // ------------------------------------------------------------------
@@ -1479,11 +1478,8 @@ const PET_SPRITES = {
     },
     bird: {
         // Idle (2 frames, blink) is the standing pose. fly (4-frame side-profile flap
-        // cycle) is the main movement animation, replacing the walk-cycle convention the
-        // ground pets use, since this pet actually flies everywhere. jump/flap (each 1
-        // frame, paired into a 2-frame animation) are the reference sheet's JUMP and FLAP
-        // poses -- used the same way chicken uses hop: a periodic, purely cosmetic 2/10
-        // swap-in for a stretch while moving, per Pet.draw().
+        // cycle) is the only movement animation, replacing the walk-cycle convention the
+        // ground pets use, since this pet actually flies everywhere.
         idle: [
         // idle v0
             [
@@ -1492,10 +1488,10 @@ const PET_SPRITES = {
                 '......................',
                 '........KKKKK.........',
                 '.......KKKKKKKK.......',
-                '......KKKKKKKKKK......',
-                '......KKeweKeeKK......',
-                '......KKeeeKeeKK......',
-                '.....KKKeeeKKKKKK.....',
+                '......KKwKKKwKKK......',
+                '......KKeeKKeeKK......',
+                '......KKeeKKeeKK......',
+                '.....KKKKKKKKKKKK.....',
                 '.....KKKKKXXXKKKKJ....',
                 '..KKKKKKKKXXXKKKKK....',
                 'JJJKKJJJKKKKKKKKKKJ...',
@@ -1508,17 +1504,17 @@ const PET_SPRITES = {
                 '.......XXX..XXX.......',
                 '.......XXX..XXX.......',
             ],
-        // idle v1
+        // idle v1 (blink -- top row of each eye reverts to head-black)
             [
                 '......................',
                 '......................',
                 '......................',
                 '........KKKKK.........',
                 '.......KKKKKKKK.......',
+                '......KKwKKKwKKK......',
                 '......KKKKKKKKKK......',
-                '......KKeweKeeKK......',
-                '......KKeeeKeeKK......',
-                '.....KKKeeeKKKKKK.....',
+                '......KKeeKKeeKK......',
+                '.....KKKKKKKKKKKK.....',
                 '.....KKKKKXXXKKKKJ....',
                 '..KKKKKKKKXXXKKKKK....',
                 'JJJKKJJJKKKKKKKKKKJ...',
@@ -1530,54 +1526,6 @@ const PET_SPRITES = {
                 '.....JJXXXKKXXX.......',
                 '.......XXX..XXX.......',
                 '.......XXX..XXX.......',
-            ],
-        ],
-        hop: [
-        // jump
-            [
-                '......................',
-                '......................',
-                '......................',
-                '.........KKKK.........',
-                '........KKKKKK........',
-                '..KKK..KKKKKKKK..KKK..',
-                '.KKKKK.KeweKeeK.KKKKK.',
-                'KKJJJKKKeeeKeeKKKJJJKK',
-                'KJJJJJKKeeeKKKKKJJJJJK',
-                'KJJJJJKKKXXXXKKKJJJJJK',
-                '.KJJJKKKKXXXXKKKKJJJK.',
-                '..KKK.KJJKKKKKKK.KKK..',
-                '......JJJJKKKKKK......',
-                '......JJJJKKKKKK......',
-                '......JJJJKKKKK.......',
-                '......JJJKKKKK........',
-                '.......JJKKKK.........',
-                '........XX..XX........',
-                '........XX..XX........',
-                '......................',
-            ],
-        // flap
-            [
-                '......................',
-                '......................',
-                '......................',
-                '..KKK....KKKK....KKK..',
-                '.KKKKK..KKKKKK..KKKKK.',
-                'KKJJJKKKKKKKKKKKKJJJKK',
-                'KJJJJJKKeweKeeKKJJJJJK',
-                'KJJJJJKKeeeKeeKKJJJJJK',
-                'KJJJJJKKeeeKKKKKJJJJJK',
-                '.KJJJKKKKXXXXKKKKJJJK.',
-                '..KKK.KKKXXXXKKK.KKK..',
-                '......KJJKKKKKKK......',
-                '......JJJJKKKKKK......',
-                '......JJJJKKKKKK......',
-                '......JJJJKKKKK.......',
-                '......JJJKKKKK........',
-                '.......JJKKKK.........',
-                '......XX......XX......',
-                '......XX......XX......',
-                '......XX......XX......',
             ],
         ],
         fly: [
@@ -3522,25 +3470,14 @@ class Pet {
             }
         } else if (this.type === 'bird') {
             // Idle (2-frame blink) while standing; fly (4-frame side-profile flap cycle) is
-            // the movement animation, replacing the ground-pet walk-cycle convention since
-            // this pet actually flies everywhere it goes (including its Lv20 excursions to
-            // other regions). While flying, the same 2/10-bout mechanic as the chicken's hop
-            // swaps in 'hop' (the reference sheet's JUMP + FLAP poses) for a stretch,
-            // purely cosmetic. No more per-frame sine bob — the flap cycle carries the motion.
+            // the only movement animation, replacing the ground-pet walk-cycle convention
+            // since this pet actually flies everywhere it goes (including its Lv20
+            // excursions to other regions). No more per-frame sine bob — the flap cycle
+            // carries the motion.
             const walking = this.trackSpriteMotion();
             if (walking) {
-                const now = Date.now();
-                if (!this._birdHopRollAt || now > this._birdHopRollAt) {
-                    this._birdHopping = Math.random() < 0.2;
-                    this._birdHopRollAt = now + 1200 + Math.random() * 800;
-                }
-                if (this._birdHopping) {
-                    drawPetSprite(ctx, 'bird', 'hop', Math.floor(Date.now() / 220) % 2, this.x, this.y, this.facing || 1);
-                } else {
-                    drawPetSprite(ctx, 'bird', 'fly', Math.floor((this._spriteStep || 0) / PET_STEP_PIXELS) % 4, this.x, this.y, this.facing || 1);
-                }
+                drawPetSprite(ctx, 'bird', 'fly', Math.floor((this._spriteStep || 0) / PET_STEP_PIXELS) % 4, this.x, this.y, this.facing || 1);
             } else {
-                this._birdHopRollAt = 0; // fresh roll next time it starts moving again
                 drawPetSprite(ctx, 'bird', 'idle', Math.floor(Date.now() / 500) % 2, this.x, this.y, this.facing || 1);
             }
         } else if (this.type === 'panda') {

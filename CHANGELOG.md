@@ -91,6 +91,16 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Changelog
 
+### 2026-09-25 (18) — Bird: removed the hop animation; fixed a one-eyed-looking idle pose
+
+**Removed `hop` from `PET_SPRITES.bird` entirely, per the user's request.** Last session's bird sprite work had reused the chicken's "periodic 2/10 bout" pattern for the reference sheet's JUMP/FLAP poses; the user asked for it gone, so `PET_SPRITES.bird` is back down to just `idle` and `fly` — the two animations actually asked for originally ("instead of a walk cycle, he should have a fly cycle"). Deleted the `hop` frame array, the `_birdHopRollAt`/`_birdHopping` bout-timer logic in `Pet.draw()`'s bird branch (now a plain walking-or-not check like the dog/squirrel), and the now-stale mentions of it in the top-of-file animation comment and last session's own inline comments.
+
+**Bird idle looked one-eyed — fixed, both eyes now identical and symmetric.** The bug: the left eye was drawn as a 3×3 rounded ellipse with a white glint pixel punched into it, while the right eye was a plain 2×2 black square with no glint — two different shapes and sizes on a front-facing, otherwise-symmetric face, so the smaller/plainer right eye read as much fainter than the left (looking like only one eye was really there). Rebuilt both eyes as identical 2×2 black squares at mirrored positions, and moved the glint to a single highlight pixel sitting just above-left of *each* eye (outside the black square, not eating into it), so both sides are now the same size and shape. Also fixed the `idle` blink frame (frame 1), which turned out to be a no-op — it repainted the eye's already-black bottom row with the same near-black eye color, so nothing visibly changed between frames 0 and 1; it now blacks out each eye's *top* row (matching the head color) so a genuine thin closed-eye line shows on both sides. The side-profile `fly` frames were unaffected — those only ever show one eye, correctly, since it's a side view.
+
+**Verification:** `node --check` on `entities.js`. Confirmed via Node's `vm` module that `PET_SPRITES.bird` now has exactly two keys (`idle`, `fly`) with no `hop`, and that both idle frames are still 20×22 with no unmapped palette characters. Rendered both idle frames from the live file's actual `PET_SPRITE_PALETTE` values and visually confirmed both eyes now show clearly and symmetrically, including in the blink frame. **Not tested:** an actual browser/Playwright run (unavailable in this session).
+
+---
+
 ### 2026-09-25 (17) — Squirrel scamper tail fix; Region 3 Bird/Sparrow real pixel-art sprites + fly cycle
 
 **Squirrel's scamper tail was reading as sitting on top of its head, now clearly behind it.** In `PET_SPRITES.squirrel.scamper` (added last session), the tail arch was positioned at columns 9-18, overlapping the head/ear at columns 15-21 in rows 0-7 — since both use the same dark-brown outline color (`F`), the overlap made the tail look fused to/sitting on the head instead of trailing behind the body. Moved the tail arch to columns 1-11 in all 4 scamper frames — well clear of the head — so it now reads as a distinct poof at the back, the way it does in `idle` (which was never affected; its tail was already positioned clear of the head). `idle` frames untouched.
