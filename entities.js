@@ -426,6 +426,10 @@ function getPlayerSprite(kind, index, model) {
 //   elephant / elephantBow: idle (front-facing sway+blink, 2 frames — also the Codex
 //        portrait), walk (side-profile 4-frame leg cycle, used for ordinary movement),
 //        jump (front-facing hop, 2 frames — reserved for the Lv20 tag minigame)
+//   squirrel: idle (sitting with an acorn, 2 frames — ear-twitch on frame 1), scamper
+//        (4-frame leap cycle — the only movement animation; used instead of a walk cycle)
+//   chicken: idle (2 frames, blink), walk (4-frame side-profile cycle), hop (2 frames,
+//        the JUMP + FLAP reference poses — a periodic 2/10 stand-in for walk while moving)
 // To add another pet: add a palette letter if needed, add its frames to PET_SPRITES, and draw it
 // with drawPetSprite() from Pet.draw() / renderMiniPet() the way the dog and cat do.
 // ------------------------------------------------------------------
@@ -454,7 +458,17 @@ const PET_SPRITE_PALETTE = {
     S: '#7c8185',   // elephant shade gray (ear inner, trunk shadow, legs)
     Y: '#f4a7ba',   // elephant pink (ears, cheeks)
     T: '#f0e6d2',   // elephant toenails
-    Q: '#5d6265'    // elephant bow knot/shadow
+    Q: '#5d6265',   // elephant bow knot/shadow
+    B: '#914f28',   // squirrel fur
+    F: '#4f2316',   // squirrel fur shade (ears, tail edge, feet)
+    C: '#f3d090',   // squirrel cream (belly, muzzle)
+    N: '#ab7b53',   // squirrel acorn / paw highlight
+    m: '#3c1e14',   // squirrel nose
+    W: '#ffffff',   // chicken white
+    A: '#e3e3e3',   // chicken shade gray
+    O: '#ffd14a',   // chicken beak / feet
+    R: '#f6252a',   // chicken comb / wattle
+    P: '#ffb3c1'    // chicken cheek blush
 };
 
 const PET_SPRITES = {
@@ -1019,9 +1033,9 @@ const PET_SPRITES = {
         ],
         idle: [
             [
-                '..........ww....ww......',
-                '.........wwwwQQwwww.....',
-                '...GGG....wQQQQw..GGG...',
+                '........ww....ww........',
+                '.......wwwwQQwwww.......',
+                '...GGG..wQQQQw....GGG...',
                 '..GGGGG..GHHHHG..GGGGG..',
                 '.GYYYGSGGGGGGGGGGSGYYYG.',
                 'GGYYYSGGGGGGGGGGGGSYYYGG',
@@ -1041,9 +1055,9 @@ const PET_SPRITES = {
                 '.......TTT....TTT.......',
             ],
             [
-                '..........ww....ww......',
-                '.........wwwwQQwwww.....',
-                '...GGG....wQQQQw..GGG...',
+                '........ww....ww........',
+                '.......wwwwQQwwww.......',
+                '...GGG..wQQQQw....GGG...',
                 '..GGGGG..GHHHHG..GGGGG..',
                 '.GYYYGSGGGGGGGGGGSGYYYG.',
                 'GGYYYSGGGGGGGGGGGGSYYYGG',
@@ -1065,9 +1079,9 @@ const PET_SPRITES = {
         ],
         jump: [
             [
-                '..........ww....ww......',
-                '.........wwwwQQwwww.....',
-                '...GGG....wQQQQw..GGG...',
+                '........ww....ww........',
+                '.......wwwwQQwwww.......',
+                '...GGG..wQQQQw....GGG...',
                 '..GGGGG..GHHHHG..GGGGG..',
                 '.GYYYGSGGGGGGGGGHSGYYYG.',
                 'GGYYYSGGGGGGGGGHSGSYYYGG',
@@ -1087,9 +1101,9 @@ const PET_SPRITES = {
                 '.......TTT....TTT.......',
             ],
             [
-                '..........ww....ww......',
-                '.........wwwwQQwwww.....',
-                '...GGG....wQQQQw..GGG...',
+                '........ww....ww........',
+                '.......wwwwQQwwww.......',
+                '...GGG..wQQQQw....GGG...',
                 '..GGGGG..GHHHHG..GGGGG..',
                 '.GYYYGSGGGGGGGGGHSGYYYG.',
                 'GGYYYSGGGGGGGGGHSGSYYYGG',
@@ -1107,6 +1121,350 @@ const PET_SPRITES = {
                 '.......GGHHGGHHGG.......',
                 '.......GGG....GGG.......',
                 '.......TTT....TTT.......',
+            ],
+        ],
+    },
+    squirrel: {
+        // Idle: sitting upright with an acorn (2 frames — ear-twitch on frame 1).
+        // Scamper is the only movement animation (see draw()): used whenever the
+        // squirrel is actually moving, in place of a walk cycle.
+        idle: [
+        // idle v0
+            [
+                '..............FFFF......',
+                '.........FF..FFBBBF.....',
+                '...FF...FBBBFFBFFFBF....',
+                '..FBBB..FBBBFBFFFFFB....',
+                '..FBBBBBFBBBFBFFFFFB....',
+                '..FBBBBBBFFBFBFFFFFB....',
+                '...FFBBBBBBBFFBFFFBF....',
+                '..BCCCeBBBBBBFFBBBF.....',
+                '..CCCCCCCBBBB.FFFF......',
+                '..mmCCCCCBBBBB..........',
+                '..CCCCCCCBBBBBB.........',
+                '..CCCCCCBBBBBBBB........',
+                '....CCCBFFFCBBBB........',
+                '....BBCCFFFCCBBB........',
+                '....BBCNNNNNCBBB........',
+                '....BBCNNNNNCBBB........',
+                '.....BCNNNNNCBB.........',
+                '......BCNNNCBB..........',
+                '......FFFCCFFF..........',
+                '......FFF..FFF..........',
+            ],
+        // idle v1
+            [
+                '.F.....F......FFFF......',
+                '.........FF..FFBBBF.....',
+                '...FF...FBBBFFBFFFBF....',
+                '..FBBB..FBBBFBFFFFFB....',
+                '..FBBBBBFBBBFBFFFFFB....',
+                '..FBBBBBBFFBFBFFFFFB....',
+                '...FFBBBBBBBFFBFFFBF....',
+                '..BCCCeBBBBBBFFBBBF.....',
+                '..CCCCCCCBBBB.FFFF......',
+                '..mmCCCCCBBBBB..........',
+                '..CCCCCCCBBBBBB.........',
+                '..CCCCCCBBBBBBBB........',
+                '....CCCBFFFCBBBB........',
+                '....BBCCFFFCCBBB........',
+                '....BBCNNNNNCBBB........',
+                '....BBCNNNNNCBBB........',
+                '.....BCNNNNNCBB.........',
+                '......BCNNNCBB..........',
+                '......FFFCCFFF..........',
+                '......FFF..FFF..........',
+            ],
+        ],
+        scamper: [
+        // scamper f0
+            [
+                '...........FFFFF........',
+                '..........FFBBBBFF......',
+                '.........FBBFFFFBFF.....',
+                '.........FBFFFFFFBF.....',
+                '.........FBFFFFFFBF.....',
+                '.........FFBFFFFBFF.....',
+                '..........FFBBBBFBBB....',
+                '............FFFFBFFFB...',
+                '...............BBFFFFB..',
+                '......BBBBBBBB.BBCCeBB..',
+                '....BBBBBBBBBBBBCCCCBmm.',
+                '...BBBBCCCCCBBBBCCCCBB..',
+                '...BBCCCCCCCCCBBBCCBB...',
+                '...BBCCCCCCCCCBBBBBB....',
+                '....BCCCCCCCCCBBB.......',
+                '.....FFFCCCCFFF.........',
+                '.....FFF....FFF.........',
+                '.....FFF....FFF.........',
+                '.....FFF................',
+                '........................',
+            ],
+        // scamper f1
+            [
+                '...........FFFFF........',
+                '..........FFBBBBFF......',
+                '.........FBBFFFFBFF.....',
+                '.........FBFFFFFFBF.....',
+                '.........FBFFFFFFBF.....',
+                '.........FFBFFFFBFF.....',
+                '..........FFBBBBFBBB....',
+                '............FFFFBFFFB...',
+                '...............BBFFFFB..',
+                '......BBBBBBBB.BBCCeBB..',
+                '....BBBBBBBBBBBBCCCCBmm.',
+                '...BBBBCCCCCBBBBCCCCBB..',
+                '...BBCCCCCCCCCBBBCCBB...',
+                '...BBCCCCCCCCCBBBBBB....',
+                '....BCCCCCCCCCBBB.......',
+                '....FFFCCCCCBFFF........',
+                '....FFF......FFF........',
+                '....FFF......FFF........',
+                '.............FFF........',
+                '........................',
+            ],
+        // scamper f2
+            [
+                '...........FFFFF........',
+                '..........FFBBBBFF......',
+                '.........FBBFFFFBFF.....',
+                '.........FBFFFFFFBF.....',
+                '.........FBFFFFFFBF.....',
+                '.........FFBFFFFBFF.....',
+                '..........FFBBBBFBBB....',
+                '............FFFFBFFFB...',
+                '...............BBFFFFB..',
+                '......BBBBBBBB.BBCCeBB..',
+                '....BBBBBBBBBBBBCCCCBmm.',
+                '...BBBBCCCCCBBBBCCCCBB..',
+                '...BBCCCCCCCCCBBBCCBB...',
+                '...BBCCCCCCCCCBBBBBB....',
+                '....BCCCCCCCCCBBB.......',
+                '.....FFFCCCCFFF.........',
+                '.....FFF....FFF.........',
+                '.....FFF....FFF.........',
+                '.....FFF................',
+                '........................',
+            ],
+        // scamper f3
+            [
+                '...........FFFFF........',
+                '..........FFBBBBFF......',
+                '.........FBBFFFFBFF.....',
+                '.........FBFFFFFFBF.....',
+                '.........FBFFFFFFBF.....',
+                '.........FFBFFFFBFF.....',
+                '..........FFBBBBFBBB....',
+                '............FFFFBFFFB...',
+                '...............BBFFFFB..',
+                '......BBBBBBBB.BBCCeBB..',
+                '....BBBBBBBBBBBBCCCCBmm.',
+                '...BBBBCCCCCBBBBCCCCBB..',
+                '...BBCCCCCCCCCBBBCCBB...',
+                '...BBCCCCCCCCCBBBBBB....',
+                '....BCCCCCCCCCBBB.......',
+                '....FFFCCCCCBFFF........',
+                '....FFF......FFF........',
+                '....FFF......FFF........',
+                '.............FFF........',
+                '........................',
+            ],
+        ],
+    },
+    chicken: {
+        // Idle (2 frames, blink) and walk (4-frame side-profile cycle) are the two
+        // everyday animations. hop (2 frames: JUMP pose + FLAP pose from the reference
+        // sheet) plays instead of walk for occasional bursts while moving -- see
+        // Pet.draw(): a 2-in-10 roll every ~1.5s of movement switches to hop for that
+        // stretch, purely cosmetic (no effect on movement speed or game state).
+        idle: [
+        // idle v0
+            [
+                '.........R.R..........',
+                '.........RRR..........',
+                '........RRRRR.........',
+                '........WWWWW.........',
+                '.......WWWWWWWW.......',
+                '......WWWWWWWWWW......',
+                '......WeWeWWeWeW......',
+                '.....WWeeeWWeeeWW.....',
+                '.....WWeeeWWeeeWW.....',
+                '....WWPPWWOOWWPPWW....',
+                '....WWWWWWOOWWWWWA....',
+                '....WAAWWWWWWWWWWWA...',
+                '....AAAAWWWWWWWWWWA...',
+                '....AAAAWWWWWWAWWAA...',
+                '....AAAAWWWWWWAAAAA...',
+                '....AAAAWWWWWWWAAA....',
+                '....AAAAWWWWWWW.......',
+                '.....AAOOOWWOOO.......',
+                '.......OOO..OOO.......',
+                '.......OOO..OOO.......',
+            ],
+        // idle v1
+            [
+                '.........R.R..........',
+                '.........RRR..........',
+                '........RRRRR.........',
+                '........WWWWW.........',
+                '.......WWWWWWWW.......',
+                '......WWWWWWWWWW......',
+                '......WeWeWWeWeW......',
+                '.....WWeeeWWeeeWW.....',
+                '.....WWeeeWWeeeWW.....',
+                '....WWPPWWOOWWPPWW....',
+                '....WWWWWWOOWWWWWA....',
+                '....WAAWWWWWWWWWWWA...',
+                '....AAAAWWWWWWWWWWA...',
+                '....AAAAWWWWWWAWWAA...',
+                '....AAAAWWWWWWAAAAA...',
+                '....AAAAWWWWWWWAAA....',
+                '....AAAAWWWWWWW.......',
+                '.....AAOOOWWOOO.......',
+                '.......OOO..OOO.......',
+                '.......OOO..OOO.......',
+            ],
+        ],
+        walk: [
+        // walk f0
+            [
+                '..............RRR.....',
+                '.............RRRRR....',
+                '.............RRRRR....',
+                '..............RRWWW...',
+                '..AAA..........WWWWW..',
+                '.AAAAA........WWWWWWW.',
+                '.AAAAA.WWWWWW.WWWWeeW.',
+                '.AAAAAWWWWWWWWWWWWWWOO',
+                '.AAAAAWWWWWWWWWWWPWWOO',
+                '..AAAAAWWWWWWWWWWWW...',
+                '...AAAAAWWWWWWWWW.....',
+                '...AAAAAWWWWWWWWW.....',
+                '...AAAAAWWWWWWWWW.....',
+                '...AAAAAWWWWWWWW......',
+                '...AAAAAWWWWWWW.......',
+                '....AAOOWWWOO.........',
+                '......OO...OO.........',
+                '......OOO..OO.........',
+                '.......OO..OOO........',
+                '............OO........',
+            ],
+        // walk f1
+            [
+                '..............RRR.....',
+                '.............RRRRR....',
+                '.............RRRRR....',
+                '..............RRWWW...',
+                '..AAA..........WWWWW..',
+                '.AAAAA........WWWWWWW.',
+                '.AAAAA.WWWWWW.WWWWeeW.',
+                '.AAAAAWWWWWWWWWWWWWWOO',
+                '.AAAAAWWWWWWWWWWWPWWOO',
+                '..AAAAAWWWWWWWWWWWW...',
+                '...AAAAAWWWWWWWWW.....',
+                '...AAAAAWWWWWWWWW.....',
+                '...AAAAAWWWWWWWWW.....',
+                '...AAAAAWWWWWWWW......',
+                '...AAAAAWWWWWWW.......',
+                '....AAOOWWWOO.........',
+                '......OO...OO.........',
+                '......OO...OO.........',
+                '......OO...OO.........',
+                '......................',
+            ],
+        // walk f2
+            [
+                '..............RRR.....',
+                '.............RRRRR....',
+                '.............RRRRR....',
+                '..............RRWWW...',
+                '..AAA..........WWWWW..',
+                '.AAAAA........WWWWWWW.',
+                '.AAAAA.WWWWWW.WWWWeeW.',
+                '.AAAAAWWWWWWWWWWWWWWOO',
+                '.AAAAAWWWWWWWWWWWPWWOO',
+                '..AAAAAWWWWWWWWWWWW...',
+                '...AAAAAWWWWWWWWW.....',
+                '...AAAAAWWWWWWWWW.....',
+                '...AAAAAWWWWWWWWW.....',
+                '...AAAAAWWWWWWWW......',
+                '...AAAAAWWWWWWW.......',
+                '....AAOOWWWOO.........',
+                '......OO...OO.........',
+                '......OO...OOO........',
+                '.....OOO....OO........',
+                '.....OO...............',
+            ],
+        // walk f3
+            [
+                '..............RRR.....',
+                '.............RRRRR....',
+                '.............RRRRR....',
+                '..............RRWWW...',
+                '..AAA..........WWWWW..',
+                '.AAAAA........WWWWWWW.',
+                '.AAAAA.WWWWWW.WWWWeeW.',
+                '.AAAAAWWWWWWWWWWWWWWOO',
+                '.AAAAAWWWWWWWWWWWPWWOO',
+                '..AAAAAWWWWWWWWWWWW...',
+                '...AAAAAWWWWWWWWW.....',
+                '...AAAAAWWWWWWWWW.....',
+                '...AAAAAWWWWWWWWW.....',
+                '...AAAAAWWWWWWWW......',
+                '...AAAAAWWWWWWW.......',
+                '....AAOOWWWOO.........',
+                '......OO...OO.........',
+                '......OO...OO.........',
+                '......OO...OO.........',
+                '......................',
+            ],
+        ],
+        hop: [
+        // hop jump
+            [
+                '..........RRR.........',
+                '.........RRRRR........',
+                '.........RRRRR........',
+                '.........WWWW.........',
+                '........WWWWWW........',
+                '..WWW..WWWWWWWW..WWW..',
+                '.WWWWW.WeeWWeeW.WWWWW.',
+                'WWAAAWPPWWWWWWPPWAAAWW',
+                'WAAAAAWWWOOOOWWWAAAAAW',
+                'WAAAAAWWWOOOOWWWAAAAAW',
+                '.WAAAWWWWWWWWWWWWAAAW.',
+                '..WWW.WAAWWWWWWW.WWW..',
+                '......AAAAWWWWWW......',
+                '......AAAAWWWWWW......',
+                '......AAAAWWWWW.......',
+                '......AAAAWWWW........',
+                '.......AAWWWW.........',
+                '........OO..OO........',
+                '........OO..OO........',
+                '......................',
+            ],
+        // hop flap
+            [
+                '..........RRR.........',
+                '.........RRRRR........',
+                '.........RRRRR........',
+                '..WWW....WWWW....WWW..',
+                '.WWWWW..WWWWWW..WWWWW.',
+                'WWAAAWWWWWWWWWWWWAAAWW',
+                'WAAAAAWWeeWWeeWWAAAAAW',
+                'WAAAAAPPWWWWWWPPAAAAAW',
+                'WAAAAAWWWOOOOWWWAAAAAW',
+                '.WAAAWWWWOOOOWWWWAAAW.',
+                '..WWW.WWWWWWWWWW.WWW..',
+                '......WAAWWWWWWW......',
+                '......AAAAWWWWWW......',
+                '......AAAAWWWWWW......',
+                '......AAAAWWWWW.......',
+                '......AAAAWWWW........',
+                '.......AAWWWW.........',
+                '......OO......OO......',
+                '......OO......OO......',
+                '......OO......OO......',
             ],
         ],
     },
@@ -2732,45 +3090,37 @@ class Pet {
                 drawPetSprite(ctx, spriteType, 'idle', Math.floor(Date.now() / 500) % 2, this.x, this.y, this.facing || 1);
             }
         } else if (this.type === 'squirrel') {
-            ctx.fillStyle = this.color; 
-            ctx.fillRect(this.x + 8, this.y + 14, 16, 12);  
-            ctx.fillRect(this.x + 14, this.y + 6, 10, 10);  
-            ctx.fillRect(this.x + 20, this.y + 2, 2, 4);       
-            ctx.fillStyle = '#000000'; 
-            ctx.fillRect(this.x + 20, this.y + 8, 2, 2);   
-            ctx.fillStyle = this.color === '#d35400' ? '#7f8c8d' : '#3d1d00';
-            ctx.fillRect(this.x + 10, this.y + 26, 3, 4);  
-            ctx.fillRect(this.x + 18, this.y + 26, 3, 4);
-            ctx.fillStyle = this.color;
-            ctx.beginPath();
-            ctx.moveTo(this.x + 10, this.y + 24);
-            ctx.quadraticCurveTo(this.x + 2, this.y + 16, this.x + 4, this.y + 6);
-            ctx.quadraticCurveTo(this.x + 10, this.y + 8, this.x + 12, this.y + 18);
-            ctx.closePath();
-            ctx.fill();
+            // Idle (sitting with an acorn, 2 frames — ear-twitch on frame 1) while still;
+            // scamper (4-frame leap cycle) is the only movement animation, used whenever
+            // the squirrel is actually moving, in place of a walk cycle.
+            const walking = this.trackSpriteMotion();
+            if (walking) {
+                drawPetSprite(ctx, 'squirrel', 'scamper', Math.floor((this._spriteStep || 0) / PET_STEP_PIXELS) % 4, this.x, this.y, this.facing || 1);
+            } else {
+                drawPetSprite(ctx, 'squirrel', 'idle', Math.floor(Date.now() / 500) % 2, this.x, this.y, this.facing || 1);
+            }
         } else if (this.type === 'chicken') {
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.arc(this.x + 18, this.y + 20, 12, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#c0392b';
-            ctx.fillRect(this.x + 16, this.y + 4, 5, 4);
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.arc(this.x + 20, this.y + 10, 7, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#f39c12';
-            ctx.beginPath();
-            ctx.moveTo(this.x + 26, this.y + 8);
-            ctx.lineTo(this.x + 32, this.y + 11);
-            ctx.lineTo(this.x + 26, this.y + 14);
-            ctx.closePath();
-            ctx.fill();
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(this.x + 22, this.y + 8, 2, 2);
-            ctx.fillStyle = '#f39c12';
-            ctx.fillRect(this.x + 12, this.y + 30, 3, 6);
-            ctx.fillRect(this.x + 20, this.y + 30, 3, 6);
+            // Idle (2-frame blink) and walk (4-frame side-profile cycle) are the everyday
+            // animations. While moving, a bout timer rerolls every ~1.2-2s: 2/10 of the
+            // time the chicken switches to 'hop' (the JUMP+FLAP pair from the reference
+            // sheet) for that stretch instead of walking, then returns to walk on the next
+            // roll. Purely cosmetic — doesn't touch movement speed, state, or the save.
+            const walking = this.trackSpriteMotion();
+            if (walking) {
+                const now = Date.now();
+                if (!this._chickenHopRollAt || now > this._chickenHopRollAt) {
+                    this._chickenHopping = Math.random() < 0.2;
+                    this._chickenHopRollAt = now + 1200 + Math.random() * 800;
+                }
+                if (this._chickenHopping) {
+                    drawPetSprite(ctx, 'chicken', 'hop', Math.floor(Date.now() / 220) % 2, this.x, this.y, this.facing || 1);
+                } else {
+                    drawPetSprite(ctx, 'chicken', 'walk', Math.floor((this._spriteStep || 0) / PET_STEP_PIXELS) % 4, this.x, this.y, this.facing || 1);
+                }
+            } else {
+                this._chickenHopRollAt = 0; // fresh roll next time it starts moving again
+                drawPetSprite(ctx, 'chicken', 'idle', Math.floor(Date.now() / 500) % 2, this.x, this.y, this.facing || 1);
+            }
         } else if (this.type === 'bee') {
             ctx.fillStyle = '#f1c40f';
             ctx.beginPath();

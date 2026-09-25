@@ -692,45 +692,11 @@ function renderMiniPet(pet, elementId) {
             // .elephantBow in entities.js), matching the dog/cat portraits above.
             drawPetSprite(mctx, pet.bowColor ? 'elephantBow' : 'elephant', 'idle', 0, ox, oy, 1);
         } else if (pet.type === 'squirrel') {
-            mctx.fillStyle = pet.color; 
-            mctx.fillRect(ox + 8, oy + 14, 16, 12);  
-            mctx.fillRect(ox + 14, oy + 6, 10, 10);  
-            mctx.fillRect(ox + 20, oy + 2, 2, 4);       
-            mctx.fillStyle = '#000000'; 
-            mctx.fillRect(ox + 20, oy + 8, 2, 2);   
-            mctx.fillStyle = pet.color === '#d35400' ? '#7f8c8d' : '#3d1d00';
-            mctx.fillRect(ox + 10, oy + 26, 3, 4);  
-            mctx.fillRect(ox + 18, oy + 26, 3, 4);
-            mctx.fillStyle = pet.color;
-            mctx.beginPath();
-            mctx.moveTo(ox + 10, oy + 24);
-            mctx.quadraticCurveTo(ox + 2, oy + 16, ox + 4, oy + 6);
-            mctx.quadraticCurveTo(ox + 10, oy + 8, ox + 12, oy + 18);
-            mctx.closePath();
-            mctx.fill();
+            // Same sprite as in the world — idle frame 0 (see PET_SPRITES.squirrel).
+            drawPetSprite(mctx, 'squirrel', 'idle', 0, ox, oy, 1);
         } else if (pet.type === 'chicken') {
-            mctx.fillStyle = '#ffffff';
-            mctx.beginPath();
-            mctx.arc(ox + 18, oy + 20, 12, 0, Math.PI * 2);
-            mctx.fill();
-            mctx.fillStyle = '#c0392b';
-            mctx.fillRect(ox + 16, oy + 4, 5, 4);
-            mctx.fillStyle = '#ffffff';
-            mctx.beginPath();
-            mctx.arc(ox + 20, oy + 10, 7, 0, Math.PI * 2);
-            mctx.fill();
-            mctx.fillStyle = '#f39c12';
-            mctx.beginPath();
-            mctx.moveTo(ox + 26, oy + 8);
-            mctx.lineTo(ox + 32, oy + 11);
-            mctx.lineTo(ox + 26, oy + 14);
-            mctx.closePath();
-            mctx.fill();
-            mctx.fillStyle = '#000000';
-            mctx.fillRect(ox + 22, oy + 8, 2, 2);
-            mctx.fillStyle = '#f39c12';
-            mctx.fillRect(ox + 12, oy + 30, 3, 6);
-            mctx.fillRect(ox + 20, oy + 30, 3, 6);
+            // Same sprite as in the world — idle frame 0 (see PET_SPRITES.chicken).
+            drawPetSprite(mctx, 'chicken', 'idle', 0, ox, oy, 1);
         } else if (pet.type === 'bee') {
             mctx.fillStyle = '#f1c40f';
             mctx.beginPath();
@@ -1311,56 +1277,21 @@ function updateCharacterScreen() {
     if (nameDisplay) nameDisplay.textContent = character.name || 'Player';
     if (levelValue) levelValue.textContent = character.level;
 
-    // Tamers (character models — see PLAYER_MODELS in entities.js): one small card per
-    // model, each with a live idle-pose preview. The equipped one is marked IN USE
-    // (not clickable — nothing to do, it's already selected); every other one gets a USE
-    // button that switches to it immediately (player.model updates the same frame, no
-    // reload) and saves. Built from PLAYER_MODELS itself rather than two hardcoded cards,
-    // so a third model added later just shows up here automatically.
-    const tamersList = document.getElementById('characterTamersList');
-    if (tamersList && typeof PLAYER_MODELS !== 'undefined' && typeof getPlayerSprite === 'function') {
-        while (tamersList.firstChild) tamersList.removeChild(tamersList.firstChild);
-        const currentModel = character.model === 'male' ? 'male' : 'female';
-        const TAMER_LABELS = { female: 'Girl', male: 'Boy' };
-        Object.keys(PLAYER_MODELS).forEach(m => {
-            const inUse = currentModel === m;
-            let card = document.createElement('div');
-            card.style.cssText = 'display:flex; flex-direction:column; align-items:center; gap:4px; ' +
-                'padding:6px 10px; border-radius:8px; background:rgba(255,255,255,0.06);' +
-                (inUse ? ' box-shadow: 0 0 0 2px #2ecc71 inset;' : '');
-
-            let previewCanvas = document.createElement('canvas');
-            previewCanvas.width = 48;
-            previewCanvas.height = 48;
-            previewCanvas.style.imageRendering = 'pixelated';
-            const pctx = previewCanvas.getContext('2d');
-            pctx.imageSmoothingEnabled = false;
-            const sprite = getPlayerSprite('idle', 0, m);
-            pctx.drawImage(sprite, Math.round((48 - sprite.width) / 2), 48 - sprite.height - 1);
-
-            let nameEl = document.createElement('span');
-            nameEl.style.cssText = 'font-size: 11px; color: #ecf0f1;';
-            nameEl.textContent = TAMER_LABELS[m] || m;
-
-            let statusEl;
-            if (inUse) {
-                statusEl = document.createElement('span');
-                statusEl.style.cssText = 'font-size: 10px; color: #2ecc71; font-weight: bold;';
-                statusEl.textContent = '✓ IN USE';
-            } else {
-                statusEl = document.createElement('button');
-                statusEl.style.cssText = 'font-size: 10px; padding: 3px 10px;';
-                statusEl.textContent = 'USE';
-                const handleSelect = (e) => { if (e) e.preventDefault(); selectCharacterModel(m); };
-                statusEl.addEventListener('click', handleSelect);
-                statusEl.addEventListener('touchstart', handleSelect, { passive: false });
-            }
-
-            card.appendChild(previewCanvas);
-            card.appendChild(nameEl);
-            card.appendChild(statusEl);
-            tamersList.appendChild(card);
-        });
+    // Character model (see PLAYER_MODELS in entities.js): a live preview of the idle pose
+    // plus a button that flips character.model and, immediately, player.model — no reload
+    // needed, the next frame just draws with the other sprite set.
+    const modelLabel = document.getElementById('characterModelLabel');
+    const modelPreview = document.getElementById('characterModelPreview');
+    const switchModelBtn = document.getElementById('btnSwitchCharacterModel');
+    const model = character.model === 'male' ? 'male' : 'female';
+    if (modelLabel) modelLabel.textContent = model === 'male' ? 'Boy' : 'Girl';
+    if (switchModelBtn) switchModelBtn.textContent = model === 'male' ? '👧 Switch to Girl' : '👦 Switch to Boy';
+    if (modelPreview && typeof getPlayerSprite === 'function') {
+        const pctx = modelPreview.getContext('2d');
+        pctx.imageSmoothingEnabled = false;
+        pctx.clearRect(0, 0, 48, 48);
+        const sprite = getPlayerSprite('idle', 0, model);
+        pctx.drawImage(sprite, Math.round((48 - sprite.width) / 2), 48 - sprite.height - 1);
     }
 
     if (bonusList && typeof getCharacterBonuses === 'function') {
@@ -1376,31 +1307,15 @@ function updateCharacterScreen() {
         `;
     }
 
-    // Perk checklist, bulked by perk TYPE (see PERK_TYPES, state.js): several tree nodes
-    // share a type (e.g. 5 separate "Basic Resource" nodes across different tiers/columns),
-    // and this used to print one identical-looking "+30%" line per node once several were
-    // unlocked. Now every node of a type folds into ONE line with the SUMMED percentage
-    // from however many of that type are actually unlocked — green + ✓ once at least one is.
+    // Perk checklist: green + ✓ once the perk has been unlocked in the Perk Tree.
     if (perksList && typeof PERK_TREE !== 'undefined') {
         while (perksList.firstChild) perksList.removeChild(perksList.firstChild);
-        const grouped = {};
-        PERK_TREE.forEach(p => {
-            if (!grouped[p.type]) {
-                grouped[p.type] = { name: p.name, icon: p.icon, desc: p.desc, tier: p.tier, col: p.col, unlockedCount: 0, totalCount: 0, unlockedAdd: 0 };
-            }
-            let g = grouped[p.type];
-            g.totalCount++;
-            if (hasPerk(p.id)) { g.unlockedCount++; g.unlockedAdd += p.add; }
-            // Group sorts by its earliest (lowest tier, then col) node — same reading order
-            // the tree itself uses, so the list order doesn't jump around.
-            if (p.tier < g.tier || (p.tier === g.tier && p.col < g.col)) { g.tier = p.tier; g.col = p.col; }
-        });
-        Object.values(grouped).sort((a, b) => (a.tier - b.tier) || (a.col - b.col)).forEach(g => {
+        // Bottom-to-top, left-to-right — the same order the tree is read in.
+        [...PERK_TREE].sort((a, b) => (a.tier - b.tier) || (a.col - b.col)).forEach(p => {
             let li = document.createElement('li');
-            let unlocked = g.unlockedCount > 0;
+            let unlocked = hasPerk(p.id);
             li.style.color = unlocked ? '#2ecc71' : '#7f8c8d';
-            let pct = Math.round(g.unlockedAdd * 100);
-            li.textContent = `${unlocked ? '✓ ' : ''}${g.icon} ${g.name}: +${pct}% ${g.desc} (${g.unlockedCount}/${g.totalCount} unlocked)`;
+            li.textContent = `${unlocked ? '✓ ' : ''}${p.name}: ${p.text}`;
             perksList.appendChild(li);
         });
     }
@@ -1444,18 +1359,20 @@ if (btnRenameCharacter && characterNameInput) {
     btnRenameCharacter.addEventListener('click', handleCharacterRename);
 }
 
-// Character model selection (Tamers gallery, built in updateCharacterScreen above): picks
-// a PLAYER_MODELS entry directly rather than toggling between exactly two, so it already
-// works if a third model is ever added. Updates player.model immediately (the sprite
-// changes on screen the instant you tap USE, no reload needed), and saves it the same way
-// renaming does.
-function selectCharacterModel(model) {
-    if (typeof PLAYER_MODELS === 'undefined' || !PLAYER_MODELS[model]) return;
-    if (character.model === model) return; // already equipped — USE isn't even shown for it
-    character.model = model;
-    if (typeof player !== 'undefined') player.model = model;
-    saveGameProgress();
-    updateCharacterScreen();
+// Character model switch: flips between the two PLAYER_MODELS. Updates player.model
+// immediately (so the sprite changes on screen the instant you tap it, no reload), and
+// saves it the same way renaming does.
+const btnSwitchCharacterModel = document.getElementById('btnSwitchCharacterModel');
+if (btnSwitchCharacterModel) {
+    const handleSwitchCharacterModel = (e) => {
+        if (e) e.preventDefault();
+        character.model = character.model === 'male' ? 'female' : 'male';
+        if (typeof player !== 'undefined') player.model = character.model;
+        saveGameProgress();
+        updateCharacterScreen();
+    };
+    btnSwitchCharacterModel.addEventListener('click', handleSwitchCharacterModel);
+    btnSwitchCharacterModel.addEventListener('touchstart', handleSwitchCharacterModel, { passive: false });
 }
 
 // ------------------------------------------------------------
