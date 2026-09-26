@@ -424,21 +424,23 @@ function getPlayerSprite(kind, index, model) {
 // first in drawPetSprite(), falling back to this letter-grid art automatically when no image
 // is registered or it hasn't loaded. The letter-grid data below is kept for every pet either
 // way, as that fallback and for anim/frame combos (like dog's dig) no reference art covers.
-//   dog: walk (2 frames), sit (2-frame wag), and dig (4 frames) are all real images now
+//   dog: walk (6 frames), sit (4-frame idle), and dig (6 frames) are all real images now
 //        (PET_IMAGE_PATHS.dog — the PET_SPRITES walk/sit/dig arrays below are just the
-//        letter-grid fallback, safely wrapped to their own length by getPetSprite()). A
-//        second reference sheet briefly supplied 4/6-frame versions of walk/sit, but
-//        pixel-diff checks PLUS a direct visual check of the actual leg/tail positions
-//        (the pixel-diff number alone was misleading — see 2026-09-26 changelog entry)
-//        showed those extra frames were near-duplicate poses with no real motion between
-//        them, so they're reverted back to this original 2-frame pair, which does show
-//        strong, genuine per-frame motion. dig's 4 frames are from a separate, dedicated
-//        digging-cycle reference sheet and DO show real motion (paw reaching down, digging,
-//        then flicking dirt, with the loose dirt pile visibly changing each frame) — it
-//        replaces the old hand-drawn scratching pose that had no reference art at all. The
-//        dirt particle burst (Pet.digParticles) is a separate physics overlay independent of
-//        which sprite frame is showing, so it's unaffected by this change. The Codex portrait
-//        is also a real image (PET_IMAGE_PATHS.dog.portrait).
+//        letter-grid fallback, safely wrapped to their own length by getPetSprite()). This
+//        is the SECOND full art set for the dog — several earlier reference sheets (see the
+//        2026-09-26 changelog entries) supplied walk/idle frames that looked different in a
+//        raw pixel-diff percentage but were actually near-duplicate poses with the legs/tail
+//        frozen in place, which is why more frames kept failing to look any smoother. This
+//        set is the first to pass a direct visual check (zooming into the part of the body
+//        that's supposed to move and confirming it actually changes) on all three
+//        animations, and per the user's request, fully replaces every earlier dog PNG rather
+//        than living alongside it — including a different collar/tag style, so don't expect
+//        it to match any dog art from before 2026-09-26. The dirt particle burst
+//        (Pet.digParticles) is a separate physics overlay independent of which sprite frame
+//        is showing, so it's unaffected by any of this. The Codex portrait is also a real
+//        image (PET_IMAGE_PATHS.dog.portrait) — this sheet had no dedicated portrait pose, so
+//        it's an upscaled copy of the sit/idle sheet's first frame instead, to stay on the
+//        same model as the rest rather than reuse the old, mismatched portrait.
 //   cat: walk (4 frames), sleep (curled loaf + zzz, 2 frames — what it does whenever it's
 //        standing still, so a wild cat that isn't moving yet is asleep)
 //   elephant / elephantBow: idle (front-facing sway+blink, 2 frames — also the Codex
@@ -1842,45 +1844,59 @@ function getPetSprite(type, anim, index) {
 // length wraps (index % length), so e.g. a 2-image entry naturally cycles A-B-A-B under
 // calling code written for a 4-frame animation (dog's walk, driven by PET_STEP_PIXELS).
 //
-// PET_ASSET_VERSION: appended to every path below as a "?v=" cache-buster. The same PNG
-// filenames (sit_0.png, walk_0.png, ...) have now been replaced with different CONTENTS
-// several times (pilot -> 6/4-frame batch -> revert -> dig added). Browsers and GitHub
-// Pages' CDN cache images by URL, so re-deploying new bytes under an unchanged filename
-// can leave some visitors seeing a stale cached copy while others see the fresh one —
-// this looks exactly like the dog "flickering between the old model and the new model"
-// that was reported, even though the game code itself never falls back to the old
-// hand-drawn sprite once a real image has finished loading (verified directly: loaded
-// these files in an actual browser and drove 300 animation frames with no fallback once
-// each image first succeeded). Bump this string any time an existing dog PNG's content
-// changes without renaming the file, so every visitor is forced to fetch the new bytes
-// instead of whatever their browser/CDN had cached under that filename.
-const PET_ASSET_VERSION = 'v3';
+// PET_ASSET_VERSION: appended to every path below as a "?v=" cache-buster. Dog PNG
+// filenames (sit_0.png, walk_0.png, ...) have been replaced with different CONTENTS
+// several times now. Browsers and GitHub Pages' CDN cache images by URL, so re-deploying
+// new bytes under an unchanged filename can leave some visitors seeing a stale cached
+// copy while others see the fresh one — this is what caused an earlier "flickering
+// between old and new model" report, even though the game code itself never falls back
+// to the old hand-drawn sprite once a real image has finished loading. Bump this string
+// any time an existing dog PNG's content changes without renaming the file, so every
+// visitor is forced to fetch the new bytes instead of whatever their browser/CDN cached.
+const PET_ASSET_VERSION = 'v4';
 const PET_IMAGE_PATHS = {
     dog: {
-        // 2 frames. A second AND a third reference sheet each supplied more frames (4/6,
-        // then 4 again) for these two, but a pixel-diff check PLUS a direct zoom into the
-        // legs/tail (the pixel-diff number alone was misleading on both later sheets — see
-        // the 2026-09-26 changelog entries) showed every one of those extra frames was a
-        // near-duplicate pose with no real leg/tail movement, which is why more frames never
-        // looked any smoother in-game. Staying with these two, sourced from the original
-        // sheet's WAG and WALK CYCLE panels, which do show strong, genuine per-frame motion
-        // (~35-40% of pixels differ between the two frames of each pair, confirmed by eye).
-        sit: ['assets/pets/dog/sit_0.png?v=' + PET_ASSET_VERSION, 'assets/pets/dog/sit_1.png?v=' + PET_ASSET_VERSION],
-        // 2 frames — see note above. Pet.draw() cycles both of these with %2.
-        walk: ['assets/pets/dog/walk_0.png?v=' + PET_ASSET_VERSION, 'assets/pets/dog/walk_1.png?v=' + PET_ASSET_VERSION],
-        // 4 frames — a dedicated digging-cycle reference sheet (paw reaching down, digging,
-        // then flicking dirt up, with the loose dirt visibly increasing each frame). Unlike
-        // the walk/idle sheets, this one's frames are genuinely different poses, confirmed
-        // the same way (leg/paw position checked frame-to-frame, not just a raw pixel-diff
-        // number, since that alone was misleading on the discarded walk/idle sheets — see
-        // Pet.draw() comment below). Replaces the old letter-grid-only scratching pose.
+        // 2026-09-26: replaced the ENTIRE dog art set (sit/walk/dig/portrait) from scratch
+        // with a new reference sheet — a different model/collar style (plain gray collar +
+        // square tag) than every previous sheet (which had a blue collar + round tag), by
+        // the user's explicit request ("all the old ones should be removed and we'll work
+        // with this from scratch"). All three animations below were verified BEFORE being
+        // adopted, the same way every sheet since has been: not by trusting a pixel-diff
+        // percentage alone (that was shown to be misleading on three separate earlier
+        // sheets — see the 2026-09-26 changelog entries), but by directly zooming into the
+        // part of the body that's supposed to move and confirming it actually changes pose
+        // frame to frame. This sheet is the first to pass that check on all three:
+        // 4 frames — genuine pose variety (open-mouth, eyes-closed, head-down/curled,
+        // alert), unlike every earlier idle/wag attempt which was either near-identical
+        // poses or a front-facing angle that couldn't show a tail move at all.
+        sit: [
+            'assets/pets/dog/sit_0.png?v=' + PET_ASSET_VERSION, 'assets/pets/dog/sit_1.png?v=' + PET_ASSET_VERSION,
+            'assets/pets/dog/sit_2.png?v=' + PET_ASSET_VERSION, 'assets/pets/dog/sit_3.png?v=' + PET_ASSET_VERSION,
+        ],
+        // 6 frames — legs are genuinely at different points in the stride in every frame
+        // (confirmed by zooming into just the leg region), unlike the 4- and 6-frame walk
+        // sheets tried earlier, which all had the legs frozen in the same position.
+        walk: [
+            'assets/pets/dog/walk_0.png?v=' + PET_ASSET_VERSION, 'assets/pets/dog/walk_1.png?v=' + PET_ASSET_VERSION,
+            'assets/pets/dog/walk_2.png?v=' + PET_ASSET_VERSION, 'assets/pets/dog/walk_3.png?v=' + PET_ASSET_VERSION,
+            'assets/pets/dog/walk_4.png?v=' + PET_ASSET_VERSION, 'assets/pets/dog/walk_5.png?v=' + PET_ASSET_VERSION,
+        ],
+        // 6 frames — the hole visibly deepens and widens across the sequence, with the paw
+        // and dirt pile in a different position every frame. Replaces the previous 4-frame
+        // dig set (which was fine, but this new sheet's own dig cycle is more detailed and
+        // keeps the whole dog set on one consistent model/art style).
         dig: [
             'assets/pets/dog/dig_0.png?v=' + PET_ASSET_VERSION, 'assets/pets/dog/dig_1.png?v=' + PET_ASSET_VERSION,
             'assets/pets/dog/dig_2.png?v=' + PET_ASSET_VERSION, 'assets/pets/dog/dig_3.png?v=' + PET_ASSET_VERSION,
+            'assets/pets/dog/dig_4.png?v=' + PET_ASSET_VERSION, 'assets/pets/dog/dig_5.png?v=' + PET_ASSET_VERSION,
         ],
         // Not a Pet.draw() animation — a single larger portrait image for the Codex/detail
         // views only (see renderMiniPet() in ui.js), sized to its own aspect ratio rather
-        // than the 36px in-world sprite box.
+        // than the 36px in-world sprite box. This new sheet didn't include a dedicated
+        // portrait pose, so this is the sheet's own "sit, mouth open" idle frame (sit_0),
+        // upscaled — kept on the same model/art style as everything else rather than
+        // reusing the old portrait, which would have been a mismatched blue-collar dog
+        // next to the new gray-collar one.
         portrait: ['assets/pets/dog/portrait.png?v=' + PET_ASSET_VERSION],
     },
 };
@@ -3469,26 +3485,24 @@ class Pet {
             return;
         }
         if (this.type === 'dog') {
-            // Sprite animation: digging = 4-frame real-image dig cycle (paw down → dig →
-            // flick dirt, with the loose-dirt pose visibly changing each frame — a dedicated
-            // digging reference sheet, unlike the walk/sit pairs this replaced a hand-drawn
-            // scratching pose that had no reference art at all). walking = 2-frame walk cycle
-            // driven by distance (real images — see PET_IMAGE_PATHS.dog.walk). sitting =
-            // 2-frame wag (also real images). The walk/sit pairs come from the original
-            // reference sheet's WALK CYCLE / WAG panels, chosen because they show real motion
-            // between frames, not just extra static poses — a later sheet's 6/4-frame
-            // versions of those two were tried and reverted for exactly that reason (see the
-            // PET_IMAGE_PATHS.dog comment above). The dig particle effect (digParticles, in
+            // Sprite animation (2026-09-26: whole dog art set replaced from scratch — see the
+            // PET_IMAGE_PATHS.dog comment above for why this sheet's frames were trusted where
+            // several earlier ones weren't). digging = 6-frame real-image dig cycle (the hole
+            // visibly deepens/widens each frame). walking = 6-frame walk cycle driven by
+            // distance (real images — see PET_IMAGE_PATHS.dog.walk), legs genuinely at a
+            // different point in the stride each frame. sitting = 4-frame idle (open-mouth,
+            // eyes-closed, head-down, alert) — real pose variety, not a wag specifically, but
+            // real motion between frames either way. The dig particle effect (digParticles, in
             // Pet.update()) is a separate physics-based overlay drawn on top of whichever
             // sprite frame is showing (see the digParticles draw call further down), so it
             // keeps working unchanged regardless of how the base sprite is drawn.
             const walking = this.trackSpriteMotion();
             if (this.state === 'digging') {
-                drawPetSprite(ctx, 'dog', 'dig', Math.floor(Date.now() / 250) % 4, this.x, this.y, this.facing || 1);
+                drawPetSprite(ctx, 'dog', 'dig', Math.floor(Date.now() / 250) % 6, this.x, this.y, this.facing || 1);
             } else if (walking) {
-                drawPetSprite(ctx, 'dog', 'walk', Math.floor((this._spriteStep || 0) / PET_STEP_PIXELS) % 2, this.x, this.y, this.facing || 1);
+                drawPetSprite(ctx, 'dog', 'walk', Math.floor((this._spriteStep || 0) / PET_STEP_PIXELS) % 6, this.x, this.y, this.facing || 1);
             } else {
-                drawPetSprite(ctx, 'dog', 'sit', Math.floor(Date.now() / 400) % 2, this.x, this.y, 1);
+                drawPetSprite(ctx, 'dog', 'sit', Math.floor(Date.now() / 400) % 4, this.x, this.y, 1);
             }
         } else if (this.type === 'elephant') {
             // Sprite animation (see PET_SPRITES): 'idle' sways/blinks while standing still,
