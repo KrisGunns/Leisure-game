@@ -1853,7 +1853,7 @@ function getPetSprite(type, anim, index) {
 // to the old hand-drawn sprite once a real image has finished loading. Bump this string
 // any time an existing dog PNG's content changes without renaming the file, so every
 // visitor is forced to fetch the new bytes instead of whatever their browser/CDN cached.
-const PET_ASSET_VERSION = 'v4';
+const PET_ASSET_VERSION = 'v5';
 const PET_IMAGE_PATHS = {
     dog: {
         // 2026-09-26: replaced the ENTIRE dog art set (sit/walk/dig/portrait) from scratch

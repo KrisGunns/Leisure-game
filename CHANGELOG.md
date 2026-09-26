@@ -91,6 +91,15 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Changelog
 
+### 2026-09-26 (28) — Dog: fixed a size-jitter bug in the 5th sheet's art ("isn't the same dog")
+
+**Fixed:**
+- **The 5th-sheet dog art (entry 27, below) had every frame of each animation independently forced to the same fixed pixel height during resizing** (e.g. every idle frame → exactly 48px tall, every dig frame → exactly 40px tall), regardless of that frame's actual cropped artwork height. Reported by the user from a screen recording of the live site: "it isn't transitioning smoothly... some of the images are not the same size and makes it appear as if it isn't the same dog." Confirmed by inspecting the pre-resize crop heights: idle frames ranged 212–249px (the "head down/curled" pose is legitimately ~15% shorter than the alert poses) and dig frames ranged 204–244px (growing as the hole gets progressively deeper/wider — by design). Forcing all of them to one identical height inverted this: the naturally-shorter curled idle pose got scaled up *more* than the taller poses, and the dig hole's intended growth was flattened away — both read as the dog's size flickering between frames.
+- **Fix:** each animation (sit/walk/dig) now computes ONE scale factor — target height ÷ the average of that animation's own frames' natural pre-resize heights — and applies it uniformly to every frame in that animation, instead of resizing each frame independently to a fixed height. This keeps real, intended pose-driven size differences (curled idle frame stays a bit smaller; the dig hole/dog silhouette grows across the 6 frames) while removing the frame-to-frame jitter. Regenerated all 16 dog PNGs (sit_0–3, walk_0–5, dig_0–5) and portrait.png this way, re-checked bottom-anchored ground-line alignment on all three animations (still flush, no hover), and re-ran the real-Chromium Playwright load/draw test (0 errors, no fallback-after-successful-load, correct frame counts) against the corrected files. Bumped `PET_ASSET_VERSION` 'v4' → 'v5' so the new bytes aren't served from a stale cache under the unchanged filenames.
+- **Lesson for future sheets:** when resizing frames of an animation to a target in-game height, derive one scale factor per animation (from the average/representative raw height) and apply it to every frame uniformly — never resize each frame independently to an identical fixed height, since real poses in a good sheet aren't all the same raw size on purpose.
+
+---
+
 ### 2026-09-26 (27) — Dog: full art replacement (5th sheet) — first one to pass the motion check on walk, idle, AND dig
 
 **User asked to redo walk/idle/dig entirely from a new sheet, explicitly removing all old dog art rather than layering on another patch.** This 5th reference sheet is a different model than every previous one (plain gray/black collar + square tag, vs. the earlier blue collar + round tag), and — unlike every attempt in (24)/(25)/(26) — it passes the same direct-visual-motion check on all three animations:

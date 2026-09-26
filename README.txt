@@ -55,12 +55,35 @@ from a prior batch still sitting in your repo, they're no longer referenced by
 entities.js and can be deleted — nothing reads them anymore since every dog file in this
 set was replaced.
 
-Cache-busting: entities.js now appends "?v=v4" (PET_ASSET_VERSION) to every dog asset
+Cache-busting: entities.js now appends "?v=v5" (PET_ASSET_VERSION) to every dog asset
 path specifically because these filenames have been re-used with different contents
 several times, which can cause a browser or GitHub Pages' CDN to keep serving an old
 cached copy after a deploy. If you ever replace one of these PNGs again without renaming
-it, bump PET_ASSET_VERSION in entities.js (e.g. 'v4' -> 'v5') so everyone's browser is
+it, bump PET_ASSET_VERSION in entities.js (e.g. 'v5' -> 'v6') so everyone's browser is
 forced to fetch the new version.
+
+2026-09-26 follow-up: fixed a sizing bug ("isn't transitioning smoothly / doesn't look
+like the same dog")
+-----------------------------------------------------------------------------------------
+The first delivery of this sheet's art had a real bug, confirmed from your screen
+recording of the live site: within EACH animation, every frame had been resized
+independently to the exact same fixed pixel height (e.g. every idle frame forced to
+48px tall, every dig frame forced to 40px tall), regardless of how tall that frame's
+actual cropped artwork was before resizing. That's backwards — a frame that's naturally
+a bit shorter (like the idle "head down/curled" pose, or the earliest dig frame before
+the hole exists) got scaled UP more than a frame that's naturally taller, so the dog
+visibly grew and shrank between consecutive frames of the same animation instead of
+holding a consistent size.
+
+The fix: each animation (sit/walk/dig) now uses ONE scale factor, applied uniformly to
+every frame in that animation, derived from the average of that animation's frames'
+natural (pre-resize) heights. This preserves real, intentional size differences between
+poses — the idle curled-down frame is now correctly a bit smaller than the alert
+sit-up-straight frames, and the dig hole/dog silhouette now grows smoothly across the
+6 frames as it's meant to — while eliminating the frame-to-frame jitter that made it
+look like the model kept changing. All 16 dog PNGs (sit/walk/dig) were regenerated this
+way; portrait.png is unaffected structurally (still an upscaled sit_0.png) but was
+regenerated from the corrected sit_0 source frame.
 
 If you want a smoother animation from a future sheet
 ------------------------------------------------------
