@@ -91,6 +91,28 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Changelog
 
+### 2026-09-27 (31) — Dog: fixed inverted movement direction
+
+**Fixed:**
+- **The dog appeared to walk backwards** — moving right while its sprite still faced
+  left, and vice versa. Root cause: `drawPetSprite()`'s facing convention (unchanged,
+  correct, and shared by every other pet) is that a pet's base art must face RIGHT,
+  since it only mirrors the image (`ctx.scale(-1, 1)`) when `facing < 0` and draws it
+  as-is otherwise — see `this.facing = dx > 0 ? 1 : -1` in `Pet.trackSpriteMotion()`
+  wiring `facing` directly to real movement direction. `dog.png` (entry 29) was cut from
+  a reference photo where the dog happened to face left, so "facing right" was drawing
+  it unflipped-but-backwards and "facing left" was flipping it into actually facing
+  right — the exact inverse of correct. Fixed by mirroring `dog.png` itself (a plain
+  horizontal flip, no game logic touched, since changing the flip logic in
+  `drawPetSprite()` would have broken every other pet's already-correct art instead).
+  `portrait.png` untouched (a portrait has no movement direction). Bumped
+  `PET_ASSET_VERSION` 'v6' → 'v7'.
+- Verified with a real-Chromium Playwright screenshot comparing `facing: 1` and
+  `facing: -1` side by side — dog now faces right when `facing` is 1 (unflipped) and
+  left when `facing` is -1 (mirrored), matching every other pet's convention.
+
+---
+
 ### 2026-09-27 (30) — Cat: real art, single static image (same approach as the dog)
 
 **Added, at the user's request** ("Let's do the same for the cat in region 1. See the
