@@ -720,11 +720,34 @@ function renderMiniPet(pet, elementId) {
                 drawPetSprite(mctx, spriteType, 'idle', 0, ox, oy, 1);
             }
         } else if (pet.type === 'squirrel') {
-            // Same sprite as in the world — idle frame 0 (see PET_SPRITES.squirrel).
-            drawPetSprite(mctx, 'squirrel', 'idle', 0, ox, oy, 1);
+            // 2026-09-27: real reference image (PET_IMAGE_PATHS.squirrel.portrait), same
+            // bigger-scaled/bottom-aligned treatment as the dog/cat/elephant portraits above.
+            const portrait = typeof getPetImage === 'function' ? getPetImage('squirrel', 'portrait', 0) : null;
+            if (portrait) {
+                const pad = 4;
+                const scale = Math.min((70 - pad * 2) / portrait.width, (70 - pad * 2) / portrait.height);
+                const pw = portrait.width * scale, ph = portrait.height * scale;
+                const smoothing = mctx.imageSmoothingEnabled;
+                mctx.imageSmoothingEnabled = false;
+                mctx.drawImage(portrait, (70 - pw) / 2, 70 - pad - ph, pw, ph);
+                mctx.imageSmoothingEnabled = smoothing;
+            } else {
+                drawPetSprite(mctx, 'squirrel', 'idle', 0, ox, oy, 1);
+            }
         } else if (pet.type === 'chicken') {
-            // Same sprite as in the world — idle frame 0 (see PET_SPRITES.chicken).
-            drawPetSprite(mctx, 'chicken', 'idle', 0, ox, oy, 1);
+            // Same real-portrait treatment as above (PET_IMAGE_PATHS.chicken.portrait).
+            const portrait = typeof getPetImage === 'function' ? getPetImage('chicken', 'portrait', 0) : null;
+            if (portrait) {
+                const pad = 4;
+                const scale = Math.min((70 - pad * 2) / portrait.width, (70 - pad * 2) / portrait.height);
+                const pw = portrait.width * scale, ph = portrait.height * scale;
+                const smoothing = mctx.imageSmoothingEnabled;
+                mctx.imageSmoothingEnabled = false;
+                mctx.drawImage(portrait, (70 - pw) / 2, 70 - pad - ph, pw, ph);
+                mctx.imageSmoothingEnabled = smoothing;
+            } else {
+                drawPetSprite(mctx, 'chicken', 'idle', 0, ox, oy, 1);
+            }
         } else if (pet.type === 'bee') {
             // Same sprite as in the world — idle frame 0 (see PET_SPRITES.bee).
             drawPetSprite(mctx, 'bee', 'idle', 0, ox, oy, 1);
@@ -835,8 +858,19 @@ function renderMiniPet(pet, elementId) {
                 drawPetSprite(mctx, 'cat', 'walk', 1, ox, oy, 1);
             }
         } else if (pet.type === 'bird') {
-            // Same sprite as in the world — idle frame 0 (see PET_SPRITES.bird).
-            drawPetSprite(mctx, 'bird', 'idle', 0, ox, oy, 1);
+            // Same real-portrait treatment as above (PET_IMAGE_PATHS.bird.portrait).
+            const portrait = typeof getPetImage === 'function' ? getPetImage('bird', 'portrait', 0) : null;
+            if (portrait) {
+                const pad = 4;
+                const scale = Math.min((70 - pad * 2) / portrait.width, (70 - pad * 2) / portrait.height);
+                const pw = portrait.width * scale, ph = portrait.height * scale;
+                const smoothing = mctx.imageSmoothingEnabled;
+                mctx.imageSmoothingEnabled = false;
+                mctx.drawImage(portrait, (70 - pw) / 2, 70 - pad - ph, pw, ph);
+                mctx.imageSmoothingEnabled = smoothing;
+            } else {
+                drawPetSprite(mctx, 'bird', 'idle', 0, ox, oy, 1);
+            }
         } else if (pet.type === 'panda') {
             mctx.fillStyle = '#ffffff';
             mctx.beginPath();

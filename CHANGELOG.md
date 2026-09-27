@@ -91,6 +91,32 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Changelog
 
+### 2026-09-27 (33) — Squirrel, chicken, bird (Region 3): real art, single static image
+
+**Added, at the user's request** ("Let's implement region 3's pets. See the reference
+images for the chicken, squirrel and sparrow."), from three reference photos:
+- New `PET_IMAGE_PATHS.squirrel` (`idle`/`scamper`), `.chicken` (`idle`/`walk`/`hop`), and
+  `.bird` (`idle`/`fly`) in `entities.js` — same single-static-image approach as every
+  pet done so far this batch (dog, cat, elephant/elephantBow): one file per pet covers
+  every animation name its `Pet.draw()` branch asks for.
+- All three source photos faced left, same as the dog and elephants before them; all
+  three (plus their portraits) were mirrored up front to face right, matching this game's
+  facing convention, before ever being wired in — no repeat of entry 31's mistake.
+- Chose in-game heights by relative size rather than a fixed number: squirrel and chicken
+  34px tall, bird 28px (smallest of the three, consistent with it being the smallest pet
+  in the game already).
+- `ui.js`'s Codex mini-portrait renderer for squirrel/chicken/bird previously just drew
+  each one's tiny in-world idle sprite scaled up. Brought all three up to the same bigger
+  real-portrait treatment as the dog/cat/elephants (falling back to the old scaled-up
+  sprite only if the portrait image hasn't loaded yet).
+- Bumped `PET_ASSET_VERSION` 'v8' → 'v9'.
+- Verified via the real-Chromium Playwright harness: every animation name for all three
+  pets, both facings, and all three portraits load and draw with zero errors (alongside
+  every earlier pet's art, confirming nothing else regressed); a rendered screenshot
+  confirms all three face right at `facing: 1` and left at `facing: -1`.
+
+---
+
 ### 2026-09-27 (32) — Elephants (Region 2): real art, single static image, both variants
 
 **Added, at the user's request** ("Let's do the same for region 2's elephants now.

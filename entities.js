@@ -1853,7 +1853,7 @@ function getPetSprite(type, anim, index) {
 // to the old hand-drawn sprite once a real image has finished loading. Bump this string
 // any time an existing dog PNG's content changes without renaming the file, so every
 // visitor is forced to fetch the new bytes instead of whatever their browser/CDN cached.
-const PET_ASSET_VERSION = 'v8';
+const PET_ASSET_VERSION = 'v9';
 const PET_IMAGE_PATHS = {
     dog: {
         // 2026-09-26: switched the dog to a SINGLE static image for every animation, at the
@@ -1906,6 +1906,33 @@ const PET_IMAGE_PATHS = {
         walk: ['assets/pets/elephantBow/elephantBow.png?v=' + PET_ASSET_VERSION],
         jump: ['assets/pets/elephantBow/elephantBow.png?v=' + PET_ASSET_VERSION],
         portrait: ['assets/pets/elephantBow/portrait.png?v=' + PET_ASSET_VERSION],
+    },
+    squirrel: {
+        // 2026-09-27 (Region 3): same single-static-image approach as the dog/cat/elephants
+        // above. idle and scamper (its only movement animation — squirrels leap rather than
+        // walk in this game) both point at the same file. Source photo faced left; mirrored
+        // (image and portrait) to face right per this game's facing convention.
+        idle: ['assets/pets/squirrel/squirrel.png?v=' + PET_ASSET_VERSION],
+        scamper: ['assets/pets/squirrel/squirrel.png?v=' + PET_ASSET_VERSION],
+        portrait: ['assets/pets/squirrel/portrait.png?v=' + PET_ASSET_VERSION],
+    },
+    chicken: {
+        // idle, walk, AND hop (the periodic flap-in-place stand-in used while moving) all
+        // point at the same file — see the dog/elephant comments above for why one static
+        // image covers every animation name a pet's Pet.draw() branch asks for. Mirrored
+        // to face right, same as the others.
+        idle: ['assets/pets/chicken/chicken.png?v=' + PET_ASSET_VERSION],
+        walk: ['assets/pets/chicken/chicken.png?v=' + PET_ASSET_VERSION],
+        hop: ['assets/pets/chicken/chicken.png?v=' + PET_ASSET_VERSION],
+        portrait: ['assets/pets/chicken/portrait.png?v=' + PET_ASSET_VERSION],
+    },
+    bird: {
+        // idle and fly (its only movement animation — birds fly everywhere instead of
+        // walking) both point at the same file. The reference photo's wings-spread pose
+        // reads fine for both standing and flying. Mirrored to face right.
+        idle: ['assets/pets/bird/bird.png?v=' + PET_ASSET_VERSION],
+        fly: ['assets/pets/bird/bird.png?v=' + PET_ASSET_VERSION],
+        portrait: ['assets/pets/bird/portrait.png?v=' + PET_ASSET_VERSION],
     },
 };
 const petImageCache = {}; // path -> Image, shared across every (type, anim, index) that names it
