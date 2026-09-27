@@ -703,9 +703,22 @@ function renderMiniPet(pet, elementId) {
                 drawPetSprite(mctx, 'dog', 'sit', 0, ox, oy, 1);
             }
         } else if (pet.type === 'elephant') {
-            // Same sprite as in the world — idle frame 0 (see PET_SPRITES.elephant /
-            // .elephantBow in entities.js), matching the dog/cat portraits above.
-            drawPetSprite(mctx, pet.bowColor ? 'elephantBow' : 'elephant', 'idle', 0, ox, oy, 1);
+            // 2026-09-27: real reference image (PET_IMAGE_PATHS.elephant/.elephantBow.portrait
+            // in entities.js), same bigger-scaled/bottom-aligned treatment as the dog/cat
+            // portraits above, with the same in-world-sprite fallback for before it's loaded.
+            const spriteType = pet.bowColor ? 'elephantBow' : 'elephant';
+            const portrait = typeof getPetImage === 'function' ? getPetImage(spriteType, 'portrait', 0) : null;
+            if (portrait) {
+                const pad = 4;
+                const scale = Math.min((70 - pad * 2) / portrait.width, (70 - pad * 2) / portrait.height);
+                const pw = portrait.width * scale, ph = portrait.height * scale;
+                const smoothing = mctx.imageSmoothingEnabled;
+                mctx.imageSmoothingEnabled = false;
+                mctx.drawImage(portrait, (70 - pw) / 2, 70 - pad - ph, pw, ph);
+                mctx.imageSmoothingEnabled = smoothing;
+            } else {
+                drawPetSprite(mctx, spriteType, 'idle', 0, ox, oy, 1);
+            }
         } else if (pet.type === 'squirrel') {
             // Same sprite as in the world — idle frame 0 (see PET_SPRITES.squirrel).
             drawPetSprite(mctx, 'squirrel', 'idle', 0, ox, oy, 1);

@@ -91,6 +91,36 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Changelog
 
+### 2026-09-27 (32) — Elephants (Region 2): real art, single static image, both variants
+
+**Added, at the user's request** ("Let's do the same for region 2's elephants now.
+Change their sprite images."), from two reference photos (plain elephant, and the same
+model with a white bow for the Bow Elephant / Miss Glider variant):
+- New `PET_IMAGE_PATHS.elephant` and `.elephantBow` in `entities.js`: `idle`, `walk`, and
+  `jump` all point at one file per variant (`elephant.png` / `elephantBow.png`) — same
+  single-static-image approach as the dog and cat (entries 29–30), applied here from the
+  start. One pose covers standing still, ordinary wandering, AND the Lv20 "catch me" tag
+  minigame's hop.
+- Learned from entry 31's mistake before it could repeat: both source photos also faced
+  left, so both were mirrored up front (along with their portraits) to match this game's
+  facing convention, rather than shipping backwards-facing elephants and needing a
+  follow-up fix.
+- Skipped the "strip large trapped white blobs" cleanup step from the dog/cat cutout
+  pipeline for these two images — checked first, and unlike the dog (background bleed
+  between the legs), the elephant's stance doesn't create any enclosed background
+  pockets, and blindly applying that step would have eaten the bow elephant's white bow
+  (a large, legitimate white shape) as if it were background bleed.
+- `ui.js`'s Codex mini-portrait renderer for elephants previously just drew the tiny
+  in-world idle sprite scaled up. Brought both elephant variants up to the same bigger
+  real-portrait treatment the dog and cat already have (falling back to the old scaled-up
+  sprite only if the portrait image hasn't loaded yet).
+- Verified via the real-Chromium Playwright harness: `idle`/`walk`/`jump` for both
+  `elephant` and `elephantBow`, both facings, and both portraits all load and draw with
+  zero errors; a rendered screenshot confirms both variants face right at `facing: 1` and
+  left at `facing: -1`, and that the bow survives the cutout intact.
+
+---
+
 ### 2026-09-27 (31) — Dog: fixed inverted movement direction
 
 **Fixed:**
