@@ -806,7 +806,21 @@ function renderMiniPet(pet, elementId) {
                 mctx.fillRect(ox + 16.5, oy - 3, 3, 3);
             }
         } else if (pet.type === 'cat') {
-            drawPetSprite(mctx, 'cat', 'walk', 1, ox, oy, 1);
+            // 2026-09-27: real reference image (PET_IMAGE_PATHS.cat.portrait in entities.js),
+            // same bigger-scaled/bottom-aligned treatment as the dog portrait above, with the
+            // same in-world-sprite fallback for before the image has loaded.
+            const portrait = typeof getPetImage === 'function' ? getPetImage('cat', 'portrait', 0) : null;
+            if (portrait) {
+                const pad = 4;
+                const scale = Math.min((70 - pad * 2) / portrait.width, (70 - pad * 2) / portrait.height);
+                const pw = portrait.width * scale, ph = portrait.height * scale;
+                const smoothing = mctx.imageSmoothingEnabled;
+                mctx.imageSmoothingEnabled = false;
+                mctx.drawImage(portrait, (70 - pw) / 2, 70 - pad - ph, pw, ph);
+                mctx.imageSmoothingEnabled = smoothing;
+            } else {
+                drawPetSprite(mctx, 'cat', 'walk', 1, ox, oy, 1);
+            }
         } else if (pet.type === 'bird') {
             // Same sprite as in the world — idle frame 0 (see PET_SPRITES.bird).
             drawPetSprite(mctx, 'bird', 'idle', 0, ox, oy, 1);

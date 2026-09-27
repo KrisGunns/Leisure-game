@@ -91,6 +91,33 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Changelog
 
+### 2026-09-27 (30) — Cat: real art, single static image (same approach as the dog)
+
+**Added, at the user's request** ("Let's do the same for the cat in region 1. See the
+image to use."):
+- The cat now has real art instead of the hand-drawn letter-grid fallback, using the same
+  single-static-image approach as the dog (entry 29) from the start — no animated sheet
+  attempt first, given how that went for the dog.
+- New `PET_IMAGE_PATHS.cat` in `entities.js`: `walk` and `sleep` both point at
+  `assets/pets/cat/cat.png`, plus a `portrait` entry for `assets/pets/cat/portrait.png`.
+  Same cutout pipeline as the dog's static image (border-flood-fill background removal +
+  large-blob white-background stripping, tuned to clear the trapped background between
+  legs/tail without eating the eye highlights), downscaled to 40px tall with Lanczos
+  resampling.
+- `ui.js`'s Codex mini-portrait renderer previously drew the cat's *tiny in-world walk
+  sprite* scaled up for its Codex entry (`drawPetSprite(mctx, 'cat', 'walk', 1, ...)`),
+  unlike the dog which already had a dedicated bigger portrait treatment. Brought the cat
+  up to the same treatment: draws the new real portrait image scaled to fit the 70x70
+  Codex box, falling back to the old scaled-up sprite only if the image hasn't loaded yet.
+- No changes needed to the cat's flip-by-`facing` movement or its Schrodinger's-box
+  upside-down flip (`ctx.rotate(Math.PI)` in `Pet.draw()`'s cat branch) — both already
+  operate on whatever image `drawPetSprite()` is given, real or hand-drawn.
+- Verified via the real-Chromium Playwright harness: both `walk` and `sleep`, both
+  facings, and the portrait all load and draw with zero errors, alongside a re-check that
+  the dog's art from entries 27–29 is unaffected.
+
+---
+
 ### 2026-09-26 (29) — Dog: dropped multi-frame animation entirely, now a single static image
 
 **Changed, at the user's explicit request** ("let's go ahead and try to implement just

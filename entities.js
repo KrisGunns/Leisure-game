@@ -1874,6 +1874,18 @@ const PET_IMAGE_PATHS = {
         // view and the in-world sprite are unmistakably the same dog.
         portrait: ['assets/pets/dog/portrait.png?v=' + PET_ASSET_VERSION],
     },
+    cat: {
+        // 2026-09-26: same single-static-image approach as the dog above (see its comment),
+        // applied here from the start rather than trying an animated sheet first. walk and
+        // sleep both point at the same file — there's one pose now, so "asleep" is just this
+        // same image standing still rather than a separate curled-up/zzz frame. Flipping
+        // left/right (drawPetSprite's `facing`) and the Schrodinger's-box upside-down flip
+        // (Pet.draw()'s cat branch, via ctx.rotate) both already work on any image, real or
+        // hand-drawn, so neither needed any change for this.
+        walk: ['assets/pets/cat/cat.png?v=' + PET_ASSET_VERSION],
+        sleep: ['assets/pets/cat/cat.png?v=' + PET_ASSET_VERSION],
+        portrait: ['assets/pets/cat/portrait.png?v=' + PET_ASSET_VERSION],
+    },
 };
 const petImageCache = {}; // path -> Image, shared across every (type, anim, index) that names it
 function getPetImage(type, anim, index) {
