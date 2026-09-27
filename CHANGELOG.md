@@ -91,6 +91,39 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Changelog
 
+### 2026-09-26 (29) — Dog: dropped multi-frame animation entirely, now a single static image
+
+**Changed, at the user's explicit request** ("let's go ahead and try to implement just
+the dog with this fixed PNG image"), after entry 28's fix still left the animated sheet
+approach feeling fragile:
+- The dog's sit/walk/dig sprites are no longer separate multi-frame arrays. All three now
+  point at one file, `assets/pets/dog/dog.png`, cut out from a new single reference
+  image the user provided (clean cutout: border-flood-fill background removal +
+  large-connected-component white-blob stripping to clear the trapped background between
+  the legs, without eating the eye highlights — tuned min-blob-size up from the sheet
+  pipeline's value since this source image is much higher-resolution). Downscaled to
+  46px tall with Lanczos resampling (smoother than the pixel-art-style nearest-neighbor
+  resize used for the old sprite-sheet crops, which suits this image's painted/shaded
+  style better).
+- `PET_IMAGE_PATHS.dog.sit` / `.walk` / `.dig` are each now a single-element array. No
+  other code changed: `getPetImage()` already re-derives `index % paths.length`, so the
+  existing `Math.floor(...) % 6` / `% 4` frame-selection math in `Pet.draw()`'s dog branch
+  harmlessly always resolves to index 0 now rather than needing to be ripped out — and
+  the existing horizontal-flip-by-`facing` logic in `drawPetSprite()` still does all the
+  work of making the dog look correct walking left vs. right. The dig dirt-particle burst
+  effect is a separate overlay unrelated to which sprite image is drawn, so digging still
+  visibly reads as digging.
+- `portrait.png` is a separate, higher-res (160px tall) export of the same source image,
+  for the Codex/detail view.
+- Deleted: `sit_0.png`...`sit_3.png`, `walk_0.png`...`walk_5.png`, `dig_0.png`...`dig_5.png`
+  (the entire 5th-sheet frame set from entries 27–28) — nothing references them anymore.
+- Bumped `PET_ASSET_VERSION` 'v5' → 'v6'.
+- Verified via the real-Chromium Playwright harness: both facings draw without error for
+  all three animation names across a range of frame indices, and every index correctly
+  resolves to the same 45×46 image.
+
+---
+
 ### 2026-09-26 (28) — Dog: fixed a size-jitter bug in the 5th sheet's art ("isn't the same dog")
 
 **Fixed:**
