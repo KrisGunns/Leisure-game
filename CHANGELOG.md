@@ -91,6 +91,24 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Changelog
 
+### 2026-09-28 (36) — Fixed inverted movement re-introduced in bird/chicken/squirrel by entry 35
+
+**Fixed:**
+- Entry 35's resize re-rendered `bird.png`, `chicken.png`, and `squirrel.png` directly
+  from their original PRE-MIRROR source photos at the new, bigger size — correctly
+  mirroring `elephant.png`/`elephantBow.png` at the same time, but missing the mirror
+  step for these three, undoing entry 33's fix and shipping them facing left again.
+  Symptom: movement looked inverted, same as the dog's entry 31 bug. Caught by the user
+  immediately after entry 35 shipped.
+- Fixed by re-generating all three at the same (already-correct) sizes from entry 35 —
+  bird 34px, chicken/squirrel 41px tall — this time with the horizontal mirror re-applied.
+  Nothing else about them changed (no further size or crop changes).
+- Bumped `PET_ASSET_VERSION` 'v11' → 'v12'.
+- Verified via the real-Chromium Playwright harness: a rendered screenshot confirms all
+  three face right at `facing: 1` and left at `facing: -1` again.
+
+---
+
 ### 2026-09-28 (35) — Sized up bird/chicken/squirrel and both elephants ~20%
 
 **Changed, at the user's request** ("Make the sparrow, chicken and squirrel models
