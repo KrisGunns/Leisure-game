@@ -782,56 +782,39 @@ function renderMiniPet(pet, elementId) {
                 drawPetSprite(mctx, spriteType, 'idle', 0, ox, oy, 1);
             }
         } else if (pet.type === 'pig') {
-            let accent = pet.color === '#ffb6c1' ? '#ff8fab' : '#7f8c8d';
-            mctx.fillStyle = pet.color;
-            mctx.fillRect(ox + 4, oy + 12, 28, 18);
-            mctx.fillRect(ox + 20, oy + 4, 14, 12);
-            mctx.fillStyle = accent;
-            mctx.fillRect(ox + 20, oy, 5, 6);
-            mctx.fillRect(ox + 29, oy, 5, 6);
-            mctx.fillRect(ox + 28, oy + 10, 8, 6);
-            mctx.fillStyle = '#000000';
-            mctx.fillRect(ox + 30, oy + 12, 2, 2);
-            mctx.fillRect(ox + 34, oy + 12, 2, 2);
-            mctx.fillRect(ox + 26, oy + 7, 2, 2);
-            mctx.fillStyle = pet.color;
-            mctx.fillRect(ox + 8, oy + 28, 4, 6);
-            mctx.fillRect(ox + 22, oy + 28, 4, 6);
+            // 2026-09-28: real reference photo (PET_IMAGE_PATHS.pig/.pigMud.portrait),
+            // same bigger-scaled/bottom-aligned treatment as every other real-art pet
+            // above. spriteType picks between the two photos using the same this.color
+            // check the old hand-drawn code used for its accent color.
+            const spriteType = (pet.color === '#95a5a6') ? 'pigMud' : 'pig';
+            const portrait = typeof getPetImage === 'function' ? getPetImage(spriteType, 'portrait', 0) : null;
+            if (portrait) {
+                const pad = 4;
+                const scale = Math.min((70 - pad * 2) / portrait.width, (70 - pad * 2) / portrait.height);
+                const pw = portrait.width * scale, ph = portrait.height * scale;
+                const smoothing = mctx.imageSmoothingEnabled;
+                mctx.imageSmoothingEnabled = false;
+                mctx.drawImage(portrait, (70 - pw) / 2, 70 - pad - ph, pw, ph);
+                mctx.imageSmoothingEnabled = smoothing;
+            } else {
+                drawPetSprite(mctx, spriteType, 'idle', 0, ox, oy, 1);
+            }
         } else if (pet.type === 'monkey') {
-            mctx.fillStyle = pet.color;
-            mctx.fillRect(ox + 6, oy + 12, 22, 16);
-            mctx.fillRect(ox + 10, oy + 2, 16, 12);
-            mctx.fillStyle = '#c98a55';
-            mctx.fillRect(ox + 13, oy + 7, 10, 7);
-            mctx.fillStyle = pet.color;
-            mctx.beginPath();
-            mctx.arc(ox + 10, oy + 6, 4, 0, Math.PI * 2);
-            mctx.arc(ox + 26, oy + 6, 4, 0, Math.PI * 2);
-            mctx.fill();
-            mctx.fillStyle = '#000000';
-            mctx.fillRect(ox + 14, oy + 8, 2, 2);
-            mctx.fillRect(ox + 20, oy + 8, 2, 2);
-            mctx.fillStyle = pet.color;
-            mctx.fillRect(ox + 2, oy + 14, 4, 12);
-            mctx.fillRect(ox + 30, oy + 14, 4, 12);
-            mctx.fillRect(ox + 10, oy + 28, 4, 6);
-            mctx.fillRect(ox + 22, oy + 28, 4, 6);
-            if (pet.bowColor) {
-                mctx.fillStyle = pet.bowColor;
-                mctx.beginPath();
-                mctx.moveTo(ox + 18, oy - 1);
-                mctx.lineTo(ox + 12, oy - 5);
-                mctx.lineTo(ox + 12, oy + 2);
-                mctx.closePath();
-                mctx.fill();
-                mctx.beginPath();
-                mctx.moveTo(ox + 18, oy - 1);
-                mctx.lineTo(ox + 24, oy - 5);
-                mctx.lineTo(ox + 24, oy + 2);
-                mctx.closePath();
-                mctx.fill();
-                mctx.fillStyle = '#1e8449';
-                mctx.fillRect(ox + 16.5, oy - 3, 3, 3);
+            // 2026-09-28: real reference photo (PET_IMAGE_PATHS.monkey/.monkeyBow.portrait),
+            // same treatment as above. spriteType picks between the two photos using the
+            // same this.bowColor check the old hand-drawn code used for its procedural bow.
+            const spriteType = pet.bowColor ? 'monkeyBow' : 'monkey';
+            const portrait = typeof getPetImage === 'function' ? getPetImage(spriteType, 'portrait', 0) : null;
+            if (portrait) {
+                const pad = 4;
+                const scale = Math.min((70 - pad * 2) / portrait.width, (70 - pad * 2) / portrait.height);
+                const pw = portrait.width * scale, ph = portrait.height * scale;
+                const smoothing = mctx.imageSmoothingEnabled;
+                mctx.imageSmoothingEnabled = false;
+                mctx.drawImage(portrait, (70 - pw) / 2, 70 - pad - ph, pw, ph);
+                mctx.imageSmoothingEnabled = smoothing;
+            } else {
+                drawPetSprite(mctx, spriteType, 'idle', 0, ox, oy, 1);
             }
         } else if (pet.type === 'cat') {
             // 2026-09-27: real reference image (PET_IMAGE_PATHS.cat.portrait in entities.js),
@@ -864,30 +847,39 @@ function renderMiniPet(pet, elementId) {
                 drawPetSprite(mctx, 'bird', 'idle', 0, ox, oy, 1);
             }
         } else if (pet.type === 'panda') {
-            mctx.fillStyle = '#ffffff';
-            mctx.beginPath();
-            mctx.ellipse(ox + 18, oy + 20, 15, 12, 0, 0, Math.PI * 2);
-            mctx.fill();
-            mctx.beginPath();
-            mctx.arc(ox + 18, oy + 5, 11, 0, Math.PI * 2);
-            mctx.fill();
-            mctx.fillStyle = '#000000';
-            mctx.beginPath();
-            mctx.arc(ox + 9, oy - 3, 4, 0, Math.PI * 2);
-            mctx.fill();
-            mctx.beginPath();
-            mctx.arc(ox + 27, oy - 3, 4, 0, Math.PI * 2);
-            mctx.fill();
-            mctx.beginPath();
-            mctx.ellipse(ox + 12, oy + 5, 3.5, 4.5, -0.3, 0, Math.PI * 2);
-            mctx.fill();
-            mctx.beginPath();
-            mctx.ellipse(ox + 24, oy + 5, 3.5, 4.5, 0.3, 0, Math.PI * 2);
-            mctx.fill();
+            // 2026-09-28: real reference photo (PET_IMAGE_PATHS.panda.portrait), same
+            // treatment as above. Only one panda exists, so no color/bow branch needed.
+            const portrait = typeof getPetImage === 'function' ? getPetImage('panda', 'portrait', 0) : null;
+            if (portrait) {
+                const pad = 4;
+                const scale = Math.min((70 - pad * 2) / portrait.width, (70 - pad * 2) / portrait.height);
+                const pw = portrait.width * scale, ph = portrait.height * scale;
+                const smoothing = mctx.imageSmoothingEnabled;
+                mctx.imageSmoothingEnabled = false;
+                mctx.drawImage(portrait, (70 - pw) / 2, 70 - pad - ph, pw, ph);
+                mctx.imageSmoothingEnabled = smoothing;
+            } else {
+                drawPetSprite(mctx, 'panda', 'idle', 0, ox, oy, 1);
+            }
         } else if (pet.type === 'glider') {
-            // One shared model (entities.js) — the codex portrait can't drift from the in-world
-            // sprite, and Miss Glider's red bow comes along for free via bowColor.
-            drawGliderModel(mctx, ox, oy, { bowColor: pet.bowColor });
+            // 2026-09-28: real reference photo (PET_IMAGE_PATHS.glider/.gliderBow.portrait),
+            // replacing the old shared-model drawGliderModel() portrait (which drew the
+            // exact same procedural model as the in-world sprite). spriteType picks
+            // between the two photos using the same this.bowColor check the old code
+            // used for Miss Glider's procedural red bow.
+            const spriteType = pet.bowColor ? 'gliderBow' : 'glider';
+            const portrait = typeof getPetImage === 'function' ? getPetImage(spriteType, 'portrait', 0) : null;
+            if (portrait) {
+                const pad = 4;
+                const scale = Math.min((70 - pad * 2) / portrait.width, (70 - pad * 2) / portrait.height);
+                const pw = portrait.width * scale, ph = portrait.height * scale;
+                const smoothing = mctx.imageSmoothingEnabled;
+                mctx.imageSmoothingEnabled = false;
+                mctx.drawImage(portrait, (70 - pw) / 2, 70 - pad - ph, pw, ph);
+                mctx.imageSmoothingEnabled = smoothing;
+            } else {
+                drawPetSprite(mctx, spriteType, 'idle', 0, ox, oy, 1);
+            }
         }
     }
 

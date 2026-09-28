@@ -91,6 +91,58 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Changelog
 
+### 2026-09-28 (38) — Regions 6-9 (Pig/Mud Pig, Panda, Monkey/Bow Monkey, Glider/Miss Glider): real art, single static image, moved off hand-drawn canvas shapes, all in one pass
+
+**Changed, at the user's request** ("Perfect! Lets do all the rest of regions from 6 to
+9, so I can do one big test to ensure everything works fine... Remember to flip any as
+needed to ensure correct forward facing directional movement... Note that both male and
+female Monkey can be the same size. Similarly both male and female gliders can be the
+same size."):
+- All 7 remaining hand-drawn pets converted in one pass: `pig` (pink Pig), `pigMud`
+  (spotted Mud Pig), `panda`, `monkey` (plain Monkey), `monkeyBow` (Bow Monkey),
+  `glider` (Sugar Glider), and `gliderBow` (Miss Glider) — the same conversion the bear
+  went through last entry (hand-drawn canvas shapes in both `entities.js` and `ui.js`,
+  replaced with `drawPetSprite()`/`PET_IMAGE_PATHS`, plus new `PET_SPRITES` fallback
+  entries added for all 7 since none of them had ever used the letter-grid system
+  before — same crash risk the bear's conversion caught, avoided from the start this
+  time by adding the fallback entries up front rather than discovering the gap via a
+  crash).
+- Pig and Monkey and Glider each have TWO pets sharing one in-game `type` (`'pig'`,
+  `'monkey'`, `'glider'`), told apart by a field the OLD hand-drawn code already used to
+  pick colors/bows — `this.color` for the two pigs, `this.bowColor` for Bow Monkey and
+  Miss Glider — so `Pet.draw()` now picks the sprite TYPE (`'pigMud'`, `'monkeyBow'`,
+  `'gliderBow'`) the same way, with no new pet fields needed. Panda is the only pet of
+  its type, so no branch was needed there.
+- Every reference photo was checked against a green background before shipping. Six of
+  the seven already faced RIGHT (this game's convention) and needed no mirroring at
+  all. The two gliders' photos are a symmetric front-on flying pose (wings fully
+  spread, facing the camera) rather than a side profile, so they don't have the usual
+  strong left/right lean to mirror — used as-is.
+- Monkey/Bow Monkey and Glider/Miss Glider are each sized the SAME height as their pair
+  (36px and 32px respectively), at the user's explicit request this round — unlike the
+  Region 5 bear pair, these two pairs don't scale differently from each other. Panda is
+  sized taller (46px) than the other ground pets to read as visibly chunkier, matching
+  its old hand-drawn proportions.
+- The monkey's vine-swinging state still draws its own vine line in `Pet.draw()`
+  (unrelated to which image is shown) and now also correctly flips to face its facing
+  direction while swinging, which the old code never did. The glider's tree-resting
+  clipped peek-out view (Region 9) is UNCHANGED — still the small procedural close-up
+  via `drawGliderModel()`, since that's a distinct effect, not the main sprite.
+- All 4 pets (pig, panda, monkey, glider) now correctly turn to face their direction of
+  travel via `trackSpriteMotion()`, which none of their old hand-drawn code ever called
+  — the same gap the bear had before its own conversion.
+- Bumped `PET_ASSET_VERSION` 'v13' → 'v14'.
+- Verified via the real-Chromium Playwright harness in two passes: once with no PNGs
+  served at all (confirms the new fallback entries for all 7 sprite types don't crash),
+  and once with the real PNGs served (confirms all 7 load with zero errors); a rendered
+  screenshot confirms all 7 face right at `facing: 1` and correctly mirror to face left
+  at `facing: -1` (including the two gliders' bows visibly swapping sides), and that
+  monkey/monkeyBow and glider/gliderBow render at matching heights.
+- Nothing to delete — this is the first real-image art for all 7; only the old
+  hand-drawn canvas code (in both entities.js and ui.js) was removed.
+
+---
+
 ### 2026-09-28 (37) — Bear + Bow Bear (Region 5): real art, single static image, moved off hand-drawn canvas shapes
 
 **Changed, at the user's request** ("Now let's move on to region 5's bears. See the

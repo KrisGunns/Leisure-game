@@ -504,7 +504,16 @@ const PET_SPRITE_PALETTE = {
     a: '#5a2a00',   // bear body brown
     f: '#3a1a00',   // bear paw shade
     h: '#ff6fa5',   // bearFemale bow
-    j: '#e0559a'    // bearFemale bow knot
+    j: '#e0559a',   // bearFemale bow knot
+    q: '#ffb6c1',   // pig (pink) body
+    s: '#ff8fab',   // pig (pink) accent (ears, snout)
+    t: '#95a5a6',   // pigMud body
+    u: '#7f8c8d',   // pigMud accent (ears, snout)
+    v: '#8b5a2b',   // monkey body/ears/arms/legs
+    x: '#c98a55',   // monkey muzzle patch
+    y: '#2ecc71',   // monkeyBow bow
+    E: '#1e8449',   // monkeyBow bow knot
+    M: '#9aa1a8'    // glider/gliderBow head, ears, membrane
 };
 
 const PET_SPRITES = {
@@ -1924,6 +1933,317 @@ const PET_SPRITES = {
             ],
         ],
     },
+
+    // 2026-09-28 (Regions 6-9): coarse single-frame letter-grid fallbacks for pig/pigMud/
+    // panda/monkey/monkeyBow/glider/gliderBow, added at the same time their real-image
+    // art was — same reason bear/bearFemale needed one earlier this round: getPetSprite()
+    // does PET_SPRITES[type][anim] with no existence guard, so any real-art type that
+    // skips this table would crash the moment drawPetSprite() falls back to it (assets
+    // not yet deployed, still loading, 404, etc). Each is a coarse recreation of that
+    // pet's own OLD hand-drawn canvas shapes (rectangles/circles), not a copy of the new
+    // photo — same approach as the bear's fallback.
+    pig: {
+        idle: [[
+            '..........sss.ssss',
+            '..........sss.ssss',
+            '..........sssqssss',
+            '..........sssKqsss',
+            '..........qqqKKqqq',
+            '..........qqqqssss',
+            '..qqqqqqqqqqqqsKKK',
+            '..qqqqqqqqqqqqsKsK',
+            '..qqqqqqqqqqqqssss',
+            '..qqqqqqqqqqqqqqq.',
+            '..qqqqqqqqqqqqqqq.',
+            '..qqqqqqqqqqqqqqq.',
+            '..qqqqqqqqqqqqqqq.',
+            '..qqqqqqqqqqqqqqq.',
+            '..qqqqqqqqqqqqqqq.',
+            '..qqqqqqqqqqqqqq..',
+            '....qqq....qqq....',
+            '....qq.....qq.....',
+        ]],
+        walk: [[
+            '..........sss.ssss',
+            '..........sss.ssss',
+            '..........sssqssss',
+            '..........sssKqsss',
+            '..........qqqKKqqq',
+            '..........qqqqssss',
+            '..qqqqqqqqqqqqsKKK',
+            '..qqqqqqqqqqqqsKsK',
+            '..qqqqqqqqqqqqssss',
+            '..qqqqqqqqqqqqqqq.',
+            '..qqqqqqqqqqqqqqq.',
+            '..qqqqqqqqqqqqqqq.',
+            '..qqqqqqqqqqqqqqq.',
+            '..qqqqqqqqqqqqqqq.',
+            '..qqqqqqqqqqqqqqq.',
+            '..qqqqqqqqqqqqqq..',
+            '....qqq....qqq....',
+            '....qq.....qq.....',
+        ]],
+    },
+    pigMud: {
+        idle: [[
+            '..........uuu.uuuu',
+            '..........uuu.uuuu',
+            '..........uuutuuuu',
+            '..........uuuKtuuu',
+            '..........tttKKttt',
+            '..........ttttuuuu',
+            '..ttttttttttttuKKK',
+            '..ttttttttttttuKuK',
+            '..ttttttttttttuuuu',
+            '..ttttttttttttttt.',
+            '..ttttttttttttttt.',
+            '..ttttttttttttttt.',
+            '..ttttttttttttttt.',
+            '..ttttttttttttttt.',
+            '..ttttttttttttttt.',
+            '..tttttttttttttt..',
+            '....ttt....ttt....',
+            '....tt.....tt.....',
+        ]],
+        walk: [[
+            '..........uuu.uuuu',
+            '..........uuu.uuuu',
+            '..........uuutuuuu',
+            '..........uuuKtuuu',
+            '..........tttKKttt',
+            '..........ttttuuuu',
+            '..ttttttttttttuKKK',
+            '..ttttttttttttuKuK',
+            '..ttttttttttttuuuu',
+            '..ttttttttttttttt.',
+            '..ttttttttttttttt.',
+            '..ttttttttttttttt.',
+            '..ttttttttttttttt.',
+            '..ttttttttttttttt.',
+            '..ttttttttttttttt.',
+            '..tttttttttttttt..',
+            '....ttt....ttt....',
+            '....tt.....tt.....',
+        ]],
+    },
+    panda: {
+        idle: [[
+            '....K........K....',
+            '...KKKKWWWWWKKKK..',
+            '..KKKKKWWWWKKKKK..',
+            '...KKKKWWWWWKKKK..',
+            '...KKKKWWWWKKKK...',
+            '...WKKKKWWKKKKW...',
+            '...WKKKKWWKKKKW...',
+            '...WKKKKWWKKKKW...',
+            '....WKKWWWWKKWW...',
+            '....WWWWWWWWWWW...',
+            '...WWWWWWWWWWWW...',
+            '..WWWWWWWWWWWWWW..',
+            '..WWWWWWWWWWWWWWW.',
+            '.WWWWWWWWWWWWWWWW.',
+            '.WWWWWWWWWWWWWWWW.',
+            '.WWWWWWWWWWWWWWWW.',
+            '..WWWWWWWWWWWWWWW.',
+            '...WWWWWWWWWWWWW..',
+            '...KKKWWWWWWKKKK..',
+            '...KKKWWWWWWKKKK..',
+            '...KKK.WWWW.KKKK..',
+            '...KKK......KKKK..',
+        ]],
+        walk: [[
+            '....K........K....',
+            '...KKKKWWWWWKKKK..',
+            '..KKKKKWWWWKKKKK..',
+            '...KKKKWWWWWKKKK..',
+            '...KKKKWWWWKKKK...',
+            '...WKKKKWWKKKKW...',
+            '...WKKKKWWKKKKW...',
+            '...WKKKKWWKKKKW...',
+            '....WKKWWWWKKWW...',
+            '....WWWWWWWWWWW...',
+            '...WWWWWWWWWWWW...',
+            '..WWWWWWWWWWWWWW..',
+            '..WWWWWWWWWWWWWWW.',
+            '.WWWWWWWWWWWWWWWW.',
+            '.WWWWWWWWWWWWWWWW.',
+            '.WWWWWWWWWWWWWWWW.',
+            '..WWWWWWWWWWWWWWW.',
+            '...WWWWWWWWWWWWW..',
+            '...KKKWWWWWWKKKK..',
+            '...KKKWWWWWWKKKK..',
+            '...KKK.WWWW.KKKK..',
+            '...KKK......KKKK..',
+        ]],
+    },
+    monkey: {
+        idle: [[
+            '..................',
+            '....vvvvvvvvvvv...',
+            '...vvvvvvvvvvvv...',
+            '...vvvvvvvvvvvvv..',
+            '...vvvvKKxKKvvv...',
+            '.....vvKxxKxvv....',
+            '...vvvvxxxxxvvv...',
+            '.vvvvvvvvvvvvvvvvv',
+            '.vvvvvvvvvvvvvvvvv',
+            '.vvvvvvvvvvvvvvvvv',
+            '.vvvvvvvvvvvvvvvvv',
+            '.vvvvvvvvvvvvvvvvv',
+            '.vvvvvvvvvvvvvvvvv',
+            '.vvvvvvvvvvvvvvvv.',
+            '...vvvvvvvvvvv....',
+            '.....vvv...vvv....',
+            '.....vvv...vvv....',
+            '.....vv....vv.....',
+        ]],
+        walk: [[
+            '..................',
+            '....vvvvvvvvvvv...',
+            '...vvvvvvvvvvvv...',
+            '...vvvvvvvvvvvvv..',
+            '...vvvvKKxKKvvv...',
+            '.....vvKxxKxvv....',
+            '...vvvvxxxxxvvv...',
+            '.vvvvvvvvvvvvvvvvv',
+            '.vvvvvvvvvvvvvvvvv',
+            '.vvvvvvvvvvvvvvvvv',
+            '.vvvvvvvvvvvvvvvvv',
+            '.vvvvvvvvvvvvvvvvv',
+            '.vvvvvvvvvvvvvvvvv',
+            '.vvvvvvvvvvvvvvvv.',
+            '...vvvvvvvvvvv....',
+            '.....vvv...vvv....',
+            '.....vvv...vvv....',
+            '.....vv....vv.....',
+        ]],
+    },
+    monkeyBow: {
+        idle: [[
+            '..................',
+            '......yyEE.yy.....',
+            '......yyEEyyy.....',
+            '......yyEEyyy.....',
+            '....vvvvvvvvvvv...',
+            '...vvvvvvvvvvvv...',
+            '...vvvvvvvvvvvvv..',
+            '...vvvvKKxKKvvv...',
+            '.....vvKxxKxvv....',
+            '...vvvvxxxxxvvv...',
+            '.vvvvvvvvvvvvvvvvv',
+            '.vvvvvvvvvvvvvvvvv',
+            '.vvvvvvvvvvvvvvvvv',
+            '.vvvvvvvvvvvvvvvvv',
+            '.vvvvvvvvvvvvvvvvv',
+            '.vvvvvvvvvvvvvvvvv',
+            '.vvvvvvvvvvvvvvvv.',
+            '...vvvvvvvvvvv....',
+            '.....vvv...vvv....',
+            '.....vvv...vvv....',
+            '.....vv....vv.....',
+        ]],
+        walk: [[
+            '..................',
+            '......yyEE.yy.....',
+            '......yyEEyyy.....',
+            '......yyEEyyy.....',
+            '....vvvvvvvvvvv...',
+            '...vvvvvvvvvvvv...',
+            '...vvvvvvvvvvvvv..',
+            '...vvvvKKxKKvvv...',
+            '.....vvKxxKxvv....',
+            '...vvvvxxxxxvvv...',
+            '.vvvvvvvvvvvvvvvvv',
+            '.vvvvvvvvvvvvvvvvv',
+            '.vvvvvvvvvvvvvvvvv',
+            '.vvvvvvvvvvvvvvvvv',
+            '.vvvvvvvvvvvvvvvvv',
+            '.vvvvvvvvvvvvvvvvv',
+            '.vvvvvvvvvvvvvvvv.',
+            '...vvvvvvvvvvv....',
+            '.....vvv...vvv....',
+            '.....vvv...vvv....',
+            '.....vv....vv.....',
+        ]],
+    },
+    glider: {
+        idle: [[
+            '....MMM....MMM....',
+            '...MMMMMMMMMMMM...',
+            '..MMMMMMMMMMMMMM..',
+            '...MMMMMMMMMMMM...',
+            '....MMMKMMMKMM....',
+            '....MMKKMMKKMM....',
+            '....MMMllllMMM....',
+            '.....MMliillM.....',
+            '.....MllllllM.....',
+            '.....llllllll.....',
+            '.....llllllll.....',
+            '.....llllllll.....',
+            '.....llllllll.....',
+            '.....llllllll.....',
+            '......llllll......',
+            '.......llll.......',
+        ]],
+        walk: [[
+            '....MMM....MMM....',
+            '...MMMMMMMMMMMM...',
+            '..MMMMMMMMMMMMMM..',
+            '...MMMMMMMMMMMM...',
+            '....MMMKMMMKMM....',
+            '....MMKKMMKKMM....',
+            '....MMMllllMMM....',
+            '.....MMliillM.....',
+            '.....MllllllM.....',
+            '.....llllllll.....',
+            '.....llllllll.....',
+            '.....llllllll.....',
+            '.....llllllll.....',
+            '.....llllllll.....',
+            '......llllll......',
+            '.......llll.......',
+        ]],
+    },
+    gliderBow: {
+        idle: [[
+            '..................',
+            '....MMRR...RMM....',
+            '...MMMRRRRRRMMM...',
+            '..MMMMRRMMRRMMMM..',
+            '...MMMMMMMMMMMM...',
+            '....MMMKMMMKMM....',
+            '....MMKKMMKKMM....',
+            '....MMMllllMMM....',
+            '.....MMliillM.....',
+            '.....MllllllM.....',
+            '.....llllllll.....',
+            '.....llllllll.....',
+            '.....llllllll.....',
+            '.....llllllll.....',
+            '.....llllllll.....',
+            '......llllll......',
+            '.......llll.......',
+        ]],
+        walk: [[
+            '..................',
+            '....MMRR...RMM....',
+            '...MMMRRRRRRMMM...',
+            '..MMMMRRMMRRMMMM..',
+            '...MMMMMMMMMMMM...',
+            '....MMMKMMMKMM....',
+            '....MMKKMMKKMM....',
+            '....MMMllllMMM....',
+            '.....MMliillM.....',
+            '.....MllllllM.....',
+            '.....llllllll.....',
+            '.....llllllll.....',
+            '.....llllllll.....',
+            '.....llllllll.....',
+            '.....llllllll.....',
+            '......llllll......',
+            '.......llll.......',
+        ]],
+    },
 };
 
 const petSpriteCache = {};
@@ -1974,7 +2294,7 @@ function getPetSprite(type, anim, index) {
 // to the old hand-drawn sprite once a real image has finished loading. Bump this string
 // any time an existing dog PNG's content changes without renaming the file, so every
 // visitor is forced to fetch the new bytes instead of whatever their browser/CDN cached.
-const PET_ASSET_VERSION = 'v13';
+const PET_ASSET_VERSION = 'v14';
 const PET_IMAGE_PATHS = {
     dog: {
         // 2026-09-26: switched the dog to a SINGLE static image for every animation, at the
@@ -2089,6 +2409,64 @@ const PET_IMAGE_PATHS = {
         idle: ['assets/pets/bearFemale/bearFemale.png?v=' + PET_ASSET_VERSION],
         walk: ['assets/pets/bearFemale/bearFemale.png?v=' + PET_ASSET_VERSION],
         portrait: ['assets/pets/bearFemale/portrait.png?v=' + PET_ASSET_VERSION],
+    },
+
+    // 2026-09-28 (Regions 6-9, all in one pass): pig/panda/monkey/glider, same single-
+    // static-image approach as every pet above. All 7 reference photos already faced
+    // right when checked against a green background before shipping (the two gliders'
+    // photos are a symmetric front-on flying pose with wings spread, so mirroring them
+    // wouldn't meaningfully change the picture either way — used as-is), so NO mirroring
+    // was needed for any of these seven files. `pig`/`pigMud` are both the in-game type
+    // 'pig' (distinguished by this.color, same as the old hand-drawn code did for the
+    // accent color); `monkey`/`monkeyBow` and `glider`/`gliderBow` are both their
+    // respective in-game types too, distinguished by this.bowColor being set — same
+    // "one type, a field decides which photo" pattern the bear used for isFemaleBear.
+    pig: {
+        idle: ['assets/pets/pig/pig.png?v=' + PET_ASSET_VERSION],
+        walk: ['assets/pets/pig/pig.png?v=' + PET_ASSET_VERSION],
+        portrait: ['assets/pets/pig/portrait.png?v=' + PET_ASSET_VERSION],
+    },
+    pigMud: {
+        // The spotted "Mud Pig" — a separate photo, not a recolor of the pink pig.
+        idle: ['assets/pets/pigMud/pigMud.png?v=' + PET_ASSET_VERSION],
+        walk: ['assets/pets/pigMud/pigMud.png?v=' + PET_ASSET_VERSION],
+        portrait: ['assets/pets/pigMud/portrait.png?v=' + PET_ASSET_VERSION],
+    },
+    panda: {
+        idle: ['assets/pets/panda/panda.png?v=' + PET_ASSET_VERSION],
+        walk: ['assets/pets/panda/panda.png?v=' + PET_ASSET_VERSION],
+        portrait: ['assets/pets/panda/portrait.png?v=' + PET_ASSET_VERSION],
+    },
+    monkey: {
+        // Used for idle, walk, AND swinging (the vine-swing state still draws its own
+        // vine line on top in Pet.draw(); only the monkey's own body switched to a real
+        // photo, one static pose covering all three, same as the dog's dig particles).
+        idle: ['assets/pets/monkey/monkey.png?v=' + PET_ASSET_VERSION],
+        walk: ['assets/pets/monkey/monkey.png?v=' + PET_ASSET_VERSION],
+        portrait: ['assets/pets/monkey/portrait.png?v=' + PET_ASSET_VERSION],
+    },
+    monkeyBow: {
+        // Bow Monkey's green bow is baked into this photo, not a procedural overlay
+        // (same shift as elephantBow/bearFemale). Sized the SAME height as the plain
+        // monkey, at the user's explicit request this round ("both male and female
+        // Monkey can be the same size") — unlike the bear pair, these two don't scale
+        // differently.
+        idle: ['assets/pets/monkeyBow/monkeyBow.png?v=' + PET_ASSET_VERSION],
+        walk: ['assets/pets/monkeyBow/monkeyBow.png?v=' + PET_ASSET_VERSION],
+        portrait: ['assets/pets/monkeyBow/portrait.png?v=' + PET_ASSET_VERSION],
+    },
+    glider: {
+        idle: ['assets/pets/glider/glider.png?v=' + PET_ASSET_VERSION],
+        walk: ['assets/pets/glider/glider.png?v=' + PET_ASSET_VERSION],
+        portrait: ['assets/pets/glider/portrait.png?v=' + PET_ASSET_VERSION],
+    },
+    gliderBow: {
+        // Miss Glider's small red bow, baked into this photo. Sized the SAME height as
+        // the plain glider, at the user's explicit request this round ("both male and
+        // female gliders can be the same size").
+        idle: ['assets/pets/gliderBow/gliderBow.png?v=' + PET_ASSET_VERSION],
+        walk: ['assets/pets/gliderBow/gliderBow.png?v=' + PET_ASSET_VERSION],
+        portrait: ['assets/pets/gliderBow/portrait.png?v=' + PET_ASSET_VERSION],
     },
 };
 const petImageCache = {}; // path -> Image, shared across every (type, anim, index) that names it
@@ -3776,34 +4154,28 @@ class Pet {
                 drawPetSprite(ctx, spriteType, 'idle', Math.floor(Date.now() / 500) % 2, this.x, this.y, this.facing || 1);
             }
         } else if (this.type === 'pig') {
-            // Accent color for ears/snout/legs: a shade darker than the body color,
-            // same trick squirrel uses to keep one draw routine work for two colors.
-            let accent = this.color === '#ffb6c1' ? '#ff8fab' : '#7f8c8d';
-            ctx.fillStyle = this.color;
-            ctx.fillRect(this.x + 4, this.y + 12, 28, 18);  // body
-            ctx.fillRect(this.x + 20, this.y + 4, 14, 12);  // head
-            ctx.fillStyle = accent;
-            ctx.fillRect(this.x + 20, this.y, 5, 6);        // ear
-            ctx.fillRect(this.x + 29, this.y, 5, 6);        // ear
-            ctx.fillRect(this.x + 28, this.y + 10, 8, 6);   // snout
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(this.x + 30, this.y + 12, 2, 2);   // nostril
-            ctx.fillRect(this.x + 34, this.y + 12, 2, 2);   // nostril
-            ctx.fillRect(this.x + 26, this.y + 7, 2, 2);    // eye
-            ctx.fillStyle = this.color;
-            ctx.fillRect(this.x + 8, this.y + 28, 4, 6);    // leg
-            ctx.fillRect(this.x + 22, this.y + 28, 4, 6);   // leg
-            ctx.strokeStyle = this.color;
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(this.x + 2, this.y + 14, 3, 0, Math.PI * 1.5); // curly tail
-            ctx.stroke();
+            // 2026-09-28 (Region 6): real reference photo, single static image, replacing
+            // the old hand-drawn rectangle pig (which never turned to face its direction
+            // of travel — same class of gap the bear had before its own conversion this
+            // round). spriteType picks between the two real photos using the SAME field
+            // (this.color) the old code already used to distinguish them, so no new pet
+            // field was needed. Both photos already faced right when checked against a
+            // green background, so no mirroring was needed for either file.
+            const spriteType = (this.color === '#95a5a6') ? 'pigMud' : 'pig';
+            const walking = this.trackSpriteMotion();
+            drawPetSprite(ctx, spriteType, walking ? 'walk' : 'idle', walking ? Math.floor((this._spriteStep || 0) / PET_STEP_PIXELS) % 4 : Math.floor(Date.now() / 500) % 2, this.x, this.y, this.facing || 1);
         } else if (this.type === 'monkey') {
-            // Brown, same color regardless of level/state. `this.color` is set by
-            // createMonkey() (world.js) to keep this consistent with how every other
-            // pet's body color is threaded through.
+            // 2026-09-28 (Region 8): real reference photo, single static image, replacing
+            // the old hand-drawn rectangle monkey. spriteType picks between the two real
+            // photos using the SAME field (this.bowColor) the old code already used to
+            // draw Bow Monkey's procedural bow — Bow Monkey's green bow is now baked into
+            // its own photo instead. Both photos already faced right, so no mirroring was
+            // needed for either file. The vine-swing state ('swinging') still draws its
+            // own vine line here (unrelated to which image is drawn), and now also flips
+            // the monkey to face along whichever way it's currently facing, same as
+            // every other animated pet — the old code always drew the swinging pose
+            // facing one fixed way regardless of movement.
             let swinging = this.state === 'swinging';
-
             if (swinging) {
                 // Hanging from a vine dangling down from directly above it — draw the
                 // vine first so the monkey sits in front of/at the end of it.
@@ -3814,57 +4186,9 @@ class Pet {
                 ctx.lineTo(this.x + this.size / 2, this.y + 2);
                 ctx.stroke();
             }
-
-            ctx.fillStyle = this.color;                         // body
-            ctx.fillRect(this.x + 6, this.y + 12, 22, 16);
-            ctx.fillRect(this.x + 10, this.y + 2, 16, 12);       // head
-            ctx.fillStyle = '#c98a55';                           // muzzle patch
-            ctx.fillRect(this.x + 13, this.y + 7, 10, 7);
-            ctx.fillStyle = this.color;                          // ears
-            ctx.beginPath();
-            ctx.arc(this.x + 10, this.y + 6, 4, 0, Math.PI * 2);
-            ctx.arc(this.x + 26, this.y + 6, 4, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#000000';                           // eyes
-            ctx.fillRect(this.x + 14, this.y + 8, 2, 2);
-            ctx.fillRect(this.x + 20, this.y + 8, 2, 2);
-            ctx.fillStyle = this.color;                          // arms
-            if (swinging) {
-                // Both arms up, gripping the vine overhead.
-                ctx.fillRect(this.x + 4, this.y - 2, 4, 16);
-                ctx.fillRect(this.x + 28, this.y - 2, 4, 16);
-            } else {
-                ctx.fillRect(this.x + 2, this.y + 14, 4, 12);
-                ctx.fillRect(this.x + 30, this.y + 14, 4, 12);
-            }
-            ctx.fillRect(this.x + 10, this.y + 28, 4, 6);        // legs
-            ctx.fillRect(this.x + 22, this.y + 28, 4, 6);
-            ctx.strokeStyle = this.color;                        // tail
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(this.x + 6, this.y + 20);
-            ctx.quadraticCurveTo(this.x - 8, this.y + 22, this.x - 6, this.y + 10);
-            ctx.stroke();
-
-            if (this.bowColor) {
-                // Small bow on the head — same two-triangle-plus-knot shape as the
-                // female bear's, just smaller and positioned for the monkey's head.
-                ctx.fillStyle = this.bowColor;
-                ctx.beginPath();
-                ctx.moveTo(this.x + 18, this.y - 1);
-                ctx.lineTo(this.x + 12, this.y - 5);
-                ctx.lineTo(this.x + 12, this.y + 2);
-                ctx.closePath();
-                ctx.fill();
-                ctx.beginPath();
-                ctx.moveTo(this.x + 18, this.y - 1);
-                ctx.lineTo(this.x + 24, this.y - 5);
-                ctx.lineTo(this.x + 24, this.y + 2);
-                ctx.closePath();
-                ctx.fill();
-                ctx.fillStyle = '#1e8449';
-                ctx.fillRect(this.x + 16.5, this.y - 3, 3, 3);
-            }
+            const spriteType = this.bowColor ? 'monkeyBow' : 'monkey';
+            const walking = this.trackSpriteMotion();
+            drawPetSprite(ctx, spriteType, walking ? 'walk' : 'idle', walking ? Math.floor((this._spriteStep || 0) / PET_STEP_PIXELS) % 4 : Math.floor(Date.now() / 500) % 2, this.x, this.y, this.facing || 1);
         } else if (this.type === 'cat') {
             let boxed = this.state === 'schrodinger';
             let flipped = boxed && !this.schrodingerVisible;
@@ -3912,30 +4236,13 @@ class Pet {
                 drawPetSprite(ctx, 'bird', 'idle', Math.floor(Date.now() / 500) % 2, this.x, this.y, this.facing || 1);
             }
         } else if (this.type === 'panda') {
-            ctx.fillStyle = '#ffffff';                    // body
-            ctx.beginPath();
-            ctx.ellipse(this.x + 18, this.y + 20, 15, 12, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();                               // head
-            ctx.arc(this.x + 18, this.y + 5, 11, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#000000';                     // ears
-            ctx.beginPath();
-            ctx.arc(this.x + 9, this.y - 3, 4, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.arc(this.x + 27, this.y - 3, 4, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#000000';                     // eye patches
-            ctx.beginPath();
-            ctx.ellipse(this.x + 12, this.y + 5, 3.5, 4.5, -0.3, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.ellipse(this.x + 24, this.y + 5, 3.5, 4.5, 0.3, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#000000';                     // legs
-            ctx.fillRect(this.x + 6, this.y + 28, 5, 7);
-            ctx.fillRect(this.x + 25, this.y + 28, 5, 7);
+            // 2026-09-28 (Region 7): real reference photo, single static image, replacing
+            // the old hand-drawn circle/ellipse panda (which never turned to face its
+            // direction of travel either). Only one panda exists, so no this.color/
+            // this.bowColor branch is needed here — always 'panda'. The photo already
+            // faced right, so no mirroring was needed.
+            const walking = this.trackSpriteMotion();
+            drawPetSprite(ctx, 'panda', walking ? 'walk' : 'idle', walking ? Math.floor((this._spriteStep || 0) / PET_STEP_PIXELS) % 4 : Math.floor(Date.now() / 500) % 2, this.x, this.y, this.facing || 1);
 
             if (this.state === 'full') {
                 ctx.font = '14px monospace';
@@ -3974,7 +4281,24 @@ class Pet {
                 ctx.fillText('💤', tree.hollowX + tree.hollowRX + 6, tree.hollowY - tree.hollowRY + 4);
                 ctx.textAlign = 'left';
             } else {
-                drawGliderModel(ctx, this.x, this.y, { bowColor: this.bowColor });
+                // 2026-09-28 (Region 9): real reference photo, single static image,
+                // replacing the procedural drawGliderModel() call for the normal (not
+                // resting-in-a-tree) case. spriteType picks between the two real photos
+                // using the SAME field (this.bowColor) the old code already used to draw
+                // Miss Glider's procedural red bow — her bow is now baked into her own
+                // photo instead. Both reference photos are a symmetric front-on flying
+                // pose (wings fully spread, facing the camera), so unlike every other
+                // pet this one has no strong inherent left/right lean to mirror — used
+                // as-is. This also gives the glider a `facing` for the first time ever:
+                // the old drawGliderModel() call here never took a facing argument at
+                // all, so the glider never turned to face its direction of travel,
+                // exactly the same gap the bear had before its own conversion this round.
+                // The tree-resting clipped peek-out view just above is UNCHANGED — it's
+                // a small procedural close-up of just the face, not the main sprite, and
+                // doesn't need to face any particular direction while tucked in.
+                const spriteType = this.bowColor ? 'gliderBow' : 'glider';
+                const walking = this.trackSpriteMotion();
+                drawPetSprite(ctx, spriteType, walking ? 'walk' : 'idle', walking ? Math.floor((this._spriteStep || 0) / PET_STEP_PIXELS) % 4 : Math.floor(Date.now() / 500) % 2, this.x, this.y, this.facing || 1);
             }
         }
 
