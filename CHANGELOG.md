@@ -91,6 +91,29 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Changelog
 
+### 2026-09-28 (35) — Sized up bird/chicken/squirrel and both elephants ~20%
+
+**Changed, at the user's request** ("Make the sparrow, chicken and squirrel models
+slightly bigger, and make the elephant and bow elephant slightly bigger while keeping the
+elephant bigger than the bow elephant. You can increase the size by approximately 20%."):
+- Re-rendered `bird.png` (28px → 34px, +21%), `chicken.png` (34px → 41px, +21%), and
+  `squirrel.png` (34px → 41px, +21%) tall, each from its ORIGINAL pre-downscale source
+  photo (still on hand from entry 33) rather than re-scaling the already-shrunk game
+  sprite, to avoid compounding resize quality loss.
+- Re-rendered `elephant.png` (42px → 50px, +19%) and `elephantBow.png` (42px → 47px,
+  +12%) the same way, from entry 32's original sources. Deliberately used different
+  percentages rather than the same +20% for both, so the plain elephant stays visibly
+  bigger than the bow elephant — matching the two variants' existing size relationship
+  (equal before this change) the way the user asked to keep it.
+- Portraits (Codex/detail-view images) untouched — only the five in-world sprites changed.
+- Bumped `PET_ASSET_VERSION` 'v10' → 'v11'.
+- Verified via the real-Chromium Playwright harness: all eight pet types (including dog,
+  cat, and bee, to confirm nothing else regressed) still draw with zero errors at both
+  facings, and the loaded image dimensions confirm the new sizes and that elephant (50px)
+  is taller than elephantBow (47px).
+
+---
+
 ### 2026-09-28 (34) — Bee (Region 4): real art, single static image, covers every bee
 
 **Added, at the user's request** ("Do the same for region 4's bees. All the bees should
