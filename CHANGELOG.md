@@ -91,6 +91,29 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Changelog
 
+### 2026-09-28 (34) — Bee (Region 4): real art, single static image, covers every bee
+
+**Added, at the user's request** ("Do the same for region 4's bees. All the bees should
+have this model."), from one reference photo:
+- New `PET_IMAGE_PATHS.bee` in `entities.js`: `idle` and `walk` (its only movement
+  animation) both point at `assets/pets/bee/bee.png` — same single-static-image approach
+  as every pet so far this batch.
+- Automatically covers every bee, not just the starter: the bee sprite branches on
+  `this.type === 'bee'` in `Pet.draw()`, not on individual bee instances, so both the free
+  starter bee and every purchased worker bee pick up this same art with zero additional
+  wiring — exactly what "all the bees should have this model" asks for.
+- Unlike every reference photo so far (dog, both elephants, squirrel, chicken, bird), this
+  one already faced right, so no mirroring was needed — checked explicitly before
+  wiring it in, given entry 31's earlier miss.
+- `ui.js`'s Codex mini-portrait for the bee previously drew the tiny in-world idle sprite
+  scaled up; brought it up to the same real-portrait treatment as every other pet.
+- Verified via the real-Chromium Playwright harness: `idle`/`walk`, both facings, and the
+  portrait all load and draw with zero errors; a rendered screenshot confirms the bee
+  faces right at `facing: 1` and left at `facing: -1`, with its translucent wings intact
+  at both.
+
+---
+
 ### 2026-09-27 (33) — Squirrel, chicken, bird (Region 3): real art, single static image
 
 **Added, at the user's request** ("Let's implement region 3's pets. See the reference

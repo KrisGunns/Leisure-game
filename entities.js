@@ -1853,7 +1853,7 @@ function getPetSprite(type, anim, index) {
 // to the old hand-drawn sprite once a real image has finished loading. Bump this string
 // any time an existing dog PNG's content changes without renaming the file, so every
 // visitor is forced to fetch the new bytes instead of whatever their browser/CDN cached.
-const PET_ASSET_VERSION = 'v9';
+const PET_ASSET_VERSION = 'v10';
 const PET_IMAGE_PATHS = {
     dog: {
         // 2026-09-26: switched the dog to a SINGLE static image for every animation, at the
@@ -1933,6 +1933,17 @@ const PET_IMAGE_PATHS = {
         idle: ['assets/pets/bird/bird.png?v=' + PET_ASSET_VERSION],
         fly: ['assets/pets/bird/bird.png?v=' + PET_ASSET_VERSION],
         portrait: ['assets/pets/bird/portrait.png?v=' + PET_ASSET_VERSION],
+    },
+    bee: {
+        // 2026-09-27 (Region 4): same single-static-image approach as every pet above. idle
+        // and walk (its only movement animation) both point at the same file. This branches
+        // on this.type === 'bee' in Pet.draw(), not on individual bee instances, so it
+        // automatically covers every bee — the free starter and every purchased worker bee
+        // alike — with no per-bee wiring needed. Unlike every other pet done so far, this
+        // reference photo already faced right, so no mirroring was needed here.
+        idle: ['assets/pets/bee/bee.png?v=' + PET_ASSET_VERSION],
+        walk: ['assets/pets/bee/bee.png?v=' + PET_ASSET_VERSION],
+        portrait: ['assets/pets/bee/portrait.png?v=' + PET_ASSET_VERSION],
     },
 };
 const petImageCache = {}; // path -> Image, shared across every (type, anim, index) that names it
