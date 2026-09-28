@@ -500,7 +500,11 @@ const PET_SPRITE_PALETTE = {
     I: '#724623',   // bird legs brown
     Z: '#fac014',   // bee body gold
     V: '#26180d',   // bee head / stripes (near-black brown)
-    U: '#904e1c'    // bee legs / stinger / antennae
+    U: '#904e1c',   // bee legs / stinger / antennae
+    a: '#5a2a00',   // bear body brown
+    f: '#3a1a00',   // bear paw shade
+    h: '#ff6fa5',   // bearFemale bow
+    j: '#e0559a'    // bearFemale bow knot
 };
 
 const PET_SPRITES = {
@@ -1803,6 +1807,123 @@ const PET_SPRITES = {
             ],
         ],
     },
+    // 2026-09-28: minimal single-frame fallback for the bear/bearFemale real-image art
+    // (see PET_IMAGE_PATHS.bear/.bearFemale). The bear never had a PET_SPRITES entry
+    // before this — its old visual was hand-drawn fillRect() calls directly in
+    // Pet.draw(), not the letter-grid system every other pet's fallback uses — so once
+    // that hand-drawn code was replaced with drawPetSprite(), a fallback had to exist
+    // here too, or the game would throw (PET_SPRITES.bear undefined) any time the real
+    // image hasn't loaded yet or the assets/ folder isn't deployed. A coarse re-creation
+    // of the same blocky shapes the old fillRect version drew, not a work of art — this
+    // is only ever seen for a moment before the real photo loads in.
+    bear: {
+        idle: [
+            [
+                '....aaa....aaa....',
+                '....aaa....aaa....',
+                '....aaaaaaaaaa....',
+                '.....aaaaaaaa.....',
+                '.....aaeaaeaa.....',
+                '.....aaaaaaaa.....',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '...fff......fff...',
+                '...fff......fff...',
+                '...fff......fff...',
+            ],
+        ],
+        walk: [
+            [
+                '....aaa....aaa....',
+                '....aaa....aaa....',
+                '....aaaaaaaaaa....',
+                '.....aaaaaaaa.....',
+                '.....aaeaaeaa.....',
+                '.....aaaaaaaa.....',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '...fff......fff...',
+                '...fff......fff...',
+                '...fff......fff...',
+            ],
+        ],
+    },
+    bearFemale: {
+        idle: [
+            [
+                '..................',
+                '..................',
+                '....hhhhhhhhhh....',
+                '....hhhhhhhhhh....',
+                '....hhhhjjjhhh....',
+                '....hhhhjjjhhh....',
+                '....ahhhhhhhhh....',
+                '....ahhhhhhhhh....',
+                '....aaaaaaaaaa....',
+                '.....aaaaaaaa.....',
+                '.....aaeaaeaa.....',
+                '.....aaaaaaaa.....',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '...fff......fff...',
+                '...fff......fff...',
+                '...fff......fff...',
+            ],
+        ],
+        walk: [
+            [
+                '..................',
+                '..................',
+                '....hhhhhhhhhh....',
+                '....hhhhhhhhhh....',
+                '....hhhhjjjhhh....',
+                '....hhhhjjjhhh....',
+                '....ahhhhhhhhh....',
+                '....ahhhhhhhhh....',
+                '....aaaaaaaaaa....',
+                '.....aaaaaaaa.....',
+                '.....aaeaaeaa.....',
+                '.....aaaaaaaa.....',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '..aaaaaaaaaaaaaa..',
+                '...fff......fff...',
+                '...fff......fff...',
+                '...fff......fff...',
+            ],
+        ],
+    },
 };
 
 const petSpriteCache = {};
@@ -1853,7 +1974,7 @@ function getPetSprite(type, anim, index) {
 // to the old hand-drawn sprite once a real image has finished loading. Bump this string
 // any time an existing dog PNG's content changes without renaming the file, so every
 // visitor is forced to fetch the new bytes instead of whatever their browser/CDN cached.
-const PET_ASSET_VERSION = 'v12';
+const PET_ASSET_VERSION = 'v13';
 const PET_IMAGE_PATHS = {
     dog: {
         // 2026-09-26: switched the dog to a SINGLE static image for every animation, at the
@@ -1944,6 +2065,30 @@ const PET_IMAGE_PATHS = {
         idle: ['assets/pets/bee/bee.png?v=' + PET_ASSET_VERSION],
         walk: ['assets/pets/bee/bee.png?v=' + PET_ASSET_VERSION],
         portrait: ['assets/pets/bee/portrait.png?v=' + PET_ASSET_VERSION],
+    },
+    bear: {
+        // 2026-09-28 (Region 5): same single-static-image approach as every pet above. idle
+        // and walk both point at the same file. Both reference photos already faced right
+        // (checked explicitly — see the 2026-09-28 dog-direction and bee-no-mirror-needed
+        // changelog entries for why this always gets checked rather than assumed), so no
+        // mirroring was needed here either. Replaces the old hand-drawn rectangle bear (see
+        // the 2026-09-28 changelog entry for why that drawing code, including its
+        // ctx.scale(0.85)-for-female and procedural pink-bow overlay, was removed in favor
+        // of drawPetSprite() — this is the same shift the elephant went through with its
+        // baked-in bow instead of a programmatic overlay.
+        idle: ['assets/pets/bear/bear.png?v=' + PET_ASSET_VERSION],
+        walk: ['assets/pets/bear/bear.png?v=' + PET_ASSET_VERSION],
+        portrait: ['assets/pets/bear/portrait.png?v=' + PET_ASSET_VERSION],
+    },
+    bearFemale: {
+        // Same treatment, separate reference photo (the same model with a pink bow) rather
+        // than a recolor/overlay of the plain bear — same reasoning as elephantBow. Sized
+        // ~85% of the plain bear's height, preserving the 0.85 scale factor the old
+        // hand-drawn code used for the female bear, but baked into the asset now instead of
+        // a ctx.scale() at draw time.
+        idle: ['assets/pets/bearFemale/bearFemale.png?v=' + PET_ASSET_VERSION],
+        walk: ['assets/pets/bearFemale/bearFemale.png?v=' + PET_ASSET_VERSION],
+        portrait: ['assets/pets/bearFemale/portrait.png?v=' + PET_ASSET_VERSION],
     },
 };
 const petImageCache = {}; // path -> Image, shared across every (type, anim, index) that names it
@@ -3613,56 +3758,23 @@ class Pet {
             } else {
                 drawPetSprite(ctx, 'bee', 'idle', Math.floor(Date.now() / 500) % 2, this.x, this.y, this.facing || 1);
             }
-        } else if (this.type === 'bear' || (typeof pet !== 'undefined' && pet.type === 'bear')) {
-            let bx = this.type === 'bear' ? this.x : ox;
-            let by = this.type === 'bear' ? this.y : oy;
-            let isFemale = this.type === 'bear' && this.isFemaleBear;
-
-            ctx.save();
-            if (isFemale) {
-                // Slightly smaller model — scale the whole drawing down around its own
-                // top-left anchor (bx, by) so this.x/this.y/this.size (used for
-                // collision, wander bounds, the progress bar, etc.) still line up with
-                // what's actually drawn.
-                let scale = 0.85;
-                ctx.translate(bx, by);
-                ctx.scale(scale, scale);
-                ctx.translate(-bx, -by);
+        } else if (this.type === 'bear') {
+            // 2026-09-28: real reference photos (see PET_IMAGE_PATHS.bear/.bearFemale) —
+            // idle/walk single-static-image treatment, same as every other pet. Replaces
+            // the old hand-drawn rectangle bear, whose female variant was a ctx.scale(0.85)
+            // shrink plus a procedural pink-bow overlay; both are now baked into
+            // bearFemale.png (a separate photo, sized ~85% of the plain bear's height —
+            // same reasoning as elephantBow), so isFemaleBear only needs to pick which
+            // image to draw, not how to transform or overlay it. This is also the first
+            // time the bear's sprite calls trackSpriteMotion()/updates this.facing — the
+            // old hand-drawn version never flipped to face its movement direction at all.
+            const spriteType = this.isFemaleBear ? 'bearFemale' : 'bear';
+            const walking = this.trackSpriteMotion();
+            if (walking) {
+                drawPetSprite(ctx, spriteType, 'walk', Math.floor((this._spriteStep || 0) / PET_STEP_PIXELS) % 4, this.x, this.y, this.facing || 1);
+            } else {
+                drawPetSprite(ctx, spriteType, 'idle', Math.floor(Date.now() / 500) % 2, this.x, this.y, this.facing || 1);
             }
-
-            ctx.fillStyle = '#5a2a00'; 
-            ctx.fillRect(bx + 4, by + 8, 28, 20); 
-            ctx.fillRect(bx + 10, by, 16, 12); 
-            ctx.fillRect(bx + 8, by - 4, 6, 6); 
-            ctx.fillRect(bx + 22, by - 4, 6, 6); 
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(bx + 14, by + 4, 2, 2); 
-            ctx.fillRect(bx + 20, by + 4, 2, 2); 
-            ctx.fillStyle = '#3a1a00';
-            ctx.fillRect(bx + 6, by + 28, 6, 6); 
-            ctx.fillRect(bx + 24, by + 28, 6, 6);
-
-            if (isFemale) {
-                // Pink bow on the head — two triangular "loops" plus a small knot,
-                // sat just above the ears.
-                ctx.fillStyle = '#ff6fa5';
-                ctx.beginPath();
-                ctx.moveTo(bx + 18, by - 6);
-                ctx.lineTo(bx + 10, by - 11);
-                ctx.lineTo(bx + 10, by - 1);
-                ctx.closePath();
-                ctx.fill();
-                ctx.beginPath();
-                ctx.moveTo(bx + 18, by - 6);
-                ctx.lineTo(bx + 26, by - 11);
-                ctx.lineTo(bx + 26, by - 1);
-                ctx.closePath();
-                ctx.fill();
-                ctx.fillStyle = '#e0559a';
-                ctx.fillRect(bx + 16, by - 8, 4, 4);
-            }
-
-            ctx.restore();
         } else if (this.type === 'pig') {
             // Accent color for ears/snout/legs: a shade darker than the body color,
             // same trick squirrel uses to keep one draw routine work for two colors.

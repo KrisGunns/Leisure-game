@@ -763,43 +763,24 @@ function renderMiniPet(pet, elementId) {
                 drawPetSprite(mctx, 'bee', 'idle', 0, ox, oy, 1);
             }
         } else if (pet.type === 'bear') {
-            let isFemale = !!pet.isFemaleBear;
-            mctx.save();
-            if (isFemale) {
-                let scale = 0.85;
-                mctx.translate(ox, oy);
-                mctx.scale(scale, scale);
-                mctx.translate(-ox, -oy);
+            // 2026-09-28: real reference photo (PET_IMAGE_PATHS.bear/.bearFemale.portrait),
+            // same bigger-scaled/bottom-aligned treatment as every other real-art pet above.
+            // Replaces the old hand-drawn rectangle bear + ctx.scale(0.85)-for-female +
+            // procedural pink bow (see Pet.draw()'s bear branch in entities.js for the fuller
+            // explanation of that removal).
+            const spriteType = pet.isFemaleBear ? 'bearFemale' : 'bear';
+            const portrait = typeof getPetImage === 'function' ? getPetImage(spriteType, 'portrait', 0) : null;
+            if (portrait) {
+                const pad = 4;
+                const scale = Math.min((70 - pad * 2) / portrait.width, (70 - pad * 2) / portrait.height);
+                const pw = portrait.width * scale, ph = portrait.height * scale;
+                const smoothing = mctx.imageSmoothingEnabled;
+                mctx.imageSmoothingEnabled = false;
+                mctx.drawImage(portrait, (70 - pw) / 2, 70 - pad - ph, pw, ph);
+                mctx.imageSmoothingEnabled = smoothing;
+            } else {
+                drawPetSprite(mctx, spriteType, 'idle', 0, ox, oy, 1);
             }
-            mctx.fillStyle = '#5a2a00'; 
-            mctx.fillRect(ox + 4, oy + 8, 28, 20); 
-            mctx.fillRect(ox + 10, oy + 0, 16, 12); 
-            mctx.fillRect(ox + 8, oy - 4, 6, 6); 
-            mctx.fillRect(ox + 22, oy - 4, 6, 6); 
-            mctx.fillStyle = '#000000';
-            mctx.fillRect(ox + 14, oy + 4, 2, 2); 
-            mctx.fillRect(ox + 20, oy + 4, 2, 2); 
-            mctx.fillStyle = '#3a1a00';
-            mctx.fillRect(ox + 6, oy + 28, 6, 6); 
-            mctx.fillRect(ox + 24, oy + 28, 6, 6);
-            if (isFemale) {
-                mctx.fillStyle = '#ff6fa5';
-                mctx.beginPath();
-                mctx.moveTo(ox + 18, oy - 6);
-                mctx.lineTo(ox + 10, oy - 11);
-                mctx.lineTo(ox + 10, oy - 1);
-                mctx.closePath();
-                mctx.fill();
-                mctx.beginPath();
-                mctx.moveTo(ox + 18, oy - 6);
-                mctx.lineTo(ox + 26, oy - 11);
-                mctx.lineTo(ox + 26, oy - 1);
-                mctx.closePath();
-                mctx.fill();
-                mctx.fillStyle = '#e0559a';
-                mctx.fillRect(ox + 16, oy - 8, 4, 4);
-            }
-            mctx.restore();
         } else if (pet.type === 'pig') {
             let accent = pet.color === '#ffb6c1' ? '#ff8fab' : '#7f8c8d';
             mctx.fillStyle = pet.color;

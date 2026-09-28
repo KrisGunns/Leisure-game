@@ -91,6 +91,47 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Changelog
 
+### 2026-09-28 (37) — Bear + Bow Bear (Region 5): real art, single static image, moved off hand-drawn canvas shapes
+
+**Changed, at the user's request** ("Now let's move on to region 5's bears. See the
+reference images. Don't forget to invert the pictures for the motion in game."):
+- Unlike every previous pet converted this cycle, the bear had never used the
+  letter-grid `PET_SPRITES` fallback system or `PET_IMAGE_PATHS` at all — both the
+  plain and pink-bow female bear were drawn with hand-written canvas shapes (fillRect
+  body/head/ears, a hand-drawn triangle "bow") directly in `entities.js`'s `Pet.draw()`,
+  duplicated again in `ui.js`'s `renderMiniPet()` for the Codex portrait. That old code
+  also never called `trackSpriteMotion()`, so the bear never actually turned to face
+  its direction of travel.
+- Added `bear.png`/`portrait.png` and `bearFemale.png`/`portrait.png` (one static pose
+  each, used for both idle and walk) and wired them into `PET_IMAGE_PATHS`. `Pet.draw()`
+  now picks `spriteType = this.isFemaleBear ? 'bearFemale' : 'bear'` and calls the same
+  `drawPetSprite()`/`trackSpriteMotion()` pattern every other pet uses, so the bear now
+  correctly faces the direction it's walking for the first time. `ui.js`'s Codex
+  portrait code was replaced the same way.
+- Both reference photos were checked against a green background before shipping, per
+  the user's explicit reminder to double-check mirroring — both already face RIGHT
+  (this game's convention), so **no mirroring was needed** for either file this time.
+- Sized `bear.png` at 50px tall and `bearFemale.png` at 42px tall (≈0.85×), preserving
+  the old hand-drawn code's `ctx.scale(0.85)` ratio so the male bear stays visibly
+  bigger than the female, same relative size as before.
+- **Caught and fixed during testing:** the first pass of this change crashed
+  (`Cannot read properties of undefined (reading 'idle')`) because `getPetSprite()`
+  looks up `PET_SPRITES[type][anim]` with no existence guard, and the bear — having
+  never used the fallback system — had no entry there at all. Fixed by adding new
+  `PET_SPRITE_PALETTE` letters and `PET_SPRITES.bear`/`.bearFemale` entries (a coarse
+  single-frame recreation of the old hand-drawn shapes), giving the bear the same
+  loading-fallback safety net every other real-art pet already has.
+- Bumped `PET_ASSET_VERSION` 'v12' → 'v13'.
+- Verified via the real-Chromium Playwright harness in two passes: once with no PNGs
+  served at all (confirms the new fallback path itself doesn't crash), and once with
+  the real PNGs served (confirms both load with zero errors); a rendered screenshot
+  confirms both bear and bearFemale face right at `facing: 1`, mirror correctly to face
+  left at `facing: -1`, and that the male stays bigger than the female.
+- Nothing to delete — this is the bear's first real-image art; only the old hand-drawn
+  canvas code (in both entities.js and ui.js) was removed.
+
+---
+
 ### 2026-09-28 (36) — Fixed inverted movement re-introduced in bird/chicken/squirrel by entry 35
 
 **Fixed:**
