@@ -135,22 +135,18 @@ const SQUIRREL_BOOST_MULT = 1.5;
 const DOG_DIG_BONUS_COIN_LEVEL = 25;
 const DOG_DIG_BONUS_COIN_AMOUNT = 2;
 
-// Lv30 coin perk shared by the dog's dig and the pig's mud play: from this level on, a payout
-// gets PLAY_COIN_PERK_BONUS extra coins, and PLAY_COIN_PERK_DOUBLE_CHANCE is the chance the
-// whole payout is doubled. Below the level, the caller's own base double chance applies
-// (dog: none, pig: 5%). Read by the dog's dig payout and the pig's mud-play payout
+// Lv30 coin perk shared by the dog's dig and the pig's mud play: both pay 2 coins (the dog from
+// Lv25, the pig always), and from PLAY_COIN_PERK_LEVEL on there is a PLAY_COIN_PERK_DOUBLE_CHANCE
+// chance the payout is doubled (2 -> 4). Below the level, the caller's own base double chance
+// applies (dog: none, pig: 5%). Read by the dog's dig payout and the pig's mud-play payout
 // (entities.js) and by both pets' Pet Detail descriptions (ui.js), so the numbers can't drift.
 const PLAY_COIN_PERK_LEVEL = 30;
-const PLAY_COIN_PERK_BONUS = 2;
 const PLAY_COIN_PERK_DOUBLE_CHANCE = 0.25;
 
 function getPlayCoinPayout(baseCoins, level, baseDoubleChance) {
     let coins = baseCoins;
     let doubleChance = baseDoubleChance || 0;
-    if (level >= PLAY_COIN_PERK_LEVEL) {
-        coins += PLAY_COIN_PERK_BONUS;
-        doubleChance = PLAY_COIN_PERK_DOUBLE_CHANCE;
-    }
+    if (level >= PLAY_COIN_PERK_LEVEL) doubleChance = PLAY_COIN_PERK_DOUBLE_CHANCE;
     if (Math.random() < doubleChance) coins *= 2;
     return coins;
 }

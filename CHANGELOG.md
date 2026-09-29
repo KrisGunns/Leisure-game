@@ -143,57 +143,14 @@ same size."):
 
 ---
 
-### 2026-09-28 (37) — Bear + Bow Bear (Region 5): real art, single static image, moved off hand-drawn canvas shapes
-
-**Changed, at the user's request** ("Now let's move on to region 5's bears. See the
-reference images. Don't forget to invert the pictures for the motion in game."):
-- Unlike every previous pet converted this cycle, the bear had never used the
-  letter-grid `PET_SPRITES` fallback system or `PET_IMAGE_PATHS` at all — both the
-  plain and pink-bow female bear were drawn with hand-written canvas shapes (fillRect
-  body/head/ears, a hand-drawn triangle "bow") directly in `entities.js`'s `Pet.draw()`,
-  duplicated again in `ui.js`'s `renderMiniPet()` for the Codex portrait. That old code
-  also never called `trackSpriteMotion()`, so the bear never actually turned to face
-  its direction of travel.
-- Added `bear.png`/`portrait.png` and `bearFemale.png`/`portrait.png` (one static pose
-  each, used for both idle and walk) and wired them into `PET_IMAGE_PATHS`. `Pet.draw()`
-  now picks `spriteType = this.isFemaleBear ? 'bearFemale' : 'bear'` and calls the same
-  `drawPetSprite()`/`trackSpriteMotion()` pattern every other pet uses, so the bear now
-  correctly faces the direction it's walking for the first time. `ui.js`'s Codex
-  portrait code was replaced the same way.
-- Both reference photos were checked against a green background before shipping, per
-  the user's explicit reminder to double-check mirroring — both already face RIGHT
-  (this game's convention), so **no mirroring was needed** for either file this time.
-- Sized `bear.png` at 50px tall and `bearFemale.png` at 42px tall (≈0.85×), preserving
-  the old hand-drawn code's `ctx.scale(0.85)` ratio so the male bear stays visibly
-  bigger than the female, same relative size as before.
-- **Caught and fixed during testing:** the first pass of this change crashed
-  (`Cannot read properties of undefined (reading 'idle')`) because `getPetSprite()`
-  looks up `PET_SPRITES[type][anim]` with no existence guard, and the bear — having
-  never used the fallback system — had no entry there at all. Fixed by adding new
-  `PET_SPRITE_PALETTE` letters and `PET_SPRITES.bear`/`.bearFemale` entries (a coarse
-  single-frame recreation of the old hand-drawn shapes), giving the bear the same
-  loading-fallback safety net every other real-art pet already has.
-- Bumped `PET_ASSET_VERSION` 'v12' → 'v13'.
-- Verified via the real-Chromium Playwright harness in two passes: once with no PNGs
-  served at all (confirms the new fallback path itself doesn't crash), and once with
-  the real PNGs served (confirms both load with zero errors); a rendered screenshot
-  confirms both bear and bearFemale face right at `facing: 1`, mirror correctly to face
-  left at `facing: -1`, and that the male stays bigger than the female.
-- Nothing to delete — this is the bear's first real-image art; only the old hand-drawn
-  canvas code (in both entities.js and ui.js) was removed.
-
----
-
-### 2026-09-28 (37) — Lv30 coin perk for dig & mud play; bee double-exp moved to Lv20; Character perk list bulked by type
+### 2026-09-28 (37) — Lv30 25% double-coin perk for dig & mud play; bee double-exp moved to Lv20; Character perk list bulked by type
 
 **Changed:**
-- **Dog dig and pig mud play, Lv30:** both payouts now get **+2 coins** and a **25% chance to double the whole payout**. One shared helper, `getPlayCoinPayout(baseCoins, level, baseDoubleChance)` (state.js, with `PLAY_COIN_PERK_LEVEL`/`_BONUS`/`_DOUBLE_CHANCE`), is called by the dog's `'digging'` payout and the pig's `'mud_play'` payout (entities.js), and both Pet Detail perk lists read the same constants (ui.js). Below Lv30 nothing changed: the dog still pays 1 coin (2 from Lv25, no double chance) and the pig still pays 2 with its old 5% double. At Lv30: dog 2+2 = 4 (8 on a double), pig 2+2 = 4 (8 on a double); the Riches perk still multiplies the final amount afterwards. Averages are 5 coins per dig / mud play at Lv30.
-- **Bee double flower exp:** `PERK_CHANCES.beeDoubleExp` was `[[30, 0.10]]`, now `[[20, 0.20]]` — a Lv20 perk with a 20% chance for a flower to count double toward the next level. The bee's Pet Detail line is generated from that table, so it now reads "Lv.20: 20% chance for a flower to give double exp" with no text edit. Bees that are already Lv20-29 start getting the perk immediately; nothing is stored in saves.
-- **Character screen perk list is bulked by type:** the tree has 16 nodes but only 5 types, so the list now shows one line per type instead of 16 near-identical ones — e.g. `🍪💧 Basic Resource (2/6): +60% of +180% food & water gained from pets`. The count is unlocked/total nodes of that type in the tree, the first % is what's unlocked now and the second is what the whole tree could give. New `getBulkedPerkGroups()` (ui.js) builds it from `PERK_TREE`/`PERK_TYPES`, so a new node or a retuned % updates the list by itself. A line is green as soon as one node of the type is unlocked and gets a ✓ once every node of the type is. The Perk Tree screen itself is unchanged (still one node per perk, with its own text).
+- **Dog dig and pig mud play, Lv30:** both pay 2 coins (the dog has paid 2 since Lv25, the pig always) and now have a **25% chance to double the payout to 4**. No extra flat coins are added. One shared helper, `getPlayCoinPayout(baseCoins, level, baseDoubleChance)` (state.js, with `PLAY_COIN_PERK_LEVEL`/`_DOUBLE_CHANCE`), is called by the dog's `'digging'` payout and the pig's `'mud_play'` payout (entities.js), and both Pet Detail perk lists read the same constants (ui.js). Below Lv30 nothing changed: the dog pays 1 coin (2 from Lv25, no double chance) and the pig pays 2 with its old 5% double. The Riches perk still multiplies the final amount afterwards. Averages at Lv30 are 2.5 coins per dig / mud play.
+- **Bee double flower exp:** `PERK_CHANCES.beeDoubleExp` was `[[30, 0.10]]`, now `[[20, 0.20]]` — a Lv20 perk with a 20% chance for a flower to count double toward the next level. The bee's Pet Detail line is generated from that table, so it now reads "Lv.20: 20% chance for a flower to give double exp" with no text edit. Bees already at Lv20-29 get the perk immediately; nothing is stored in saves.
+- **Character screen perk list is bulked by type:** the tree has 16 nodes but only 5 types, so the list now shows one line per type instead of 16 near-identical ones — e.g. `🍪💧 Basic Resource (2/6): +60% of +180% food & water gained from pets`. The count is unlocked/total nodes of that type, the first % is what's unlocked now and the second is what the whole tree could give. New `getBulkedPerkGroups()` (ui.js) builds it from `PERK_TREE`/`PERK_TYPES`, so a new node or a retuned % updates the list by itself. A line is green as soon as one node of the type is unlocked and gets a ✓ once every node of the type is. The Perk Tree screen itself is unchanged.
 
-**Assumption to confirm:** "+2 coins at Lv30" was read as *+2 extra coins on top of the payout each pet already gives* (so dog and pig both pay 4), not "the payout becomes 2". If you meant the payout itself becomes 2, set `PLAY_COIN_PERK_BONUS` to 0 (dog) — pig already pays 2 at base.
-
-**Verification:** applied by a find-and-replace patcher that refuses to touch a file unless every anchor line is found exactly once. The payout helper was sampled 200,000 times per case (dog/pig, Lv29 vs Lv30) and the bulked perk totals were computed from the real `PERK_TYPES`/`PERK_TREE_LAYOUT` data. **Not tested:** an in-browser run of the game.
+**Verification:** every edit was applied by anchored find-and-replace and the three JS files pass a syntax check. **Not tested:** an in-browser run of the game.
 
 ---
 
