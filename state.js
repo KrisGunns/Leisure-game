@@ -675,11 +675,12 @@ function showLevelUpToast(level) {
 // ACHIEVEMENTS & STATISTICS (MENU -> 🏆 ACHIEVEMENTS / 📊 STATISTICS)
 // ------------------------------------------------------------
 // Diamonds 💎 are a new resource (inventory.diamonds) that achievements pay out. Nothing spends
-// them yet. Achievements are checked from updateUI() (ui.js) via checkAchievements(), and the
-// rewards are paid AUTOMATICALLY the moment a tier's goal is reached.
+// them yet. Rewards are NOT automatic: when a tier's goal is reached the Achievements screen shows
+// it as a box the player taps to claim (claimAnimalTamerTier()).
 //
-// "Animal Tamer" is a ladder of tiers. Only the current tier shows: 0/1 -> at 1/1 it pays and the
-// next tier starts at 1/3, and so on. `claimed` (saved) is how many tiers have been paid; the
+// "Animal Tamer" is a ladder of tiers. Only the current tier shows: 0/1 -> at 1/1 the player claims
+// it and the next tier starts at 1/3 (if that is already met too it is claimed next, and so on).
+// `claimed` (saved) is how many tiers have been claimed; the
 // number of pets tamed is NOT saved — it is recounted from the pets themselves, so it can never
 // drift. Edit a row to retune a goal or a reward; add a row to add a tier.
 const ANIMAL_TAMER_TIERS = [
@@ -693,6 +694,11 @@ const ANIMAL_TAMER_TIERS = [
     { goal: 15, reward: 10 },
     { goal: 17, reward: 15 }
 ];
+
+// How many achievements the game has (the Statistics screen reads "x/ACHIEVEMENT_TOTAL"). The tiers
+// of Animal Tamer are levels of ONE achievement, not separate ones; it counts as accomplished once
+// every tier is claimed.
+const ACHIEVEMENT_TOTAL = 1;
 
 const achievements = { animalTamer: { claimed: 0 } };   // saved (see saveGameProgress)
 const gameStats = { playSeconds: 0 };                    // saved; ticked by tickShopBuffs() below
@@ -735,31 +741,25 @@ function getTamedPetCount() {
 function getAnimalTamerProgress() {
     const count = getTamedPetCount();
     const claimed = Math.max(0, Math.min(ANIMAL_TAMER_TIERS.length, Math.floor(Number(achievements.animalTamer.claimed)) || 0));
-    return { count: count, claimed: claimed, tier: ANIMAL_TAMER_TIERS[claimed] || null, done: claimed >= ANIMAL_TAMER_TIERS.length };
+    return { count: count, claimed: claimed, tier: ANIMAL_TAMER_TIERS[claimed] || null, done: claimed >= ANIMAL_TAMER_TIERS.length,
+             claimable: claimed < ANIMAL_TAMER_TIERS.length && count >= ANIMAL_TAMER_TIERS[claimed].goal };
 }
 
-// Pays every tier whose goal has been reached. Safe to call every frame; does nothing unless a
-// tier has just been completed. A save from before achievements existed that already has many pets
-// tamed is paid for all the tiers it has earned, in one go (one combined notice).
-function checkAchievements() {
-    if (typeof petsByRegion === 'undefined') return;
-    const progress = getAnimalTamerProgress();
-    let claimed = progress.claimed;
-    let earned = 0, lastGoal = 0, tiersPaid = 0;
-    while (claimed < ANIMAL_TAMER_TIERS.length && progress.count >= ANIMAL_TAMER_TIERS[claimed].goal) {
-        earned += ANIMAL_TAMER_TIERS[claimed].reward;
-        lastGoal = ANIMAL_TAMER_TIERS[claimed].goal;
-        claimed++;
-        tiersPaid++;
-    }
-    achievements.animalTamer.claimed = claimed;
-    if (tiersPaid > 0) {
-        inventory.diamonds += earned;
-        saveGameProgress();
-        showAchievementToast(tiersPaid === 1
-            ? `🏆 Animal Tamer ${lastGoal}/${lastGoal} complete!  +${earned} 💎`
-            : `🏆 Animal Tamer: ${tiersPaid} levels complete!  +${earned} 💎`);
-    }
+// Claims the current Animal Tamer tier: only works once its goal has been reached, pays its
+// diamonds, and moves on to the next tier (which may already be complete too — the player then
+// claims that one as well, one tap per tier). Returns the diamonds paid (0 if nothing to claim).
+// Rewards are NEVER paid automatically: the Achievements screen shows a completed tier as a box
+// the player taps. A save from before achievements existed simply finds its earned tiers waiting.
+function claimAnimalTamerTier() {
+    if (typeof petsByRegion === 'undefined') return 0;
+    const p = getAnimalTamerProgress();
+    if (p.done || p.count < p.tier.goal) return 0;
+    inventory.diamonds += p.tier.reward;
+    achievements.animalTamer.claimed = p.claimed + 1;
+    saveGameProgress();
+    showAchievementToast(`🏆 Animal Tamer ${p.tier.goal}/${p.tier.goal}  +${p.tier.reward} 💎`);
+    updateUI();
+    return p.tier.reward;
 }
 
 // Non-blocking notice, same approach as showLevelUpToast().
@@ -948,8 +948,8 @@ function loadGameProgress() {
             });
         }
 
-        // Achievements + total play time. Older saves have neither: claimed starts at 0 and
-        // checkAchievements() then pays any tiers the save's pets have already earned.
+        // Achievements + total play time. Older saves have neither: claimed starts at 0 and any
+        // tiers the save's pets have already earned are simply waiting to be claimed.
         if (stateMatrix.achievements && stateMatrix.achievements.animalTamer) {
             const c = Math.floor(Number(stateMatrix.achievements.animalTamer.claimed));
             achievements.animalTamer.claimed = (isFinite(c) && c > 0) ? Math.min(c, ANIMAL_TAMER_TIERS.length) : 0;

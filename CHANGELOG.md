@@ -143,6 +143,24 @@ same size."):
 
 ---
 
+### 2026-09-29 (39) — Achievement rewards are claimed by tapping, tier ladder hidden, diamonds in the Shop, Statistics achievements one-liner, TAMERS screen title
+
+**Changed:**
+- **TAMERS screen title:** the screen opened by the MENU's TAMERS button now reads `🧑 TAMERS` at the top too (was CHARACTER).
+- **Animal Tamer rewards are no longer automatic.** `checkAchievements()` (which paid on its own from `updateUI()`) is replaced by `claimAnimalTamerTier()` (state.js). When the current tier's goal is reached, the Achievements screen shows it as a boxed, pulsing `1/1 — TAP TO CLAIM · 1 💎` button. Tapping it pays the diamonds and moves to the next tier; if that tier is already met too it shows as a claim box again (one tap per tier) until it reaches a tier that isn't complete yet, e.g. `5/7` with its progress bar. `getAnimalTamerProgress()` gained `claimable`. Delegated touch/mouse handler `handleAchievementClaim()` (ui.js); a tap can't claim two tiers.
+- **Achievements screen** now shows only the current tier (the full 1/1…17/17 list is gone) and no longer shows the diamond total (that row and its CSS were removed). After the last tier it reads `17/17 ✓ Complete`.
+- **Saves:** unchanged format. `claimed` still means tiers already paid, so nothing paid earlier is paid twice; older saves just find their earned tiers waiting to be claimed instead of being paid on load.
+- **STATISTICS:** the "Achievements accomplished" section and its tier list are gone; there is now one line, `🏆 Achievements accomplished  0/1` (`1/1` once every Animal Tamer tier has been claimed). New `ACHIEVEMENT_TOTAL = 1` (state.js) — the tiers are levels of ONE achievement, so bump it when a second achievement is added.
+
+**Added:**
+- **SHOP:** a `💎 Your diamonds` row right under `🪙 Your gold` (`shopDiamondRow`, blue-tinted), kept live and part of the shop's redraw signature. Nothing can be bought with diamonds yet.
+
+**Files:** state.js, ui.js, index.html, style.css (`?v=2.0`), CHANGELOG.md.
+
+**Verification:** run in real Chromium at phone size: 1/1 does not pay by itself; the box appears; three taps in a row claim tiers 1, 3 and 5 (+1, +2, +4 = 7 💎) and stop at `6/7`; a stray tap pays nothing; the Shop row sits directly under gold and updates live; Statistics reads 0/1 with no tier list, then 1/1 after all nine tiers are claimed (66 💎 total); claimed tiers and diamonds survive a reload with nothing auto-paid; no JS errors. **Not tested:** on a real phone / the APK wrapper.
+
+---
+
 ### 2026-09-29 (38) — Diamonds + Animal Tamer achievement, ACHIEVEMENTS and STATISTICS menu screens, CHAR button renamed TAMERS
 
 **Added:**

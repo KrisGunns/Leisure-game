@@ -499,9 +499,7 @@ function updateUI() {
     if (bagBananas) bagBananas.textContent = inventory.bananas;
     if (bagDiamonds) bagDiamonds.textContent = inventory.diamonds;
 
-    // Achievements: pays any Animal Tamer level that has just been completed, then keeps the
-    // Achievements / Statistics screens live while they're open (both are cheap no-ops otherwise).
-    if (typeof checkAchievements === 'function') checkAchievements();
+    // Keeps the Achievements / Statistics screens live while they're open (cheap no-ops otherwise).
     if (typeof refreshAchievementScreens === 'function') refreshAchievementScreens();
 
     const interactBtn = document.getElementById('interactBtn');
@@ -1465,6 +1463,7 @@ const openShopBtn = document.getElementById('openShopBtn');
 const shopClose = document.getElementById('shopClose');
 const shopContent = document.getElementById('shopContent');
 const shopGoldValue = document.getElementById('shopGoldValue');
+const shopDiamondValue = document.getElementById('shopDiamondValue');
 const shopTabBuy = document.getElementById('shopTabBuy');
 const shopTabSell = document.getElementById('shopTabSell');
 const shopTabUnlockables = document.getElementById('shopTabUnlockables');
@@ -1482,7 +1481,7 @@ function getShopSignature() {
     // rebuilt every second.
     // Which unlockables are owned is part of the signature so the Unlockables tab flips
     // to "Owned" as soon as something is bought.
-    return [shopTab, inventory.coins, inventory.eggs, inventory.fish,
+    return [shopTab, inventory.coins, inventory.diamonds, inventory.eggs, inventory.fish,
             isShopBuffActive('cake'), isShopBuffActive('wisdomPotion'),
             Object.keys(unlockedIds).sort().join(',')].join('|');
 }
@@ -1585,6 +1584,7 @@ function renderShop() {
     if (!shopContent) return;
 
     if (shopGoldValue) shopGoldValue.textContent = inventory.coins;
+    if (shopDiamondValue) shopDiamondValue.textContent = inventory.diamonds;
     if (shopTabBuy) shopTabBuy.classList.toggle('shopTabActive', shopTab === 'buy');
     if (shopTabSell) shopTabSell.classList.toggle('shopTabActive', shopTab === 'sell');
     if (shopTabUnlockables) shopTabUnlockables.classList.toggle('shopTabActive', shopTab === 'unlockables');
@@ -2190,13 +2190,12 @@ if (hiveHoneyLabel) {
 
 // ============================================================
 // ACHIEVEMENTS + STATISTICS screens (MENU -> 🏆 ACHIEVEMENTS / 📊 STATISTICS).
-// The data and the payout logic live in state.js (ANIMAL_TAMER_TIERS, checkAchievements(), gameStats);
+// The data and the claim logic live in state.js (ANIMAL_TAMER_TIERS, claimAnimalTamerTier(), gameStats);
 // this is only the display. Both screens redraw from updateUI() while open, but only when what
 // they show has changed (a 'signature'), since updateUI() runs every frame.
 // ============================================================
 const achievementsOverlay = document.getElementById('achievementsOverlay');
 const achievementsList = document.getElementById('achievementsList');
-const achievementsDiamondValue = document.getElementById('achievementsDiamondValue');
 const statsOverlay = document.getElementById('statsOverlay');
 const statsContent = document.getElementById('statsContent');
 let achievementsSignature = '';
@@ -2220,26 +2219,27 @@ function formatPlayTime(totalSeconds) {
 function renderAchievementsScreen(force) {
     if (!achievementsList) return;
     const p = getAnimalTamerProgress();
-    const sig = [p.count, p.claimed, inventory.diamonds].join('|');
+    const sig = [p.count, p.claimed].join('|');
     if (!force && sig === achievementsSignature) return;
     achievementsSignature = sig;
 
-    if (achievementsDiamondValue) achievementsDiamondValue.textContent = inventory.diamonds;
-
-    // Only the current tier is shown as N/goal: 1/1 completes and pays, then the next reads 1/3, ...
-    const goal = p.tier ? p.tier.goal : ANIMAL_TAMER_TIERS[ANIMAL_TAMER_TIERS.length - 1].goal;
-    const shown = p.done ? goal : Math.min(p.count, goal);
-    const pct = Math.round((shown / goal) * 100);
-
     let html = `<div class="achCard">
         <div class="achCardTitle">🐾 Animal Tamer</div>
-        <div class="achCardDesc">Tame pets to earn 💎 diamonds. Each level pays out automatically.</div>
-        <div class="achProgressRow"><strong>${shown}/${goal}</strong><span class="achReward">${p.done ? '✓ Complete' : 'Reward: ' + p.tier.reward + ' 💎'}</span></div>
+        <div class="achCardDesc">Tame pets to earn 💎 diamonds. Tap a completed level to claim it.</div>`;
+    if (p.done) {
+        html += `<div class="achProgressRow"><strong>${ANIMAL_TAMER_TIERS[ANIMAL_TAMER_TIERS.length - 1].goal}/${ANIMAL_TAMER_TIERS[ANIMAL_TAMER_TIERS.length - 1].goal}</strong><span class="achReward">✓ Complete</span></div>
+        <div class="achBar"><div class="achBarFill" style="width:100%"></div></div>`;
+    } else if (p.claimable) {
+        // Goal reached: the tier shows as a tappable box; tapping pays it and moves to the next tier.
+        html += `<button class="achClaimBox" data-claim="animalTamer">
+            <span class="achClaimGoal">${p.tier.goal}/${p.tier.goal}</span>
+            <span class="achClaimHint">TAP TO CLAIM · ${p.tier.reward} 💎</span>
+        </button>`;
+    } else {
+        const pct = Math.round((p.count / p.tier.goal) * 100);
+        html += `<div class="achProgressRow"><strong>${p.count}/${p.tier.goal}</strong><span class="achReward">Reward: ${p.tier.reward} 💎</span></div>
         <div class="achBar"><div class="achBarFill" style="width:${pct}%"></div></div>`;
-    ANIMAL_TAMER_TIERS.forEach((t, i) => {
-        const cls = i < p.claimed ? 'achTierDone' : (i === p.claimed ? 'achTierCurrent' : '');
-        html += `<div class="achTier ${cls}"><span>${i < p.claimed ? '✓ ' : ''}${t.goal}/${t.goal}</span><span>${t.reward} 💎</span></div>`;
-    });
+    }
     html += `</div>`;
     achievementsList.innerHTML = html;
 }
@@ -2259,6 +2259,7 @@ function renderStatsScreen(force) {
         <div class="statsCardTitle">🧑 ${escapeHtml(character.name || 'Player')}</div>
         <div class="statsRow"><span>⏱️ Total game time played</span><strong>${formatPlayTime(gameStats.playSeconds)}</strong></div>
         <div class="statsRow"><span>🐾 Pets tamed</span><strong>${p.count}/${totalPets}</strong></div>
+        <div class="statsRow"><span>🏆 Achievements accomplished</span><strong>${p.done ? 1 : 0}/${ACHIEVEMENT_TOTAL}</strong></div>
         <div class="statsRow"><span>⭐ Character level</span><strong>${character.level}</strong></div>
         <div class="statsRow"><span>🪙 Coins</span><strong>${inventory.coins}</strong></div>
         <div class="statsRow"><span>💎 Diamonds</span><strong>${inventory.diamonds}</strong></div>
@@ -2272,17 +2273,7 @@ function renderStatsScreen(force) {
         <div class="statsRow"><span>🪙 Coin gain</span><strong>+${pct(b.coin)}%</strong></div>
         <div class="statsRow"><span>🖐️ Manual gather</span><strong>+${pct(b.manualGather)}%</strong></div>
     </div>
-    <div class="statsCard">
-        <div class="statsCardTitle">🏆 Achievements accomplished</div>`;
-    if (p.claimed === 0) {
-        html += `<div class="statsMuted">None yet.</div>`;
-    } else {
-        html += `<div class="statsRow"><span>🐾 Animal Tamer</span><strong>${p.claimed}/${ANIMAL_TAMER_TIERS.length} levels</strong></div>`;
-        ANIMAL_TAMER_TIERS.slice(0, p.claimed).forEach(t => {
-            html += `<div class="statsRow"><span class="achTierDone">✓ ${t.goal}/${t.goal} pets tamed</span><strong>+${t.reward} 💎</strong></div>`;
-        });
-    }
-    html += `</div>`;
+    </div>`;
     statsContent.innerHTML = html;
 }
 
@@ -2315,3 +2306,17 @@ bindOverlayButton(document.getElementById('statsClose'), (e) => {
     if (e) e.preventDefault();
     if (statsOverlay) statsOverlay.style.display = 'none';
 });
+
+// Tapping the completed-tier box claims it (delegated, because the card is redrawn as it changes).
+// touchstart + mousedown like every other button; preventDefault on touch stops the follow-up
+// mouse event so one tap can never claim two tiers.
+function handleAchievementClaim(e) {
+    const box = e.target.closest ? e.target.closest('[data-claim="animalTamer"]') : null;
+    if (!box) return;
+    if (e.cancelable) e.preventDefault();
+    if (claimAnimalTamerTier() > 0) renderAchievementsScreen(true);
+}
+if (achievementsList) {
+    achievementsList.addEventListener('touchstart', handleAchievementClaim, { passive: false });
+    achievementsList.addEventListener('mousedown', handleAchievementClaim);
+}

@@ -900,7 +900,8 @@ body, html {
     cursor: pointer;
 }
 #achievementsClose:active, #statsClose:active { background: #e74c3c; }
-#achievementsDiamondRow {
+/* Diamond total under the gold in the SHOP (same shape as #shopGoldRow, blue instead of gold). */
+#shopDiamondRow {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -911,7 +912,7 @@ body, html {
     border-radius: 8px;
     font-size: 13px;
 }
-#achievementsDiamondRow strong { color: #5dade2; font-size: 16px; }
+#shopDiamondRow strong { color: #5dade2; font-size: 16px; }
 #achievementsList, #statsContent {
     flex: 1;
     min-height: 0;
@@ -939,9 +940,30 @@ body, html {
 .achReward { color: #5dade2; font-weight: bold; }
 .achBar { height: 10px; background: #2a2a30; border: 1px solid #444; border-radius: 6px; overflow: hidden; margin-bottom: 10px; }
 .achBarFill { height: 100%; width: 0%; background: linear-gradient(90deg, #2e86c1, #5dade2); }
-.achTier { display: flex; justify-content: space-between; padding: 3px 6px; border-radius: 4px; color: #7f8c8d; }
-.achTierDone { color: #2ecc71; }
-.achTierCurrent { color: #fff; background: rgba(93, 173, 226, 0.15); }
+/* A completed tier: a big tappable box (pulses so it reads as "claim me"). */
+.achClaimBox {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    padding: 16px 10px;
+    background: rgba(93, 173, 226, 0.15);
+    border: 3px solid #5dade2;
+    border-radius: 10px;
+    color: #fff;
+    font-family: monospace;
+    cursor: pointer;
+    animation: achPulse 1.6s ease-in-out infinite;
+}
+.achClaimBox:active { filter: brightness(1.25); }
+.achClaimGoal { font-size: 26px; font-weight: bold; }
+.achClaimHint { font-size: 12px; font-weight: bold; color: #5dade2; }
+@keyframes achPulse {
+    0%, 100% { box-shadow: 0 0 6px rgba(93, 173, 226, 0.35); }
+    50%      { box-shadow: 0 0 16px rgba(93, 173, 226, 0.85); }
+}
+@media (prefers-reduced-motion: reduce) { .achClaimBox { animation: none; } }
 .statsRow { display: flex; justify-content: space-between; gap: 10px; }
 .statsRow strong { color: #fff; text-align: right; }
 .statsMuted { color: #7f8c8d; }
