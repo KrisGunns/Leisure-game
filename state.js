@@ -102,7 +102,7 @@ const PERK_CHANCES = {
     pandaFever:     [ [20, 0.05], [30, 0.08] ],   // panda: Bamboo Fever
     monkeySwing:    [ [20, 0.05], [30, 0.08] ],   // monkey: swing on the vines
     beeDoubleHoney: [ [20, 0.10], [30, 0.12] ],   // bee: double honey when dropping off
-    beeDoubleExp:   [ [30, 0.10] ],               // bee: double flower exp
+    beeDoubleExp:   [ [20, 0.20] ],               // bee: double flower exp
     bearDoubleFish: [ [20, 0.10], [30, 0.15] ]    // bear: double catch
 };
 
@@ -134,6 +134,26 @@ const SQUIRREL_BOOST_MULT = 1.5;
 // level, the amount, and the description can't drift apart.
 const DOG_DIG_BONUS_COIN_LEVEL = 25;
 const DOG_DIG_BONUS_COIN_AMOUNT = 2;
+
+// Lv30 coin perk shared by the dog's dig and the pig's mud play: from this level on, a payout
+// gets PLAY_COIN_PERK_BONUS extra coins, and PLAY_COIN_PERK_DOUBLE_CHANCE is the chance the
+// whole payout is doubled. Below the level, the caller's own base double chance applies
+// (dog: none, pig: 5%). Read by the dog's dig payout and the pig's mud-play payout
+// (entities.js) and by both pets' Pet Detail descriptions (ui.js), so the numbers can't drift.
+const PLAY_COIN_PERK_LEVEL = 30;
+const PLAY_COIN_PERK_BONUS = 2;
+const PLAY_COIN_PERK_DOUBLE_CHANCE = 0.25;
+
+function getPlayCoinPayout(baseCoins, level, baseDoubleChance) {
+    let coins = baseCoins;
+    let doubleChance = baseDoubleChance || 0;
+    if (level >= PLAY_COIN_PERK_LEVEL) {
+        coins += PLAY_COIN_PERK_BONUS;
+        doubleChance = PLAY_COIN_PERK_DOUBLE_CHANCE;
+    }
+    if (Math.random() < doubleChance) coins *= 2;
+    return coins;
+}
 
 // Chicken "chain egg" (Lv30): after a forage lays an egg, the NEXT forage gets this much extra
 // egg chance on top of the base; every further egg in a row adds it again, up to the cap. A

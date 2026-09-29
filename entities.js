@@ -3466,6 +3466,7 @@ class Pet {
                 // Lv25+ (DOG_DIG_BONUS_COIN_LEVEL, state.js): the dig awards DOG_DIG_BONUS_COIN_AMOUNT
                 // coins instead of 1.
                 let dogCoinsBase = (this.level >= DOG_DIG_BONUS_COIN_LEVEL) ? DOG_DIG_BONUS_COIN_AMOUNT : 1;
+                dogCoinsBase = getPlayCoinPayout(dogCoinsBase, this.level, 0);   // Lv30: +2 coins, 25% double
                 let dogCoinsEarned = Math.round(dogCoinsBase * coinBonus);
                 inventory.coins += dogCoinsEarned;
                 if (typeof spawnCoinPopup === 'function') spawnCoinPopup(this.homeRegion, this.x + this.size / 2, this.y, dogCoinsEarned);
@@ -3633,7 +3634,7 @@ class Pet {
             if (this.stateTimer <= 0 && this.mudParticles.length === 0) {
                 // 2 coins for the mud-play session, 5% chance to double to 4.
                 let mudCoins = 2;
-                if (Math.random() < 0.05) mudCoins *= 2;
+                mudCoins = getPlayCoinPayout(mudCoins, this.level, 0.05);   // Lv30: +2 coins, 25% double (else 5% double)
                 let pigCoinsEarned = Math.round(mudCoins * coinBonus);
                 inventory.coins += pigCoinsEarned;
                 if (typeof spawnCoinPopup === 'function') spawnCoinPopup(this.homeRegion, this.x + this.size / 2, this.y, pigCoinsEarned);

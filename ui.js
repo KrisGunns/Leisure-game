@@ -316,6 +316,7 @@ function getPetPerkDescriptions(type) {
         perks.push({ level: digLvl1, text: `${Math.round(digChance1 * 100)}% chance per forage to dig for a bonus coin` });
         perks.push({ level: DOG_DIG_BONUS_COIN_LEVEL, text: `Digging now awards ${DOG_DIG_BONUS_COIN_AMOUNT} coins instead of 1` });
         perks.push({ level: digLvl2, text: `Digging chance doubles to ${Math.round(digChance2 * 100)}%` });
+        perks.push({ level: PLAY_COIN_PERK_LEVEL, text: `Digging pays +${PLAY_COIN_PERK_BONUS} more coins, and ${Math.round(PLAY_COIN_PERK_DOUBLE_CHANCE * 100)}% of digs pay double coins` });
     } else if (type === 'chicken') {
         addChance('chickenEgg', c => `${c} chance per forage to lay a collectible egg`, c => `Egg chance increases to ${c}`);
         perks.push({ level: CHAIN_EGG_MIN_LEVEL, text: `Chain egg: after laying an egg, the next forage gets +${Math.round(CHAIN_EGG_STEP * 100)}% egg chance, growing another +${Math.round(CHAIN_EGG_STEP * 100)}% with each egg in a row (up to +${Math.round(CHAIN_EGG_MAX * 100)}%). A forage with no egg resets it` });
@@ -325,6 +326,7 @@ function getPetPerkDescriptions(type) {
         addChance('squirrelBoost', c => `${c} chance per forage to make every pet in this region ${Math.round((SQUIRREL_BOOST_MULT - 1) * 100)}% faster for ${SQUIRREL_BOOST_SECONDS}s`, c => `Speed-boost chance increases to ${c}`);
     } else if (type === 'pig') {
         addChance('pigMud', c => `${c} chance per forage to play in mud +2 coins (only while standing in the mud patch)`, c => `Mud-play chance increases to ${c}`);
+        perks.push({ level: PLAY_COIN_PERK_LEVEL, text: `Mud play pays +${PLAY_COIN_PERK_BONUS} more coins, and ${Math.round(PLAY_COIN_PERK_DOUBLE_CHANCE * 100)}% of sessions pay double coins` });
     } else if (type === 'cat') {
         addChance('catDouble', c => `${c} chance per forage to double the food/water gained`, c => `Double-forage chance increases to ${c}`);
         addChance('catSchrodinger', c => `${c} chance per forage to enter Schr\u00F6dinger's state`, c => `Schr\u00F6dinger's state chance increases to ${c}`);
@@ -1295,6 +1297,33 @@ const characterClose = document.getElementById('characterClose');
 // drift from what's actually applied to foraging/gathering), and the full perk
 // checklist with the perks unlocked in the Perk Tree highlighted — same visual treatment
 // as a pet's Level Perks list in showPetDetail().
+// The Perk Tree has several nodes of the same type (Basic Resource appears 6 times, Glazed 3,
+// Fishy Business 2, Riches 3, Bananas! 2). The Character screen lists them BULKED: one entry per
+// type, showing how many of that type are unlocked and the combined % they add, out of the
+// combined % available across the whole tree. Everything is read from PERK_TREE / PERK_TYPES
+// (state.js), so a new node or a retuned % updates this list automatically.
+function getBulkedPerkGroups() {
+    const groups = [];
+    const byType = {};
+    PERK_TREE.forEach(p => {
+        let g = byType[p.type];
+        if (!g) {
+            g = byType[p.type] = {
+                type: p.type,
+                name: p.name,
+                icon: p.icon,
+                desc: (typeof PERK_TYPES !== 'undefined' && PERK_TYPES[p.type] && PERK_TYPES[p.type].desc) || p.text,
+                total: 0, owned: 0, totalAdd: 0, ownedAdd: 0
+            };
+            groups.push(g);
+        }
+        g.total++;
+        g.totalAdd += p.add;
+        if (hasPerk(p.id)) { g.owned++; g.ownedAdd += p.add; }
+    });
+    return groups;
+}
+
 function updateCharacterScreen() {
     const nameDisplay = document.getElementById('characterNameDisplay');
     const levelValue = document.getElementById('characterLevelValue');
@@ -1366,11 +1395,11 @@ function updateCharacterScreen() {
     if (perksList && typeof PERK_TREE !== 'undefined') {
         while (perksList.firstChild) perksList.removeChild(perksList.firstChild);
         // Bottom-to-top, left-to-right — the same order the tree is read in.
-        [...PERK_TREE].sort((a, b) => (a.tier - b.tier) || (a.col - b.col)).forEach(p => {
+        getBulkedPerkGroups().forEach(p => {
             let li = document.createElement('li');
-            let unlocked = hasPerk(p.id);
+            let unlocked = p.owned > 0;
             li.style.color = unlocked ? '#2ecc71' : '#7f8c8d';
-            li.textContent = `${unlocked ? '✓ ' : ''}${p.name}: ${p.text}`;
+            li.textContent = `${p.owned === p.total ? '✓ ' : ''}${p.icon} ${p.name} (${p.owned}/${p.total}): +${Math.round(p.ownedAdd * 100)}% of +${Math.round(p.totalAdd * 100)}% ${p.desc}`;
             perksList.appendChild(li);
         });
     }

@@ -184,6 +184,19 @@ reference images. Don't forget to invert the pictures for the motion in game."):
 
 ---
 
+### 2026-09-28 (37) — Lv30 coin perk for dig & mud play; bee double-exp moved to Lv20; Character perk list bulked by type
+
+**Changed:**
+- **Dog dig and pig mud play, Lv30:** both payouts now get **+2 coins** and a **25% chance to double the whole payout**. One shared helper, `getPlayCoinPayout(baseCoins, level, baseDoubleChance)` (state.js, with `PLAY_COIN_PERK_LEVEL`/`_BONUS`/`_DOUBLE_CHANCE`), is called by the dog's `'digging'` payout and the pig's `'mud_play'` payout (entities.js), and both Pet Detail perk lists read the same constants (ui.js). Below Lv30 nothing changed: the dog still pays 1 coin (2 from Lv25, no double chance) and the pig still pays 2 with its old 5% double. At Lv30: dog 2+2 = 4 (8 on a double), pig 2+2 = 4 (8 on a double); the Riches perk still multiplies the final amount afterwards. Averages are 5 coins per dig / mud play at Lv30.
+- **Bee double flower exp:** `PERK_CHANCES.beeDoubleExp` was `[[30, 0.10]]`, now `[[20, 0.20]]` — a Lv20 perk with a 20% chance for a flower to count double toward the next level. The bee's Pet Detail line is generated from that table, so it now reads "Lv.20: 20% chance for a flower to give double exp" with no text edit. Bees that are already Lv20-29 start getting the perk immediately; nothing is stored in saves.
+- **Character screen perk list is bulked by type:** the tree has 16 nodes but only 5 types, so the list now shows one line per type instead of 16 near-identical ones — e.g. `🍪💧 Basic Resource (2/6): +60% of +180% food & water gained from pets`. The count is unlocked/total nodes of that type in the tree, the first % is what's unlocked now and the second is what the whole tree could give. New `getBulkedPerkGroups()` (ui.js) builds it from `PERK_TREE`/`PERK_TYPES`, so a new node or a retuned % updates the list by itself. A line is green as soon as one node of the type is unlocked and gets a ✓ once every node of the type is. The Perk Tree screen itself is unchanged (still one node per perk, with its own text).
+
+**Assumption to confirm:** "+2 coins at Lv30" was read as *+2 extra coins on top of the payout each pet already gives* (so dog and pig both pay 4), not "the payout becomes 2". If you meant the payout itself becomes 2, set `PLAY_COIN_PERK_BONUS` to 0 (dog) — pig already pays 2 at base.
+
+**Verification:** applied by a find-and-replace patcher that refuses to touch a file unless every anchor line is found exactly once. The payout helper was sampled 200,000 times per case (dog/pig, Lv29 vs Lv30) and the bulked perk totals were computed from the real `PERK_TYPES`/`PERK_TREE_LAYOUT` data. **Not tested:** an in-browser run of the game.
+
+---
+
 ### 2026-09-28 (36) — Fixed inverted movement re-introduced in bird/chicken/squirrel by entry 35
 
 **Fixed:**
