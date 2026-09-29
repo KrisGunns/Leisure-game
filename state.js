@@ -13,6 +13,7 @@ const bagFish = document.getElementById('bagFish');
 const bagCoins = document.getElementById('bagCoins');
 const bagEggs = document.getElementById('bagEggs');
 const bagBananas = document.getElementById('bagBananas');
+const bagDiamonds = document.getElementById('bagDiamonds');
 const regionSelector = document.getElementById('regionSelector');
 const whistleBtn = document.getElementById('whistleBtn');
 
@@ -229,7 +230,8 @@ const inventory = {
     fish: 0,
     coins: 0,
     eggs: 0,
-    bananas: 0
+    bananas: 0,
+    diamonds: 0   // 💎 earned from achievements (see ANIMAL_TAMER_TIERS)
 };
 
 // NEW: Core Character Database Profile Properties
@@ -559,6 +561,7 @@ function tickShopBuffs() {
     let dt = (shopBuffLastTick === null) ? 0 : (now - shopBuffLastTick) / 1000;
     shopBuffLastTick = now;
     if (dt > 0.25) dt = 0.25;
+    gameStats.playSeconds += dt;   // total time played: only frames that actually render, so it pauses while backgrounded
 
     SHOP_ITEMS.forEach(item => {
         if (shopBuffs[item.id] > 0) {
@@ -668,6 +671,119 @@ function showLevelUpToast(level) {
     }, 1600);
 }
 
+// ------------------------------------------------------------
+// ACHIEVEMENTS & STATISTICS (MENU -> 🏆 ACHIEVEMENTS / 📊 STATISTICS)
+// ------------------------------------------------------------
+// Diamonds 💎 are a new resource (inventory.diamonds) that achievements pay out. Nothing spends
+// them yet. Achievements are checked from updateUI() (ui.js) via checkAchievements(), and the
+// rewards are paid AUTOMATICALLY the moment a tier's goal is reached.
+//
+// "Animal Tamer" is a ladder of tiers. Only the current tier shows: 0/1 -> at 1/1 it pays and the
+// next tier starts at 1/3, and so on. `claimed` (saved) is how many tiers have been paid; the
+// number of pets tamed is NOT saved — it is recounted from the pets themselves, so it can never
+// drift. Edit a row to retune a goal or a reward; add a row to add a tier.
+const ANIMAL_TAMER_TIERS = [
+    { goal: 1,  reward: 1 },
+    { goal: 3,  reward: 2 },
+    { goal: 5,  reward: 4 },
+    { goal: 7,  reward: 6 },
+    { goal: 9,  reward: 8 },
+    { goal: 11, reward: 10 },
+    { goal: 13, reward: 10 },
+    { goal: 15, reward: 10 },
+    { goal: 17, reward: 15 }
+];
+
+const achievements = { animalTamer: { claimed: 0 } };   // saved (see saveGameProgress)
+const gameStats = { playSeconds: 0 };                    // saved; ticked by tickShopBuffs() below
+
+// The 17 pets the Pets Codex lists: every pet in petsByRegion except the extra bees bought at the
+// hive (only the starter bee is a Codex entry), with the bird taken from birdPet (it can be visiting
+// another region's array while on an excursion) plus the two sugar gliders.
+function getCodexPets() {
+    const list = [];
+    if (typeof petsByRegion === 'undefined') return list;
+    for (const r in petsByRegion) {
+        petsByRegion[r].forEach((p, i) => {
+            if (p.type === 'bird') return;
+            if (p.type === 'bee' && i > 0) return;
+            list.push(p);
+        });
+    }
+    if (typeof birdPet !== 'undefined' && birdPet) list.push(birdPet);
+    if (typeof gliderPets !== 'undefined') gliderPets.forEach(g => list.push(g));
+    return list;
+}
+
+// Same rule as the Pets Codex's TAMED label: pets that arrive wild (Lv1) are tamed at Lv2; the
+// bee and the sugar gliders are tamed from the start. A pet that isn't in the game yet (its region
+// or shop unlock isn't bought) is not tamed.
+function isPetTamed(p) {
+    if (!p || !isPetAvailable(p)) return false;
+    const region = (p.type === 'glider') ? 9 : (p.homeRegion || p.region);
+    if (region && !isRegionOwned(region)) return false;
+    if (p.type === 'bee' || p.type === 'glider') return true;
+    return p.level >= 2;
+}
+
+function getTamedPetCount() {
+    return getCodexPets().filter(isPetTamed).length;
+}
+
+// Where the Animal Tamer ladder stands: `count` pets tamed, `claimed` tiers paid, `tier` = the tier
+// being worked on (null when every tier is done).
+function getAnimalTamerProgress() {
+    const count = getTamedPetCount();
+    const claimed = Math.max(0, Math.min(ANIMAL_TAMER_TIERS.length, Math.floor(Number(achievements.animalTamer.claimed)) || 0));
+    return { count: count, claimed: claimed, tier: ANIMAL_TAMER_TIERS[claimed] || null, done: claimed >= ANIMAL_TAMER_TIERS.length };
+}
+
+// Pays every tier whose goal has been reached. Safe to call every frame; does nothing unless a
+// tier has just been completed. A save from before achievements existed that already has many pets
+// tamed is paid for all the tiers it has earned, in one go (one combined notice).
+function checkAchievements() {
+    if (typeof petsByRegion === 'undefined') return;
+    const progress = getAnimalTamerProgress();
+    let claimed = progress.claimed;
+    let earned = 0, lastGoal = 0, tiersPaid = 0;
+    while (claimed < ANIMAL_TAMER_TIERS.length && progress.count >= ANIMAL_TAMER_TIERS[claimed].goal) {
+        earned += ANIMAL_TAMER_TIERS[claimed].reward;
+        lastGoal = ANIMAL_TAMER_TIERS[claimed].goal;
+        claimed++;
+        tiersPaid++;
+    }
+    achievements.animalTamer.claimed = claimed;
+    if (tiersPaid > 0) {
+        inventory.diamonds += earned;
+        saveGameProgress();
+        showAchievementToast(tiersPaid === 1
+            ? `🏆 Animal Tamer ${lastGoal}/${lastGoal} complete!  +${earned} 💎`
+            : `🏆 Animal Tamer: ${tiersPaid} levels complete!  +${earned} 💎`);
+    }
+}
+
+// Non-blocking notice, same approach as showLevelUpToast().
+function showAchievementToast(text) {
+    let toast = document.getElementById('achievementToast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'achievementToast';
+        toast.style.cssText = `
+            position: fixed; top: 30%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.88); color: #5dade2; font-family: monospace;
+            font-weight: bold; font-size: 13px; padding: 10px 16px;
+            border: 2px solid #5dade2; border-radius: 8px; z-index: 9999;
+            pointer-events: none; text-align: center;
+            transition: opacity 0.35s ease; opacity: 0;
+        `;
+        document.body.appendChild(toast);
+    }
+    toast.textContent = text;
+    toast.style.opacity = '1';
+    clearTimeout(toast._hideTimer);
+    toast._hideTimer = setTimeout(() => { toast.style.opacity = '0'; }, 3200);
+}
+
 const input = {
     up: false,
     down: false,
@@ -690,7 +806,8 @@ function saveGameProgress() {
                 fish: inventory.fish,
                 coins: inventory.coins,
                 eggs: inventory.eggs,
-                bananas: inventory.bananas
+                bananas: inventory.bananas,
+                diamonds: inventory.diamonds
             },
             currentRegion: currentRegion,
             // The hive's own stored (uncollected) honey pool — separate from
@@ -758,6 +875,9 @@ function saveGameProgress() {
             }));
         }
 
+        stateMatrix.achievements = { animalTamer: { claimed: achievements.animalTamer.claimed } };
+        stateMatrix.playSeconds = gameStats.playSeconds;
+
         stateMatrix.characterData = character;
 
         stateMatrix.shopBuffs = {
@@ -786,6 +906,7 @@ function loadGameProgress() {
             inventory.coins = stateMatrix.inventory.coins || 0;
             inventory.eggs = stateMatrix.inventory.eggs || 0;
             inventory.bananas = stateMatrix.inventory.bananas || 0;
+            inventory.diamonds = Math.max(0, Math.floor(Number(stateMatrix.inventory.diamonds)) || 0);   // older saves have none
         }
 
         if (typeof region4Hive !== 'undefined' && region4Hive) {
@@ -826,6 +947,15 @@ function loadGameProgress() {
                 shopBuffs[item.id] = (isFinite(remaining) && remaining > 0) ? Math.min(remaining, item.duration) : 0;
             });
         }
+
+        // Achievements + total play time. Older saves have neither: claimed starts at 0 and
+        // checkAchievements() then pays any tiers the save's pets have already earned.
+        if (stateMatrix.achievements && stateMatrix.achievements.animalTamer) {
+            const c = Math.floor(Number(stateMatrix.achievements.animalTamer.claimed));
+            achievements.animalTamer.claimed = (isFinite(c) && c > 0) ? Math.min(c, ANIMAL_TAMER_TIERS.length) : 0;
+        }
+        const savedPlay = Number(stateMatrix.playSeconds);
+        gameStats.playSeconds = (isFinite(savedPlay) && savedPlay > 0) ? savedPlay : 0;
 
         if (stateMatrix.currentRegion) {
             currentRegion = stateMatrix.currentRegion;

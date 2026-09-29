@@ -861,3 +861,96 @@ body, html {
 }
 .perkDetailStatusOk { color: #2ecc71; }
 
+
+/* ---------------- ACHIEVEMENTS & STATISTICS ---------------- */
+/* Same dark panel as the Shop / Perk Tree (opaque, layered over the orange MENU). */
+#achievementsOverlay, #statsOverlay {
+    display: none;
+    position: absolute;
+    top: 50px;
+    bottom: 50px;
+    left: 20px;
+    right: 20px;
+    background: #141414;
+    border: 3px solid #444;
+    border-radius: 12px;
+    color: #fff;
+    z-index: 10000;
+    flex-direction: column;
+    padding: 15px;
+}
+#achievementsHeader, #statsHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #444;
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+}
+#achievementsClose, #statsClose {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: #c0392b;
+    border: none;
+    color: white;
+    padding: 4px 10px;
+    font-weight: bold;
+    border-radius: 4px;
+    cursor: pointer;
+}
+#achievementsClose:active, #statsClose:active { background: #e74c3c; }
+#achievementsDiamondRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    background: rgba(93, 173, 226, 0.10);
+    border: 1px solid #2e6a94;
+    border-radius: 8px;
+    font-size: 13px;
+}
+#achievementsDiamondRow strong { color: #5dade2; font-size: 16px; }
+#achievementsList, #statsContent {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-bottom: 10px;
+    font-family: monospace;
+}
+.achCard, .statsCard {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 12px;
+    line-height: 1.6;
+    flex-shrink: 0;
+}
+.achCardTitle, .statsCardTitle { font-size: 14px; font-weight: bold; color: #f1c40f; }
+.achCardDesc { color: #95a5a6; font-size: 11px; margin-bottom: 8px; }
+.achProgressRow { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+.achProgressRow strong { font-size: 16px; color: #fff; }
+.achReward { color: #5dade2; font-weight: bold; }
+.achBar { height: 10px; background: #2a2a30; border: 1px solid #444; border-radius: 6px; overflow: hidden; margin-bottom: 10px; }
+.achBarFill { height: 100%; width: 0%; background: linear-gradient(90deg, #2e86c1, #5dade2); }
+.achTier { display: flex; justify-content: space-between; padding: 3px 6px; border-radius: 4px; color: #7f8c8d; }
+.achTierDone { color: #2ecc71; }
+.achTierCurrent { color: #fff; background: rgba(93, 173, 226, 0.15); }
+.statsRow { display: flex; justify-content: space-between; gap: 10px; }
+.statsRow strong { color: #fff; text-align: right; }
+.statsMuted { color: #7f8c8d; }
+
+/* Seven buttons now live in the MENU: tighter spacing, and scroll instead of clipping on short screens. */
+#menuButtonList {
+    gap: 12px;
+    padding-bottom: 16px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.menuBtn { flex-shrink: 0; padding: 14px; }

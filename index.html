@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Just a little leisure</title>
-    <link rel="stylesheet" href="style.css?v=1.8">
+    <link rel="stylesheet" href="style.css?v=1.9">
 </head>
 <body>
     <div id="gameContainer">
@@ -66,6 +66,7 @@
             <div class="bagItemRow"><span>🍯 Wild Honey:</span><strong id="bagHoney">0</strong></div>
             <div class="bagItemRow"><span>🐟 Fish:</span><strong id="bagFish">0</strong></div>
             <div class="bagItemRow"><span>🍌 Bananas:</span><strong id="bagBananas">0</strong></div>
+            <div class="bagItemRow"><span>💎 Diamonds:</span><strong id="bagDiamonds">0</strong></div>
         </div>
     </div>
 
@@ -135,6 +136,26 @@
             <div id="perkTreeCanvas"></div>
         </div>
         <div id="perkDetail"></div>
+    </div>
+
+    <div id="achievementsOverlay" style="display: none;">
+        <div id="achievementsHeader">
+            <h2>🏆 ACHIEVEMENTS</h2>
+            <button id="achievementsClose">X</button>
+        </div>
+        <div id="achievementsDiamondRow">
+            <span>💎 Diamonds</span>
+            <strong id="achievementsDiamondValue">0</strong>
+        </div>
+        <div id="achievementsList"></div>
+    </div>
+
+    <div id="statsOverlay" style="display: none;">
+        <div id="statsHeader">
+            <h2>📊 STATISTICS</h2>
+            <button id="statsClose">X</button>
+        </div>
+        <div id="statsContent"></div>
     </div>
 
     <div id="devPanel">
@@ -388,9 +409,11 @@
             <div id="menuButtonList">
                 <button id="openCodexBtn" class="menuBtn">🐾 PETS</button>
                 <button id="openBagBtn" class="menuBtn">🎒 BAG</button>
-                <button id="openCharacterBtn" class="menuBtn">🧑 CHAR</button>
+                <button id="openCharacterBtn" class="menuBtn">🧑 TAMERS</button>
                 <button id="openShopBtn" class="menuBtn">🛒 SHOP</button>
                 <button id="openPerkTreeBtn" class="menuBtn">🌳 PERK TREE</button>
+                <button id="openAchievementsBtn" class="menuBtn">🏆 ACHIEVEMENTS</button>
+                <button id="openStatsBtn" class="menuBtn">📊 STATISTICS</button>
             </div>
         </div>
     </div>

@@ -143,6 +143,26 @@ same size."):
 
 ---
 
+### 2026-09-29 (38) — Diamonds + Animal Tamer achievement, ACHIEVEMENTS and STATISTICS menu screens, CHAR button renamed TAMERS
+
+**Added:**
+- **💎 Diamonds:** new resource, `inventory.diamonds` (state.js), shown in the Bag (`bagDiamonds` row in index.html) and saved/loaded with the rest of the inventory (older saves load with 0). Nothing spends them yet.
+- **Animal Tamer achievement:** `ANIMAL_TAMER_TIERS` (state.js) is a data table of `{goal, reward}` — 1/1 → 1💎, 3/3 → 2, 5/5 → 4, 7/7 → 6, 9/9 → 8, 11/11 → 10, 13/13 → 10, 15/15 → 10, 17/17 → 15 (66 in total). Only the current tier is shown, as N/goal; completing it pays out automatically (with a toast) and the next tier starts from the same count (1/1 → 1/3 → …). Checked from `updateUI()` via `checkAchievements()`. Saved as `achievements.animalTamer.claimed` (tiers already paid); the pet count itself is not saved, it is recounted every time so it can't drift. A save from before this update is paid, in one go, for every tier its pets have already earned.
+- **What counts as "tamed":** the 17 pets the Pets Codex lists (`getCodexPets()`): the same rule as the Codex's TAMED label — wild pets at Lv2+, while the starter bee and both sugar gliders count as soon as their region is bought. Pets that aren't in the game yet (shop pet or region not bought) don't count, and bees bought at the hive don't add to the total.
+- **Total time played:** `gameStats.playSeconds` (saved as `playSeconds`), ticked once per rendered frame inside `tickShopBuffs()` (same clamped real-clock method as the shop buffs, so it pauses while the app is backgrounded).
+- **MENU → 🏆 ACHIEVEMENTS:** the Animal Tamer card with progress bar, reward, and the full ladder (✓ for paid tiers, highlight for the current one), plus the diamond total. New `renderAchievementsScreen()` (ui.js).
+- **MENU → 📊 STATISTICS:** total game time played, pets tamed (x/17), character level, coins, diamonds, all the character bonuses (same numbers as the TAMERS screen, from `getCharacterBonuses()`), and the achievements accomplished (paid tiers). New `renderStatsScreen()` (ui.js). Both screens redraw only when what they show changes.
+
+**Changed:**
+- The MENU's `🧑 CHAR` button now reads `🧑 TAMERS` (same button id, `openCharacterBtn`, same screen; the screen's own title still says CHARACTER).
+- The MENU now has 7 buttons, so `#menuButtonList` got a tighter gap and scrolls if the screen is short. style.css version bumped to `?v=1.9`.
+
+**Files:** state.js, ui.js, index.html, style.css, CHANGELOG.md.
+
+**Verification:** run in real Chromium at phone size (390×780): fresh load with no JS errors; tamed pets counted 0 → 1 → 3 → 5 (bee and glider counted on buying their regions, an unbought Lv5 cat not counted); rewards paid once each (1, 3, 7 diamonds running total); screens render; play time ticks; reload keeps diamonds/claimed/time; a save with the achievement data removed is paid retroactively; all 17 tamed pays the full 66 diamonds. **Not tested:** on a real phone / the APK wrapper.
+
+---
+
 ### 2026-09-28 (37) — Lv30 25% double-coin perk for dig & mud play; bee double-exp moved to Lv20; Character perk list bulked by type
 
 **Changed:**

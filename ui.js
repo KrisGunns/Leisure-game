@@ -497,6 +497,12 @@ function updateUI() {
     if (bagHoney) bagHoney.textContent = inventory.honey;
     if (bagFish) bagFish.textContent = inventory.fish;
     if (bagBananas) bagBananas.textContent = inventory.bananas;
+    if (bagDiamonds) bagDiamonds.textContent = inventory.diamonds;
+
+    // Achievements: pays any Animal Tamer level that has just been completed, then keeps the
+    // Achievements / Statistics screens live while they're open (both are cheap no-ops otherwise).
+    if (typeof checkAchievements === 'function') checkAchievements();
+    if (typeof refreshAchievementScreens === 'function') refreshAchievementScreens();
 
     const interactBtn = document.getElementById('interactBtn');
     if (interactBtn) {
@@ -2181,3 +2187,131 @@ if (hiveHoneyLabel) {
     hiveHoneyLabel.addEventListener('touchstart', handleCollectHiveHoney, { passive: false });
     hiveHoneyLabel.addEventListener('mousedown', handleCollectHiveHoney);
 }
+
+// ============================================================
+// ACHIEVEMENTS + STATISTICS screens (MENU -> 🏆 ACHIEVEMENTS / 📊 STATISTICS).
+// The data and the payout logic live in state.js (ANIMAL_TAMER_TIERS, checkAchievements(), gameStats);
+// this is only the display. Both screens redraw from updateUI() while open, but only when what
+// they show has changed (a 'signature'), since updateUI() runs every frame.
+// ============================================================
+const achievementsOverlay = document.getElementById('achievementsOverlay');
+const achievementsList = document.getElementById('achievementsList');
+const achievementsDiamondValue = document.getElementById('achievementsDiamondValue');
+const statsOverlay = document.getElementById('statsOverlay');
+const statsContent = document.getElementById('statsContent');
+let achievementsSignature = '';
+let statsSignature = '';
+
+function escapeHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// 3725 -> "1h 2m 5s"
+function formatPlayTime(totalSeconds) {
+    const s = Math.floor(totalSeconds);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return `${h}h ${m}m ${sec}s`;
+    if (m > 0) return `${m}m ${sec}s`;
+    return `${sec}s`;
+}
+
+function renderAchievementsScreen(force) {
+    if (!achievementsList) return;
+    const p = getAnimalTamerProgress();
+    const sig = [p.count, p.claimed, inventory.diamonds].join('|');
+    if (!force && sig === achievementsSignature) return;
+    achievementsSignature = sig;
+
+    if (achievementsDiamondValue) achievementsDiamondValue.textContent = inventory.diamonds;
+
+    // Only the current tier is shown as N/goal: 1/1 completes and pays, then the next reads 1/3, ...
+    const goal = p.tier ? p.tier.goal : ANIMAL_TAMER_TIERS[ANIMAL_TAMER_TIERS.length - 1].goal;
+    const shown = p.done ? goal : Math.min(p.count, goal);
+    const pct = Math.round((shown / goal) * 100);
+
+    let html = `<div class="achCard">
+        <div class="achCardTitle">🐾 Animal Tamer</div>
+        <div class="achCardDesc">Tame pets to earn 💎 diamonds. Each level pays out automatically.</div>
+        <div class="achProgressRow"><strong>${shown}/${goal}</strong><span class="achReward">${p.done ? '✓ Complete' : 'Reward: ' + p.tier.reward + ' 💎'}</span></div>
+        <div class="achBar"><div class="achBarFill" style="width:${pct}%"></div></div>`;
+    ANIMAL_TAMER_TIERS.forEach((t, i) => {
+        const cls = i < p.claimed ? 'achTierDone' : (i === p.claimed ? 'achTierCurrent' : '');
+        html += `<div class="achTier ${cls}"><span>${i < p.claimed ? '✓ ' : ''}${t.goal}/${t.goal}</span><span>${t.reward} 💎</span></div>`;
+    });
+    html += `</div>`;
+    achievementsList.innerHTML = html;
+}
+
+function renderStatsScreen(force) {
+    if (!statsContent) return;
+    const p = getAnimalTamerProgress();
+    const sig = [Math.floor(gameStats.playSeconds), p.count, p.claimed, inventory.diamonds, inventory.coins, character.level, character.name, character.perks.length].join('|');
+    if (!force && sig === statsSignature) return;
+    statsSignature = sig;
+
+    const b = getCharacterBonuses(character.level);
+    const pct = (mult) => Math.round((mult - 1) * 100);
+    const totalPets = getCodexPets().length;
+
+    let html = `<div class="statsCard">
+        <div class="statsCardTitle">🧑 ${escapeHtml(character.name || 'Player')}</div>
+        <div class="statsRow"><span>⏱️ Total game time played</span><strong>${formatPlayTime(gameStats.playSeconds)}</strong></div>
+        <div class="statsRow"><span>🐾 Pets tamed</span><strong>${p.count}/${totalPets}</strong></div>
+        <div class="statsRow"><span>⭐ Character level</span><strong>${character.level}</strong></div>
+        <div class="statsRow"><span>🪙 Coins</span><strong>${inventory.coins}</strong></div>
+        <div class="statsRow"><span>💎 Diamonds</span><strong>${inventory.diamonds}</strong></div>
+    </div>
+    <div class="statsCard">
+        <div class="statsCardTitle">✨ Bonuses</div>
+        <div class="statsRow"><span>🍪💧 Pet food/water gain</span><strong>+${pct(b.petFoodWater)}%</strong></div>
+        <div class="statsRow"><span>🍯 Pet honey gain</span><strong>+${pct(b.petHoney)}%</strong></div>
+        <div class="statsRow"><span>🐟 Pet fish gain</span><strong>+${pct(b.petFish)}%</strong></div>
+        <div class="statsRow"><span>🍌 Pet banana gain</span><strong>+${pct(b.petBanana)}%</strong></div>
+        <div class="statsRow"><span>🪙 Coin gain</span><strong>+${pct(b.coin)}%</strong></div>
+        <div class="statsRow"><span>🖐️ Manual gather</span><strong>+${pct(b.manualGather)}%</strong></div>
+    </div>
+    <div class="statsCard">
+        <div class="statsCardTitle">🏆 Achievements accomplished</div>`;
+    if (p.claimed === 0) {
+        html += `<div class="statsMuted">None yet.</div>`;
+    } else {
+        html += `<div class="statsRow"><span>🐾 Animal Tamer</span><strong>${p.claimed}/${ANIMAL_TAMER_TIERS.length} levels</strong></div>`;
+        ANIMAL_TAMER_TIERS.slice(0, p.claimed).forEach(t => {
+            html += `<div class="statsRow"><span class="achTierDone">✓ ${t.goal}/${t.goal} pets tamed</span><strong>+${t.reward} 💎</strong></div>`;
+        });
+    }
+    html += `</div>`;
+    statsContent.innerHTML = html;
+}
+
+// Called from updateUI() every frame: keeps whichever of the two screens is open live.
+function refreshAchievementScreens() {
+    if (achievementsOverlay && achievementsOverlay.style.display !== 'none') renderAchievementsScreen(false);
+    if (statsOverlay && statsOverlay.style.display !== 'none') renderStatsScreen(false);
+}
+
+function bindOverlayButton(el, handler) {
+    if (!el) return;
+    el.addEventListener('touchstart', handler, { passive: false });
+    el.addEventListener('mousedown', handler);
+}
+bindOverlayButton(document.getElementById('openAchievementsBtn'), (e) => {
+    if (e) e.preventDefault();
+    renderAchievementsScreen(true);
+    if (achievementsOverlay) achievementsOverlay.style.display = 'flex';
+});
+bindOverlayButton(document.getElementById('achievementsClose'), (e) => {
+    if (e) e.preventDefault();
+    if (achievementsOverlay) achievementsOverlay.style.display = 'none';
+});
+bindOverlayButton(document.getElementById('openStatsBtn'), (e) => {
+    if (e) e.preventDefault();
+    renderStatsScreen(true);
+    if (statsOverlay) statsOverlay.style.display = 'flex';
+});
+bindOverlayButton(document.getElementById('statsClose'), (e) => {
+    if (e) e.preventDefault();
+    if (statsOverlay) statsOverlay.style.display = 'none';
+});
