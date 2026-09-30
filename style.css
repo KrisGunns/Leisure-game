@@ -864,7 +864,7 @@ body, html {
 
 /* ---------------- ACHIEVEMENTS & STATISTICS ---------------- */
 /* Same dark panel as the Shop / Perk Tree (opaque, layered over the orange MENU). */
-#achievementsOverlay, #statsOverlay {
+#achievementsOverlay, #statsOverlay, #tasksOverlay {
     display: none;
     position: absolute;
     top: 50px;
@@ -879,7 +879,7 @@ body, html {
     flex-direction: column;
     padding: 15px;
 }
-#achievementsHeader, #statsHeader {
+#achievementsHeader, #statsHeader, #tasksHeader {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -887,7 +887,7 @@ body, html {
     padding-bottom: 10px;
     margin-bottom: 12px;
 }
-#achievementsClose, #statsClose {
+#achievementsClose, #statsClose, #tasksClose {
     position: absolute;
     top: 15px;
     right: 15px;
@@ -899,7 +899,7 @@ body, html {
     border-radius: 4px;
     cursor: pointer;
 }
-#achievementsClose:active, #statsClose:active { background: #e74c3c; }
+#achievementsClose:active, #statsClose:active, #tasksClose:active { background: #e74c3c; }
 /* Diamond total under the gold in the SHOP (same shape as #shopGoldRow, blue instead of gold). */
 #shopDiamondRow {
     display: flex;
@@ -913,7 +913,7 @@ body, html {
     font-size: 13px;
 }
 #shopDiamondRow strong { color: #5dade2; font-size: 16px; }
-#achievementsList, #statsContent {
+#achievementsList, #statsContent, #tasksList {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
@@ -976,3 +976,41 @@ body, html {
     -webkit-overflow-scrolling: touch;
 }
 .menuBtn { flex-shrink: 0; padding: 14px; }
+
+/* ---------------- TASKS ---------------- */
+.taskTop { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.taskTrackBtn {
+    flex-shrink: 0;
+    padding: 3px 9px;
+    font-family: monospace;
+    font-size: 10px;
+    font-weight: bold;
+    color: #5dade2;
+    background: transparent;
+    border: 2px solid #5dade2;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.taskTrackBtn:active { filter: brightness(1.3); }
+.taskTrackBtn.taskTracked { background: #5dade2; color: #101820; }
+.taskDone { opacity: 0.9; border-color: #2e6a94; }
+.taskCountdown { font-size: 12px; color: #95a5a6; }
+.taskCountdown strong { color: #5dade2; font-size: 15px; }
+/* The tracked task, under the MENU button: a small outlined square-ish box. */
+#trackedTaskBox {
+    position: absolute;
+    top: 58px;
+    left: 15px;
+    max-width: 150px;
+    padding: 5px 8px;
+    background: rgba(0, 0, 0, 0.55);
+    border: 2px solid rgba(255, 255, 255, 0.7);
+    border-radius: 4px;
+    color: #fff;
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: bold;
+    line-height: 1.3;
+    pointer-events: none;
+    z-index: 100;
+}

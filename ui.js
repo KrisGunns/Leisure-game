@@ -120,6 +120,7 @@ function showSchrodingerPicker(cat) {
         if (correct) {
             let catCoinsEarned = 10;
             inventory.coins += catCoinsEarned;
+            recordCatGuessCorrect();   // Schrodinger's Cat achievement + "Dead or Alive" task
             if (typeof spawnCoinPopup === 'function') spawnCoinPopup(cat.homeRegion || 1, cat.x + cat.size / 2, cat.y, catCoinsEarned);
             saveGameProgress();
         }
@@ -1172,7 +1173,7 @@ function updateCodexData() {
                     <strong>${slot.glider.label}</strong><br>
                     Status: <span class="codexTamed">TAMED</span><br>
                     Level: ${slot.glider.level}/${MAX_PET_LEVEL}<br>
-                    Next Req: ${slot.glider.level < MAX_PET_LEVEL ? '🍯' + gliderReq.honey + ' 🍌' + gliderReq.bananas + ' 💧' + gliderReq.water : 'MAX'}<br>
+                    Next Req: ${slot.glider.level < MAX_PET_LEVEL ? '🍯/🍌 ' + gliderReq.treats + ' 💧' + gliderReq.water : 'MAX'}<br>
                     ⚡ Stamina: ${Math.floor(slot.glider.stamina)}/${getGliderMaxStamina(slot.glider.level)}
                 `;
             }
@@ -2218,36 +2219,42 @@ function formatPlayTime(totalSeconds) {
 
 function renderAchievementsScreen(force) {
     if (!achievementsList) return;
-    const p = getAnimalTamerProgress();
-    const sig = [p.count, p.claimed].join('|');
+    const progresses = ACHIEVEMENT_DEFS.map(d => getAchievementProgress(d.id));
+    const sig = progresses.map(p => p.count + ':' + p.claimed).join('|');
     if (!force && sig === achievementsSignature) return;
     achievementsSignature = sig;
 
-    let html = `<div class="achCard">
-        <div class="achCardTitle">🐾 Animal Tamer</div>
-        <div class="achCardDesc">Tame pets to earn 💎 diamonds. Tap a completed level to claim it.</div>`;
-    if (p.done) {
-        html += `<div class="achProgressRow"><strong>${ANIMAL_TAMER_TIERS[ANIMAL_TAMER_TIERS.length - 1].goal}/${ANIMAL_TAMER_TIERS[ANIMAL_TAMER_TIERS.length - 1].goal}</strong><span class="achReward">✓ Complete</span></div>
+    let html = '';
+    progresses.forEach(p => {
+        const d = p.def;
+        html += `<div class="achCard">
+        <div class="achCardTitle">${d.icon} ${escapeHtml(d.title)}</div>
+        <div class="achCardDesc">${escapeHtml(d.desc)}</div>`;
+        if (p.done) {
+            const last = d.tiers[d.tiers.length - 1].goal;
+            html += `<div class="achProgressRow"><strong>${last}/${last}</strong><span class="achReward">✓ Complete</span></div>
         <div class="achBar"><div class="achBarFill" style="width:100%"></div></div>`;
-    } else if (p.claimable) {
-        // Goal reached: the tier shows as a tappable box; tapping pays it and moves to the next tier.
-        html += `<button class="achClaimBox" data-claim="animalTamer">
+        } else if (p.claimable) {
+            // Goal reached: the tier shows as a tappable box; tapping pays it and moves to the next tier.
+            html += `<button class="achClaimBox" data-claim="${d.id}">
             <span class="achClaimGoal">${p.tier.goal}/${p.tier.goal}</span>
             <span class="achClaimHint">TAP TO CLAIM · ${p.tier.reward} 💎</span>
         </button>`;
-    } else {
-        const pct = Math.round((p.count / p.tier.goal) * 100);
-        html += `<div class="achProgressRow"><strong>${p.count}/${p.tier.goal}</strong><span class="achReward">Reward: ${p.tier.reward} 💎</span></div>
+        } else {
+            const pct = Math.round((p.count / p.tier.goal) * 100);
+            html += `<div class="achProgressRow"><strong>${p.count}/${p.tier.goal}</strong><span class="achReward">Reward: ${p.tier.reward} 💎</span></div>
         <div class="achBar"><div class="achBarFill" style="width:${pct}%"></div></div>`;
-    }
-    html += `</div>`;
+        }
+        html += `</div>`;
+    });
     achievementsList.innerHTML = html;
 }
 
 function renderStatsScreen(force) {
     if (!statsContent) return;
-    const p = getAnimalTamerProgress();
-    const sig = [Math.floor(gameStats.playSeconds), p.count, p.claimed, inventory.diamonds, inventory.coins, character.level, character.name, character.perks.length].join('|');
+    const p = getAchievementProgress('animalTamer');
+    const doneCount = getAchievementsDoneCount();
+    const sig = [Math.floor(gameStats.playSeconds), p.count, doneCount, ACHIEVEMENT_DEFS.map(d => achievements[d.id].claimed).join(','), inventory.diamonds, inventory.coins, character.level, character.name, character.perks.length].join('|');
     if (!force && sig === statsSignature) return;
     statsSignature = sig;
 
@@ -2259,7 +2266,7 @@ function renderStatsScreen(force) {
         <div class="statsCardTitle">🧑 ${escapeHtml(character.name || 'Player')}</div>
         <div class="statsRow"><span>⏱️ Total game time played</span><strong>${formatPlayTime(gameStats.playSeconds)}</strong></div>
         <div class="statsRow"><span>🐾 Pets tamed</span><strong>${p.count}/${totalPets}</strong></div>
-        <div class="statsRow"><span>🏆 Achievements accomplished</span><strong>${p.done ? 1 : 0}/${ACHIEVEMENT_TOTAL}</strong></div>
+        <div class="statsRow"><span>🏆 Achievements accomplished</span><strong>${doneCount}/${ACHIEVEMENT_TOTAL}</strong></div>
         <div class="statsRow"><span>⭐ Character level</span><strong>${character.level}</strong></div>
         <div class="statsRow"><span>🪙 Coins</span><strong>${inventory.coins}</strong></div>
         <div class="statsRow"><span>💎 Diamonds</span><strong>${inventory.diamonds}</strong></div>
@@ -2281,6 +2288,7 @@ function renderStatsScreen(force) {
 function refreshAchievementScreens() {
     if (achievementsOverlay && achievementsOverlay.style.display !== 'none') renderAchievementsScreen(false);
     if (statsOverlay && statsOverlay.style.display !== 'none') renderStatsScreen(false);
+    refreshTasksUI();
 }
 
 function bindOverlayButton(el, handler) {
@@ -2311,12 +2319,112 @@ bindOverlayButton(document.getElementById('statsClose'), (e) => {
 // touchstart + mousedown like every other button; preventDefault on touch stops the follow-up
 // mouse event so one tap can never claim two tiers.
 function handleAchievementClaim(e) {
-    const box = e.target.closest ? e.target.closest('[data-claim="animalTamer"]') : null;
+    const box = e.target.closest ? e.target.closest('[data-claim]') : null;
     if (!box) return;
     if (e.cancelable) e.preventDefault();
-    if (claimAnimalTamerTier() > 0) renderAchievementsScreen(true);
+    if (claimAchievementTier(box.getAttribute('data-claim')) > 0) renderAchievementsScreen(true);
 }
 if (achievementsList) {
     achievementsList.addEventListener('touchstart', handleAchievementClaim, { passive: false });
     achievementsList.addEventListener('mousedown', handleAchievementClaim);
+}
+
+
+// ============================================================
+// TASKS screen (MENU -> 📋 TASKS) + the tracked-task box under the MENU button.
+// Data and rules live in state.js (TASK_DEFS, taskState, addTaskProgress, tickTasks). The list is
+// rebuilt only when something it shows changes (progress, state, or the countdown's whole second).
+// ============================================================
+const tasksOverlay = document.getElementById('tasksOverlay');
+const tasksList = document.getElementById('tasksList');
+const trackedTaskBox = document.getElementById('trackedTaskBox');
+let tasksSignature = '';
+let trackedBoxText = null;
+
+// 10725000 ms -> "2h 58m 45s" (always hours, minutes and seconds)
+function formatTaskCountdown(ms) {
+    const total = Math.max(0, Math.ceil(ms / 1000));
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    return `${h}h ${m}m ${s}s`;
+}
+
+function renderTasksScreen(force) {
+    if (!tasksList) return;
+    const now = Date.now();
+    const sig = taskState.slots.map(s => [s.id, s.progress, s.readyAt > 0 ? Math.ceil((s.readyAt - now) / 1000) : 0].join(':')).join('|') + '#' + taskState.tracked;
+    if (!force && sig === tasksSignature) return;
+    tasksSignature = sig;
+
+    let html = '';
+    taskState.slots.forEach(slot => {
+        const def = getTaskDef(slot.id);
+        if (slot.readyAt > 0) {
+            html += `<div class="achCard taskCard taskDone">
+            <div class="taskTop"><div class="achCardTitle">✅ ${escapeHtml(def.name)}</div></div>
+            <div class="achCardDesc">Completed · +${def.reward} 💎 collected</div>
+            <div class="taskCountdown">New task in <strong>${formatTaskCountdown(slot.readyAt - now)}</strong></div>
+        </div>`;
+        } else {
+            const pct = Math.round((slot.progress / def.goal) * 100);
+            const tracked = taskState.tracked === def.id;
+            html += `<div class="achCard taskCard">
+            <div class="taskTop">
+                <div class="achCardTitle">📋 ${escapeHtml(def.name)}</div>
+                <button class="taskTrackBtn${tracked ? ' taskTracked' : ''}" data-track="${def.id}">${tracked ? 'TRACKING' : 'TRACK'}</button>
+            </div>
+            <div class="achCardDesc">${escapeHtml(def.desc)}</div>
+            <div class="achProgressRow"><strong>${slot.progress}/${def.goal}</strong><span class="achReward">Reward: ${def.reward} 💎</span></div>
+            <div class="achBar"><div class="achBarFill" style="width:${pct}%"></div></div>
+        </div>`;
+        }
+    });
+    tasksList.innerHTML = html;
+}
+
+// The little outlined box under the MENU button: "<task name> <progress>/<goal>".
+function refreshTrackedTaskBox() {
+    if (!trackedTaskBox) return;
+    let text = null;
+    if (taskState.tracked) {
+        const slot = taskState.slots.find(s => s.id === taskState.tracked && s.readyAt === 0);
+        const def = slot ? getTaskDef(slot.id) : null;
+        if (def) text = `${def.name} ${slot.progress}/${def.goal}`;
+    }
+    if (text === trackedBoxText) return;
+    trackedBoxText = text;
+    trackedTaskBox.textContent = text || '';
+    trackedTaskBox.style.display = text ? 'block' : 'none';
+}
+
+function refreshTasksUI() {
+    refreshTrackedTaskBox();
+    if (tasksOverlay && tasksOverlay.style.display !== 'none') renderTasksScreen(false);
+}
+
+bindOverlayButton(document.getElementById('openTasksBtn'), (e) => {
+    if (e) e.preventDefault();
+    renderTasksScreen(true);
+    if (tasksOverlay) tasksOverlay.style.display = 'flex';
+});
+bindOverlayButton(document.getElementById('tasksClose'), (e) => {
+    if (e) e.preventDefault();
+    if (tasksOverlay) tasksOverlay.style.display = 'none';
+});
+
+// TRACK / TRACKING toggles which task shows on the main screen (only one at a time).
+function handleTaskTrack(e) {
+    const btn = e.target.closest ? e.target.closest('[data-track]') : null;
+    if (!btn) return;
+    if (e.cancelable) e.preventDefault();
+    const id = btn.getAttribute('data-track');
+    taskState.tracked = (taskState.tracked === id) ? null : id;
+    saveGameProgress();
+    renderTasksScreen(true);
+    refreshTrackedTaskBox();
+}
+if (tasksList) {
+    tasksList.addEventListener('touchstart', handleTaskTrack, { passive: false });
+    tasksList.addEventListener('mousedown', handleTaskTrack);
 }

@@ -24,23 +24,23 @@ const MAX_PET_LEVEL = 30;
 // New Core Dynamic Math Formula Engine (scaling factor is Level ^ 1.2, so it keeps working
 // unchanged up to MAX_PET_LEVEL)
 function getLevelRequirement(type, currentLevel) {
-    const baseMap = { dog: 20, elephant: 35, squirrel: 10, chicken: 15, bee: 8, bear: 15, pig: 80, cat: 40, bird: 50, panda: 120, monkey: 50 };
+    const baseMap = { dog: 20, elephant: 35, squirrel: 10, chicken: 15, bee: 8, bear: 10, pig: 80, cat: 40, bird: 50, panda: 120, monkey: 50 };
     let base = baseMap[type] || 20;
     
     // Safety fallback: If currentLevel is accidentally passed as an object or undefined, default to 1
     let lvl = (typeof currentLevel === 'number') ? currentLevel : 1;
     
-    // Sugar gliders (Region 9) are the only pets fed THREE different resources: Base Exp is
-    // 40 honey + 40 bananas + 20 water at level 1, each scaled by the same Level ^ 1.2 curve
-    // as everything else. All three must be met to level up (like food AND water for the
-    // rest of the pets). Returns { honey, bananas, water } — see the glider branches in
-    // input.js (feeding), ui.js (codex) and entities.js (progress bar).
+    // Sugar gliders (Region 9) eat a "treat" — EITHER honey OR bananas, whichever the player
+    // has (any mix counts) — AND water. Base Exp is 40 treats + 20 water at level 1, each
+    // scaled by the same Level ^ 1.2 curve as everything else. Both must be met to level up
+    // (like food AND water for the rest of the pets). Returns { treats, water } — see the
+    // glider branches in input.js (feeding), ui.js (codex) and entities.js (progress bar).
+    // Progress: treats eaten = honeyEaten + bananaEaten, water eaten = waterEaten.
     if (type === 'glider') {
         const curve = Math.pow(lvl, 1.2);
         return {
-            honey:   Math.floor(40 * curve),
-            bananas: Math.floor(40 * curve),
-            water:   Math.floor(20 * curve)
+            treats: Math.floor(40 * curve),
+            water:  Math.floor(20 * curve)
         };
     }
 
@@ -244,9 +244,14 @@ let character = {
     perks: []        // ids of unlocked PERK_TREE nodes
 };
 
-// Calculate exponential player XP progression thresholds (No level cap ceiling)
+// Character XP needed to get from `currentLevel` to the next one. Level 1 needs the base
+// (100 XP) and every level after that needs 50% MORE than the one before it (compounding):
+// 100, 150, 225, 337, 506... Change CHARACTER_XP_BASE / CHARACTER_XP_GROWTH to rebalance.
+const CHARACTER_XP_BASE = 100;
+const CHARACTER_XP_GROWTH = 1.5;
 function getCharacterNextXP(currentLevel) {
-    return Math.floor(100 * Math.pow(currentLevel, 0.6)); // Scaled curve scaling boundaries
+    const lvl = Math.max(1, Math.floor(Number(currentLevel)) || 1);
+    return Math.floor(CHARACTER_XP_BASE * Math.pow(CHARACTER_XP_GROWTH, lvl - 1));
 }
 
 // ------------------------------------------------------------
@@ -276,11 +281,11 @@ const PERK_TYPES = {
     // type into one line with a SUMMED percentage, so it can't just reuse `text`, which is
     // one specific node's own fixed +NN%. The Perk Tree screen itself still shows each
     // node's own individual `text` unchanged — this doesn't touch that.
-    basicResource: { name: 'Basic Resource', icon: '🍪💧', cost: 5,  stat: 'petFoodWater', add: 0.30, text: '+30% food & water gained from pets', desc: 'food & water gained from pets' },
-    glazed:        { name: 'Glazed',         icon: '🍯',   cost: 10, stat: 'petHoney',     add: 0.25, text: '+25% honey gained from pets',        desc: 'honey gained from pets' },
-    fishyBusiness: { name: 'Fishy Business', icon: '🐟',   cost: 8,  stat: 'petFish',      add: 0.25, text: '+25% fish gained from pets',         desc: 'fish gained from pets' },
-    riches:        { name: 'Riches',         icon: '🪙',   cost: 20, stat: 'coin',         add: 0.25, text: '+25% coin gained',                   desc: 'coin gained' },
-    bananas:       { name: 'Bananas!',       icon: '🍌',   cost: 6,  stat: 'petBanana',    add: 0.20, text: '+20% bananas gained from pets',      desc: 'bananas gained from pets' }
+    basicResource: { name: 'Basic Resource', icon: '🍪💧', cost: 1,  stat: 'petFoodWater', add: 0.30, text: '+30% food & water gained from pets', desc: 'food & water gained from pets' },
+    glazed:        { name: 'Glazed',         icon: '🍯',   cost: 3,  stat: 'petHoney',     add: 0.25, text: '+25% honey gained from pets',        desc: 'honey gained from pets' },
+    fishyBusiness: { name: 'Fishy Business', icon: '🐟',   cost: 2,  stat: 'petFish',      add: 0.25, text: '+25% fish gained from pets',         desc: 'fish gained from pets' },
+    riches:        { name: 'Riches',         icon: '🪙',   cost: 5,  stat: 'coin',         add: 0.25, text: '+25% coin gained',                   desc: 'coin gained' },
+    bananas:       { name: 'Bananas!',       icon: '🍌',   cost: 2,  stat: 'petBanana',    add: 0.20, text: '+20% bananas gained from pets',      desc: 'bananas gained from pets' }
 };
 
 // Ids are `<type>_c<col>t<tier>` (by the node's ORIGINAL position). They're stored in
@@ -308,7 +313,28 @@ const PERK_TREE_LAYOUT = [
     { id: 'fishyBusiness_c1t3', type: 'fishyBusiness', tier: 3, col: 1, requires: ['riches_c1t2'] },
     { id: 'basicResource_c2t3', type: 'basicResource', tier: 3, col: 2, requires: ['glazed_c2t2'] },
     { id: 'riches_c3t3',        type: 'riches',        tier: 3, col: 3, requires: ['basicResource_c3t2'] },
-    { id: 'bananas_c4t3',       type: 'bananas',       tier: 3, col: 4, requires: ['glazed_c4t2'] }
+    { id: 'bananas_c4t3',       type: 'bananas',       tier: 3, col: 4, requires: ['glazed_c4t2'] },
+
+    // Tier 4 — Basic Resource / Glazed / Fishy Business / Bananas! / Glazed
+    { id: 'basicResource_c0t4', type: 'basicResource', tier: 4, col: 0, requires: ['riches_c0t3'] },
+    { id: 'glazed_c1t4',        type: 'glazed',        tier: 4, col: 1, requires: ['fishyBusiness_c1t3'] },
+    { id: 'fishyBusiness_c2t4', type: 'fishyBusiness', tier: 4, col: 2, requires: ['basicResource_c2t3'] },
+    { id: 'bananas_c3t4',       type: 'bananas',       tier: 4, col: 3, requires: ['riches_c3t3'] },
+    { id: 'glazed_c4t4',        type: 'glazed',        tier: 4, col: 4, requires: ['bananas_c4t3'] },
+
+    // Tier 5 — Fishy Business / Basic Resource / Glazed / Riches / Basic Resource
+    { id: 'fishyBusiness_c0t5', type: 'fishyBusiness', tier: 5, col: 0, requires: ['basicResource_c0t4'] },
+    { id: 'basicResource_c1t5', type: 'basicResource', tier: 5, col: 1, requires: ['glazed_c1t4'] },
+    { id: 'glazed_c2t5',        type: 'glazed',        tier: 5, col: 2, requires: ['fishyBusiness_c2t4'] },
+    { id: 'riches_c3t5',        type: 'riches',        tier: 5, col: 3, requires: ['bananas_c3t4'] },
+    { id: 'basicResource_c4t5', type: 'basicResource', tier: 5, col: 4, requires: ['glazed_c4t4'] },
+
+    // Tier 6 (top row) — Glazed / Basic Resource / Bananas! / Glazed / Fishy Business
+    { id: 'glazed_c0t6',        type: 'glazed',        tier: 6, col: 0, requires: ['fishyBusiness_c0t5'] },
+    { id: 'basicResource_c1t6', type: 'basicResource', tier: 6, col: 1, requires: ['basicResource_c1t5'] },
+    { id: 'bananas_c2t6',       type: 'bananas',       tier: 6, col: 2, requires: ['glazed_c2t5'] },
+    { id: 'glazed_c3t6',        type: 'glazed',        tier: 6, col: 3, requires: ['riches_c3t5'] },
+    { id: 'fishyBusiness_c4t6', type: 'fishyBusiness', tier: 6, col: 4, requires: ['basicResource_c4t5'] }
 ];
 
 // Flat list the rest of the game reads: each layout row merged over its type.
@@ -562,6 +588,7 @@ function tickShopBuffs() {
     shopBuffLastTick = now;
     if (dt > 0.25) dt = 0.25;
     gameStats.playSeconds += dt;   // total time played: only frames that actually render, so it pauses while backgrounded
+    tickTasks();
 
     SHOP_ITEMS.forEach(item => {
         if (shopBuffs[item.id] > 0) {
@@ -695,13 +722,39 @@ const ANIMAL_TAMER_TIERS = [
     { goal: 17, reward: 15 }
 ];
 
-// How many achievements the game has (the Statistics screen reads "x/ACHIEVEMENT_TOTAL"). The tiers
-// of Animal Tamer are levels of ONE achievement, not separate ones; it counts as accomplished once
-// every tier is claimed.
-const ACHIEVEMENT_TOTAL = 1;
+// "Schrodinger's Cat": guess correctly in the cat's Dead-or-Alive mini game. Same ladder idea; the
+// count IS saved (gameStats.catGuessesCorrect) because it can't be recounted from anything.
+const SCHRODINGER_TIERS = [
+    { goal: 1,  reward: 1 },
+    { goal: 3,  reward: 2 },
+    { goal: 6,  reward: 3 },
+    { goal: 10, reward: 5 },
+    { goal: 15, reward: 5 },
+    { goal: 20, reward: 5 },
+    { goal: 30, reward: 5 },
+    { goal: 45, reward: 10 },
+    { goal: 70, reward: 15 }
+];
 
-const achievements = { animalTamer: { claimed: 0 } };   // saved (see saveGameProgress)
-const gameStats = { playSeconds: 0 };                    // saved; ticked by tickShopBuffs() below
+const gameStats = { playSeconds: 0, catGuessesCorrect: 0 };   // saved; playSeconds ticked by tickShopBuffs() below
+
+// Every achievement in the game. To add one: add its tier table + a row here (title, description,
+// and getCount = how far along the player is); the Achievements/Statistics screens and the save
+// code are all driven by this list. Each achievement's `claimed` (tiers already paid) is saved.
+// The tiers of one achievement are levels of it, not separate achievements; it counts as
+// accomplished (Statistics "x/ACHIEVEMENT_TOTAL") once every tier is claimed.
+const ACHIEVEMENT_DEFS = [
+    { id: 'animalTamer',     icon: '🐾', title: 'Animal Tamer',      tiers: ANIMAL_TAMER_TIERS,
+      desc: 'Tame pets to earn 💎 diamonds. Tap a completed level to claim it.',
+      getCount: () => getTamedPetCount() },
+    { id: 'schrodingersCat', icon: '🐱', title: "Schrodinger's Cat", tiers: SCHRODINGER_TIERS,
+      desc: "Guess correctly in the cat's Dead or Alive mini game. Tap a completed level to claim it.",
+      getCount: () => gameStats.catGuessesCorrect }
+];
+const ACHIEVEMENT_TOTAL = ACHIEVEMENT_DEFS.length;
+
+const achievements = {};   // saved (see saveGameProgress): { <id>: { claimed } }
+ACHIEVEMENT_DEFS.forEach(d => { achievements[d.id] = { claimed: 0 }; });
 
 // The 17 pets the Pets Codex lists: every pet in petsByRegion except the extra bees bought at the
 // hive (only the starter bee is a Codex entry), with the bird taken from birdPet (it can be visiting
@@ -736,30 +789,120 @@ function getTamedPetCount() {
     return getCodexPets().filter(isPetTamed).length;
 }
 
-// Where the Animal Tamer ladder stands: `count` pets tamed, `claimed` tiers paid, `tier` = the tier
-// being worked on (null when every tier is done).
-function getAnimalTamerProgress() {
-    const count = getTamedPetCount();
-    const claimed = Math.max(0, Math.min(ANIMAL_TAMER_TIERS.length, Math.floor(Number(achievements.animalTamer.claimed)) || 0));
-    return { count: count, claimed: claimed, tier: ANIMAL_TAMER_TIERS[claimed] || null, done: claimed >= ANIMAL_TAMER_TIERS.length,
-             claimable: claimed < ANIMAL_TAMER_TIERS.length && count >= ANIMAL_TAMER_TIERS[claimed].goal };
+function getAchievementDef(id) {
+    return ACHIEVEMENT_DEFS.find(d => d.id === id) || null;
 }
 
-// Claims the current Animal Tamer tier: only works once its goal has been reached, pays its
+// Where one achievement's ladder stands: `count` = progress so far, `claimed` = tiers paid, `tier` =
+// the tier being worked on (null when every tier is done).
+function getAchievementProgress(id) {
+    const def = getAchievementDef(id);
+    if (!def) return null;
+    const count = Math.max(0, Math.floor(Number(def.getCount())) || 0);
+    const claimed = Math.max(0, Math.min(def.tiers.length, Math.floor(Number(achievements[id].claimed)) || 0));
+    return { def: def, count: count, claimed: claimed, tier: def.tiers[claimed] || null, done: claimed >= def.tiers.length,
+             claimable: claimed < def.tiers.length && count >= def.tiers[claimed].goal };
+}
+
+function getAchievementsDoneCount() {
+    return ACHIEVEMENT_DEFS.filter(d => getAchievementProgress(d.id).done).length;
+}
+
+// Claims the current tier of an achievement: only works once its goal has been reached, pays its
 // diamonds, and moves on to the next tier (which may already be complete too — the player then
 // claims that one as well, one tap per tier). Returns the diamonds paid (0 if nothing to claim).
 // Rewards are NEVER paid automatically: the Achievements screen shows a completed tier as a box
-// the player taps. A save from before achievements existed simply finds its earned tiers waiting.
-function claimAnimalTamerTier() {
+// the player taps. A save from before an achievement existed simply finds its earned tiers waiting.
+function claimAchievementTier(id) {
     if (typeof petsByRegion === 'undefined') return 0;
-    const p = getAnimalTamerProgress();
-    if (p.done || p.count < p.tier.goal) return 0;
+    const p = getAchievementProgress(id);
+    if (!p || p.done || p.count < p.tier.goal) return 0;
     inventory.diamonds += p.tier.reward;
-    achievements.animalTamer.claimed = p.claimed + 1;
+    achievements[id].claimed = p.claimed + 1;
     saveGameProgress();
-    showAchievementToast(`🏆 Animal Tamer ${p.tier.goal}/${p.tier.goal}  +${p.tier.reward} 💎`);
+    showAchievementToast(`🏆 ${p.def.title} ${p.tier.goal}/${p.tier.goal}  +${p.tier.reward} 💎`);
     updateUI();
     return p.tier.reward;
+}
+
+// Called by the cat's Dead-or-Alive mini game (ui.js) on every correct guess.
+function recordCatGuessCorrect() {
+    gameStats.catGuessesCorrect++;
+    addTaskProgress('deadOrAlive', 1);
+}
+
+// ------------------------------------------------------------
+// TASKS (MENU -> 📋 TASKS)
+// ------------------------------------------------------------
+// Three tasks are active at a time (one per slot), each worth diamonds. Finishing one pays its
+// diamonds AUTOMATICALLY and starts a 3-hour REAL-TIME cooldown for that slot (it keeps counting
+// while the game is closed — it's stored as a timestamp); when it ends the slot gets a new task,
+// never one that another slot already has. An unfinished task never expires. The player can
+// TRACK one task: it is then shown in a box under the MENU button on the main screen.
+// To add a task: add a row here and call addTaskProgress('<id>', amount) where the thing happens.
+const TASK_COOLDOWN_MS = 3 * 60 * 60 * 1000;
+const TASK_SLOT_COUNT = 3;
+const TASK_DEFS = [
+    { id: 'deadOrAlive',   name: 'Dead or Alive',   desc: 'Guess correctly in the cat mini game', goal: 2,   reward: 2 },
+    { id: 'playfulGiants', name: 'Playful Giants',  desc: 'Play with elephants',                  goal: 5,   reward: 1 },
+    { id: 'easter',        name: 'Easter',          desc: 'Collect eggs',                         goal: 8,   reward: 1 },
+    { id: 'pandaFrenzy',   name: 'Panda Frenzy',    desc: 'Feed the panda bamboo',                goal: 60,  reward: 2 },
+    { id: 'getSomeRest',   name: 'Get some rest',   desc: 'Restore stamina for sugar gliders',    goal: 100, reward: 2 }
+];
+
+function getTaskDef(id) {
+    return TASK_DEFS.find(t => t.id === id) || null;
+}
+
+// slot: { id, progress, readyAt }. readyAt = 0 -> the task is active; otherwise it is finished and
+// the next task arrives at that timestamp (ms).
+const taskState = { slots: [], tracked: null };
+
+// A random task that none of the slots already hold (`avoidId` is also skipped when possible, so a
+// finished task isn't immediately handed back).
+function pickNewTaskId(avoidId) {
+    const held = taskState.slots.map(s => s.id);
+    let pool = TASK_DEFS.filter(t => held.indexOf(t.id) === -1 && t.id !== avoidId);
+    if (pool.length === 0) pool = TASK_DEFS.filter(t => held.indexOf(t.id) === -1);
+    if (pool.length === 0) pool = TASK_DEFS;
+    return pool[Math.floor(Math.random() * pool.length)].id;
+}
+
+function resetTaskSlots() {
+    taskState.slots = [];
+    for (let i = 0; i < TASK_SLOT_COUNT; i++) {
+        taskState.slots.push({ id: pickNewTaskId(null), progress: 0, readyAt: 0 });
+    }
+}
+resetTaskSlots();
+
+// Adds progress to the ACTIVE task with this id (if any); completing it pays it out.
+function addTaskProgress(id, amount) {
+    const slot = taskState.slots.find(s => s.id === id && s.readyAt === 0);
+    if (!slot) return;
+    const def = getTaskDef(id);
+    slot.progress = Math.min(def.goal, slot.progress + (amount || 1));
+    if (slot.progress >= def.goal) {
+        inventory.diamonds += def.reward;
+        slot.readyAt = Date.now() + TASK_COOLDOWN_MS;
+        if (taskState.tracked === id) taskState.tracked = null;
+        showAchievementToast(`📋 ${def.name} complete!  +${def.reward} 💎`);
+        saveGameProgress();
+    }
+}
+
+// Called every frame (tickShopBuffs): hands a new task to any slot whose cooldown has ended.
+function tickTasks() {
+    const now = Date.now();
+    taskState.slots.forEach(slot => {
+        if (slot.readyAt > 0 && now >= slot.readyAt) {
+            slot.id = pickNewTaskId(slot.id);
+            slot.progress = 0;
+            slot.readyAt = 0;
+            showAchievementToast(`📋 New task: ${getTaskDef(slot.id).name}`);
+            saveGameProgress();
+        }
+    });
 }
 
 // Non-blocking notice, same approach as showLevelUpToast().
@@ -875,8 +1018,14 @@ function saveGameProgress() {
             }));
         }
 
-        stateMatrix.achievements = { animalTamer: { claimed: achievements.animalTamer.claimed } };
+        stateMatrix.achievements = {};
+        ACHIEVEMENT_DEFS.forEach(d => { stateMatrix.achievements[d.id] = { claimed: achievements[d.id].claimed }; });
         stateMatrix.playSeconds = gameStats.playSeconds;
+        stateMatrix.catGuessesCorrect = gameStats.catGuessesCorrect;
+        stateMatrix.tasks = {
+            slots: taskState.slots.map(s => ({ id: s.id, progress: s.progress, readyAt: s.readyAt })),
+            tracked: taskState.tracked
+        };
 
         stateMatrix.characterData = character;
 
@@ -950,12 +1099,41 @@ function loadGameProgress() {
 
         // Achievements + total play time. Older saves have neither: claimed starts at 0 and any
         // tiers the save's pets have already earned are simply waiting to be claimed.
-        if (stateMatrix.achievements && stateMatrix.achievements.animalTamer) {
-            const c = Math.floor(Number(stateMatrix.achievements.animalTamer.claimed));
-            achievements.animalTamer.claimed = (isFinite(c) && c > 0) ? Math.min(c, ANIMAL_TAMER_TIERS.length) : 0;
-        }
+        ACHIEVEMENT_DEFS.forEach(d => {
+            const saved = stateMatrix.achievements && stateMatrix.achievements[d.id];
+            const c = saved ? Math.floor(Number(saved.claimed)) : 0;
+            achievements[d.id].claimed = (isFinite(c) && c > 0) ? Math.min(c, d.tiers.length) : 0;
+        });
         const savedPlay = Number(stateMatrix.playSeconds);
         gameStats.playSeconds = (isFinite(savedPlay) && savedPlay > 0) ? savedPlay : 0;
+        const savedCatGuesses = Math.floor(Number(stateMatrix.catGuessesCorrect));
+        gameStats.catGuessesCorrect = (isFinite(savedCatGuesses) && savedCatGuesses > 0) ? savedCatGuesses : 0;
+
+        // Tasks: older saves have none (they keep the three random ones made at startup). Bad or
+        // duplicate entries are replaced, progress is clamped to its goal, and a countdown can
+        // never be longer than 3 hours (guards against a bad clock/edited save).
+        if (stateMatrix.tasks && Array.isArray(stateMatrix.tasks.slots)) {
+            const nowMs = Date.now();
+            const restored = [];
+            for (let i = 0; i < TASK_SLOT_COUNT; i++) {
+                const sv = stateMatrix.tasks.slots[i];
+                const def = sv ? getTaskDef(sv.id) : null;
+                if (def && !restored.some(r => r.id === def.id)) {
+                    const prog = Math.max(0, Math.min(def.goal, Math.floor(Number(sv.progress)) || 0));
+                    let ready = Number(sv.readyAt);
+                    ready = (isFinite(ready) && ready > 0) ? Math.min(ready, nowMs + TASK_COOLDOWN_MS) : 0;
+                    restored.push({ id: def.id, progress: ready > 0 ? def.goal : Math.min(prog, def.goal - 1), readyAt: ready });
+                } else {
+                    restored.push(null);
+                }
+            }
+            taskState.slots = restored.filter(Boolean);
+            while (taskState.slots.length < TASK_SLOT_COUNT) {
+                taskState.slots.push({ id: pickNewTaskId(null), progress: 0, readyAt: 0 });
+            }
+            const trk = stateMatrix.tasks.tracked;
+            taskState.tracked = taskState.slots.some(s => s.id === trk && s.readyAt === 0) ? trk : null;
+        }
 
         if (stateMatrix.currentRegion) {
             currentRegion = stateMatrix.currentRegion;

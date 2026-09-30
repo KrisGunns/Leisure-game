@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Just a little leisure</title>
-    <link rel="stylesheet" href="style.css?v=2.0">
+    <link rel="stylesheet" href="style.css?v=2.1">
 </head>
 <body>
     <div id="gameContainer">
@@ -46,6 +46,8 @@
     <canvas id="labelCanvas"></canvas>
 
     <button id="openMenuBtn" class="utilBtn">☰ MENU</button>
+    <!-- The task the player chose to TRACK (MENU -> TASKS): name + progress, e.g. "Easter 3/8". Hidden when none. -->
+    <div id="trackedTaskBox" style="display: none;"></div>
     <button id="settingsBtn" class="utilBtn">⚙️</button>
     
     <!-- FIXED: Removed inline positioning coordinates so it maps cleanly to your right-side style.css parameters! -->
@@ -156,6 +158,14 @@
             <button id="statsClose">X</button>
         </div>
         <div id="statsContent"></div>
+    </div>
+
+    <div id="tasksOverlay" style="display: none;">
+        <div id="tasksHeader">
+            <h2>📋 TASKS</h2>
+            <button id="tasksClose">X</button>
+        </div>
+        <div id="tasksList"></div>
     </div>
 
     <div id="devPanel">
@@ -412,6 +422,7 @@
                 <button id="openCharacterBtn" class="menuBtn">🧑 TAMERS</button>
                 <button id="openShopBtn" class="menuBtn">🛒 SHOP</button>
                 <button id="openPerkTreeBtn" class="menuBtn">🌳 PERK TREE</button>
+                <button id="openTasksBtn" class="menuBtn">📋 TASKS</button>
                 <button id="openAchievementsBtn" class="menuBtn">🏆 ACHIEVEMENTS</button>
                 <button id="openStatsBtn" class="menuBtn">📊 STATISTICS</button>
             </div>

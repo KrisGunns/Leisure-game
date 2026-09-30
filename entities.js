@@ -3009,6 +3009,7 @@ class Pet {
                 while (this.restTimer >= GLIDER_REST_SECONDS && this.stamina < maxStamina) {
                     this.restTimer -= GLIDER_REST_SECONDS;
                     this.stamina += 1;
+                    addTaskProgress('getSomeRest', 1);   // "Get some rest" task
                 }
                 if (this.stamina >= maxStamina) {
                     // Fully rested — climb out at the foot of the tree and wander off,
@@ -3720,6 +3721,7 @@ class Pet {
                     // Caught you! Award coins and reset
                     let elephantCoinsEarned = 5;
                     inventory.coins += elephantCoinsEarned;
+                    addTaskProgress('playfulGiants', 1);   // "Playful Giants" task
                     if (typeof spawnCoinPopup === 'function') spawnCoinPopup(this.homeRegion, this.x + this.size / 2, this.y, elephantCoinsEarned);
                     updateUI();
                     saveGameProgress();
@@ -4348,10 +4350,10 @@ class Pet {
                     let totalReq = getLevelRequirement(this.type, this.level);
                     progressRatio = this.foodEaten / totalReq;
             } else if (this.type === 'glider') {
-                // Three resources (honey + bananas + water), same "total eaten / total needed" idea.
+                // Treats (honey or bananas) + water, same "total eaten / total needed" idea.
                 let req = getLevelRequirement('glider', this.level);
-                let totalNeeded = req.honey + req.bananas + req.water;
-                let totalEaten = this.honeyEaten + this.bananaEaten + this.waterEaten;
+                let totalNeeded = req.treats + req.water;
+                let totalEaten = Math.min(this.honeyEaten + this.bananaEaten, req.treats) + Math.min(this.waterEaten, req.water);
                 progressRatio = totalNeeded > 0 ? (totalEaten / totalNeeded) : 0;
             } else {
                 // FIXED: Uses our new math engine function instead of looking for the deleted data array

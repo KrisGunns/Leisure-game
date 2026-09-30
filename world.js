@@ -240,6 +240,7 @@ function updateBambooFever(dt) {
             if (dist < player.size / 2 + 10) {
                 bambooItems.splice(i, 1);
                 bambooFever.collected++;
+                addTaskProgress('pandaFrenzy', 1);   // "Panda Frenzy" task
                 updateUI();
                 // Keep a steady supply on the map so there's always something to chase
                 // for the whole 30s instead of it petering out early.
@@ -1100,6 +1101,7 @@ function checkCollisions() {
                 
                 currentRItems.eggs.splice(i, 1); 
                 inventory.eggs += 1;
+                addTaskProgress('easter', 1);   // "Easter" task
                 gainPlayerXP(1); 
                 updateUI();
                 saveGameProgress();

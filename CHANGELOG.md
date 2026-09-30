@@ -143,6 +143,31 @@ same size."):
 
 ---
 
+### 2026-09-30 (40) — Balance pass (character XP, Bear exp, glider food, perk costs + 3 new perk rows), Schrodinger's Cat achievement, Tasks system
+
+**Changed (balance):**
+- **Character XP:** `getCharacterNextXP()` (state.js) is now `CHARACTER_XP_BASE (100) × CHARACTER_XP_GROWTH (1.5) ^ (level − 1)`: 100, 150, 225, 337, 506… Each level needs 50% more than the last (compounding). Old formula was `100 × level^0.6`. To rebalance, change the two constants.
+- **Bear / Bow Bear base exp 15 → 10** (`baseMap.bear` in `getLevelRequirement`).
+- **Sugar gliders (Glider + Miss Glider) now eat honey OR bananas, AND water.** `getLevelRequirement('glider', lvl)` returns `{ treats, water }` = 40 and 20 at Lv1 × Level^1.2 (was honey 40 + bananas 40 + water 20). "Treats eaten" = `honeyEaten + bananaEaten` (any mix; honey is used first, then bananas), so the save format is unchanged. Updated: `feedGliders()` (input.js), the glider progress bar (entities.js), the Codex "Next Req" line (`🍯/🍌 N 💧 N`, ui.js). Old saves whose stored honey+bananas already cover the new requirement level up on the next feed.
+- **Perk costs:** Basic Resource 1, Glazed 3, Fishy Business 2, Riches 5, Bananas! 2 (`PERK_TYPES`).
+
+**Added:**
+- **3 new perk rows** (tiers 4, 5, 6 in `PERK_TREE_LAYOUT`; 31 perks total). Listed top-down as requested: TOP row = Glazed, Basic Resource, Bananas!, Glazed, Fishy Business; next = Fishy Business, Basic Resource, Glazed, Riches, Basic Resource; next = Basic Resource, Glazed, Fishy Business, Bananas!, Glazed. Each grows out of the perk directly below it (same column). New ids `<type>_c<col>t<tier>`; old ids untouched, so saves keep their perks.
+- **Achievements are now data-driven** (`ACHIEVEMENT_DEFS`, `getAchievementProgress(id)`, `claimAchievementTier(id)` in state.js; the old `getAnimalTamerProgress`/`claimAnimalTamerTier` are gone). New achievement **🐱 Schrodinger's Cat**: correct guesses in the cat's Dead-or-Alive mini game (`recordCatGuessCorrect()`, count saved as `catGuessesCorrect`). Tiers goal/💎: 1/1, 3/2, 6/3, 10/5, 15/5, 20/5, 30/5, 45/10, 70/15 (`SCHRODINGER_TIERS`). Same tap-to-claim ladder as Animal Tamer. Statistics now reads `Achievements accomplished x/2`. Save: `achievements` is a map `{id:{claimed}}` (older saves only had animalTamer; the rest default to 0).
+- **📋 TASKS** (MENU button + screen). 3 task slots; finishing a task **pays its diamonds automatically** and starts a real-time 3-hour cooldown for that slot (stored as a timestamp, so it keeps counting while the game is closed, clamped to ≤3h on load). The finished slot shows `Completed · +N 💎` and `New task in Xh Ym Zs`; when it ends, the slot gets a new random task not already held by another slot. Unfinished tasks never expire. Tasks (`TASK_DEFS`): Dead or Alive (correct cat guesses 2, +2💎), Playful Giants (elephant play catches 5, +1), Easter (collect eggs 8, +1), Panda Frenzy (bamboo collected in Bamboo Fever 60, +2), Get some rest (stamina restored by resting sugar gliders 100, +2). Hooks: `recordCatGuessCorrect()` (ui.js), `addTaskProgress()` in entities.js (elephant `playing_chase`, glider rest tick) and world.js (egg pickup, bamboo pickup). `tickTasks()` runs from `tickShopBuffs()`.
+- **TRACK button** on each active task: shows that task in an outlined box under the MENU button (`#trackedTaskBox`, e.g. `Easter 3/8`); tap again (`TRACKING`) to untrack. Clears itself when the task completes. Only one task is tracked at a time.
+- Save: `tasks: { slots:[{id,progress,readyAt}], tracked }`. Older saves start with 3 random tasks.
+
+**Notes:**
+- The `balance/` simulation files in the Project are now OUT OF DATE (glider needs, perk layout/costs and the character XP curve changed) — re-run `balance/sim.js` after updating it if you need fresh numbers.
+- Interpretations: "increase by 50%" = compounding (×1.5 each level); "bananas or honey AND water" keeps the 40/20 base as a combined treat amount.
+
+**Files:** state.js, input.js, entities.js, world.js, ui.js, index.html, style.css (`?v=2.1`), CHANGELOG.md.
+
+**Verification:** Chromium at 390×780: XP 100/150/225/337/506; glider levels on bananas + water with 0 honey; perk tree has 31 perks, rows in the requested order, every `requires` resolves; task completes → +💎, cooldown countdown, tracker box shows/hides; cat achievement claimable and claimed; everything survives a reload; no JS errors.
+
+---
+
 ### 2026-09-29 (39) — Achievement rewards are claimed by tapping, tier ladder hidden, diamonds in the Shop, Statistics achievements one-liner, TAMERS screen title
 
 **Changed:**

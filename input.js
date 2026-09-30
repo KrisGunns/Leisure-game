@@ -355,8 +355,9 @@ function getFeedFraction() {
 // Feeds the sugar gliders in reach — the ones in the region the player is in, plus the one
 // being carried. They aren't in petsByRegion (see gliderPets in world.js), so the loop in
 // executeContinuousFeed() doesn't see them. Unlike every other pet they're fed THREE
-// resources — honey, bananas and water — and need all three to level up (Base Exp 40 / 40 /
-// 20 at level 1). Same +1 XP per unit given as everywhere else.
+// things — a treat (honey OR bananas, whichever the player has; honey is used first) AND
+// water — and need both to level up (Base Exp 40 treats / 20 water at level 1). Same +1 XP
+// per unit given as everywhere else.
 function feedGliders() {
     const feedFraction = getFeedFraction();
 
@@ -370,18 +371,28 @@ function feedGliders() {
         if (Math.sqrt(dx * dx + dy * dy) >= 80) return;
 
         let req = getLevelRequirement('glider', g.level);
-        let totalNeeded = req.honey + req.bananas + req.water;
+        let totalNeeded = req.treats + req.water;
         let feedAmount = Math.max(1, Math.ceil(totalNeeded * feedFraction));
 
         for (let i = 0; i < feedAmount; i++) {
             if (g.level >= MAX_PET_LEVEL) break;
             let cur = getLevelRequirement('glider', g.level);
 
-            if (g.honeyEaten < cur.honey && inventory.honey > 0) {
+            // Progress from an older save (which tracked honey AND bananas separately) can
+            // already cover the new, smaller requirement — level up before feeding more.
+            if ((g.honeyEaten + g.bananaEaten) >= cur.treats && g.waterEaten >= cur.water) {
+                g.level++;
+                g.honeyEaten = 0;
+                g.bananaEaten = 0;
+                g.waterEaten = 0;
+                continue;
+            }
+
+            if ((g.honeyEaten + g.bananaEaten) < cur.treats && inventory.honey > 0) {
                 inventory.honey--;
                 g.honeyEaten++;
                 gainPlayerXP(1);
-            } else if (g.bananaEaten < cur.bananas && inventory.bananas > 0) {
+            } else if ((g.honeyEaten + g.bananaEaten) < cur.treats && inventory.bananas > 0) {
                 inventory.bananas--;
                 g.bananaEaten++;
                 gainPlayerXP(1);
@@ -393,7 +404,7 @@ function feedGliders() {
                 break;
             }
 
-            if (g.honeyEaten >= cur.honey && g.bananaEaten >= cur.bananas && g.waterEaten >= cur.water) {
+            if ((g.honeyEaten + g.bananaEaten) >= cur.treats && g.waterEaten >= cur.water) {
                 g.level++;
                 g.honeyEaten = 0;
                 g.bananaEaten = 0;
