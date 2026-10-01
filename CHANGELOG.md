@@ -143,6 +143,18 @@ same size."):
 
 ---
 
+### 2026-10-01 (44) — Tamers perks show active bonuses only, wipe resets play time, pet-image loading hardened (elephant "old model")
+
+**Fixed / changed:**
+- **TAMERS → Perks** now lists only the bonuses that are ACTIVE: a type appears once its first perk is unlocked in the Perk Tree, and shows just the current combined % (e.g. `🍪💧 Basic Resource: +60% food & water gained from pets`), not "x of y%" and no locked entries. With nothing unlocked it says so. Heading now reads `Perks (active bonuses)`. (`updateCharacterScreen()`, ui.js; index.html heading.)
+- **Wipe Save now resets STATISTICS game time** (and the rest of the new progress). Cause: the wipe only deleted the save key; the in-memory play time (and everything else) stayed, and the 10-second autosave / any task or claim could write it straight back before the reload. New `saveDisabled` flag (state.js) makes `saveGameProgress()` do nothing once a wipe starts, and the wipe also zeroes `gameStats`, achievement claims, diamonds, tasks (new random set), and the character (level/xp/perk points/perks).
+- **Elephant / Bow Elephant "old model":** the real art is `assets/pets/elephant/elephant.png` and `assets/pets/elephantBow/elephantBow.png`; the old hand-drawn letter-grid sprite is only a fallback. I did not change any elephant art or code. The old model appears whenever the PNG isn't available yet or fails to load (missing/misnamed file, or a stale cached copy). Changes: (1) the fallback is now drawn ONLY after a load has actually FAILED — while a PNG is still downloading nothing is drawn, so there's no flash of the old model; (2) every pet image is preloaded at start-up (`preloadPetImages()`); (3) a failed load logs `Pet image failed to load (showing the old fallback model instead): <path>` to the browser console, so a missing file is easy to identify; (4) `PET_ASSET_VERSION` v14 → v15 to bypass stale cached copies. If the old model still shows, check that both elephant PNGs exist at those paths in the deployed site.
+- Verified (Chromium): bonuses list for none / 3 perks; saved play time 5000 → null after wipe, 1s in memory after the reload; with a PNG present the plain elephant uses it, with one missing the bow falls back only after the failure and logs it; no JS errors.
+
+**Files:** state.js, ui.js, entities.js, index.html, CHANGELOG.md.
+
+---
+
 ### 2026-10-01 (43) — Character XP retuned so the full Perk Tree unlocks at ~10:00
 
 **Changed:**

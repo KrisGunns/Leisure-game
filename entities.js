@@ -2294,7 +2294,7 @@ function getPetSprite(type, anim, index) {
 // to the old hand-drawn sprite once a real image has finished loading. Bump this string
 // any time an existing dog PNG's content changes without renaming the file, so every
 // visitor is forced to fetch the new bytes instead of whatever their browser/CDN cached.
-const PET_ASSET_VERSION = 'v14';
+const PET_ASSET_VERSION = 'v15';
 const PET_IMAGE_PATHS = {
     dog: {
         // 2026-09-26: switched the dog to a SINGLE static image for every animation, at the
@@ -2477,11 +2477,38 @@ function getPetImage(type, anim, index) {
     let img = petImageCache[path];
     if (!img) {
         img = new Image();
-        img.src = path; // if this 404s, img just never completes -- getPetImage keeps
-        petImageCache[path] = img; // returning null and the letter-grid fallback keeps drawing
+        // If the file is missing (404) the game falls back to the old hand-drawn letter-grid
+        // sprite. That fallback is now ONLY used after a load has actually failed — while the PNG
+        // is still loading nothing is drawn — and the failing path is logged so a missing or
+        // misnamed file is easy to spot (browser console / Network tab).
+        img.onerror = () => {
+            img._failed = true;
+            if (typeof console !== 'undefined') console.error('Pet image failed to load (showing the old fallback model instead): ' + path);
+        };
+        img.src = path;
+        petImageCache[path] = img;
     }
     return (img.complete && img.naturalWidth > 0) ? img : null;
 }
+
+// True while a registered pet PNG is still downloading (not loaded, not failed).
+function isPetImageLoading(type, anim, index) {
+    const paths = PET_IMAGE_PATHS[type] && PET_IMAGE_PATHS[type][anim];
+    if (!paths || !paths.length) return false;
+    const img = petImageCache[paths[index % paths.length]];
+    return !!img && !img._failed && !(img.complete && img.naturalWidth > 0);
+}
+
+// Starts downloading every registered pet image up front, so the real art is ready within a
+// moment of start-up instead of each one only beginning to load the first time it's drawn.
+function preloadPetImages() {
+    Object.keys(PET_IMAGE_PATHS).forEach(type => {
+        Object.keys(PET_IMAGE_PATHS[type]).forEach(anim => {
+            PET_IMAGE_PATHS[type][anim].forEach((p, i) => getPetImage(type, anim, i));
+        });
+    });
+}
+preloadPetImages();
 
 // Draws one frame of a pet's sprite into the 36 x 36 box whose top-left is (boxX, boxY), on any
 // 2D context (the game canvas, or the Codex portrait canvas). facing: 1 = right, -1 = left.
@@ -2489,7 +2516,11 @@ function getPetImage(type, anim, index) {
 // (getPetSprite / PET_SPRITES) whenever one is registered and has finished loading;
 // otherwise this is exactly the letter-grid draw it's always been.
 function drawPetSprite(c, type, anim, index, boxX, boxY, facing) {
-    const sprite = getPetImage(type, anim, index) || getPetSprite(type, anim, index);
+    const realImage = getPetImage(type, anim, index);
+    // The real PNG is still downloading: draw nothing for that moment rather than flashing the
+    // old hand-drawn model (which is only for a PNG that failed to load).
+    if (!realImage && isPetImageLoading(type, anim, index)) return;
+    const sprite = realImage || getPetSprite(type, anim, index);
     const w = sprite.width;
     const h = sprite.height;
     const dx = Math.round(boxX + 18 - w / 2);

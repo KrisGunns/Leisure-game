@@ -943,7 +943,12 @@ let feedTurboTimeout = null;
 let feedHoldCounter = 0;
 
 
+// Set by the dev "Wipe Save" button (ui.js) so nothing — the 10-second autosave, a task completing,
+// a claim — can write the old progress back into localStorage between the wipe and the page reload.
+let saveDisabled = false;
+
 function saveGameProgress() {
+    if (saveDisabled) return;
     try {
         const stateMatrix = {
             inventory: {

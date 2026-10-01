@@ -1400,13 +1400,22 @@ function updateCharacterScreen() {
     if (perksList && typeof PERK_TREE !== 'undefined') {
         while (perksList.firstChild) perksList.removeChild(perksList.firstChild);
         // Bottom-to-top, left-to-right — the same order the tree is read in.
-        getBulkedPerkGroups().forEach(p => {
+        // Only the bonuses that are ACTIVE: a type appears once the first perk of it is unlocked in
+        // the Perk Tree, and shows just its current combined % (no "x of y").
+        const active = getBulkedPerkGroups().filter(p => p.owned > 0);
+        active.forEach(p => {
             let li = document.createElement('li');
-            let unlocked = p.owned > 0;
-            li.style.color = unlocked ? '#2ecc71' : '#7f8c8d';
-            li.textContent = `${p.owned === p.total ? '✓ ' : ''}${p.icon} ${p.name} (${p.owned}/${p.total}): +${Math.round(p.ownedAdd * 100)}% of +${Math.round(p.totalAdd * 100)}% ${p.desc}`;
+            li.style.color = '#2ecc71';
+            li.textContent = `${p.icon} ${p.name}: +${Math.round(p.ownedAdd * 100)}% ${p.desc}`;
             perksList.appendChild(li);
         });
+        if (active.length === 0) {
+            let li = document.createElement('li');
+            li.style.color = '#7f8c8d';
+            li.style.listStyle = 'none';
+            li.textContent = 'No perks unlocked yet — spend perk points in the Perk Tree.';
+            perksList.appendChild(li);
+        }
     }
 }
 
@@ -1931,8 +1940,23 @@ if (btnAddGold) {
 if (btnWipeSave) {
     btnWipeSave.addEventListener('click', () => {
         if (confirm("⚠️ WARNING: Delete all save data? This resets everything!")) {
-            // 1. Wipe the local storage cache completely clean
+            // 1. Block every further save (the autosave would otherwise re-write the old progress
+            //    before the reload) and wipe the local storage cache completely clean
+            saveDisabled = true;
             localStorage.removeItem('just_a_little_leisure_save_v2');
+
+            // Achievements, statistics, diamonds, tasks and the character go back to a brand-new
+            // game too (the total game time shown in STATISTICS resets with them).
+            gameStats.playSeconds = 0;
+            gameStats.catGuessesCorrect = 0;
+            ACHIEVEMENT_DEFS.forEach(d => { achievements[d.id].claimed = 0; });
+            inventory.diamonds = 0;
+            taskState.tracked = null;
+            resetTaskSlots();
+            character.level = 1;
+            character.xp = 0;
+            character.perkPoints = 0;
+            character.perks = [];
             
             // 2. Zero out your active resource trackers securely
             inventory.food = 0; 
