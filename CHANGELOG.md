@@ -143,6 +143,39 @@ same size."):
 
 ---
 
+### 2026-10-01 (43) — Character XP retuned so the full Perk Tree unlocks at ~10:00
+
+**Changed:**
+- `CHARACTER_XP_STEP` (state.js) 0.875 → **3**: XP per level is now `100 + 300 × (level − 1)` (100, 400, 700, 1,000 … 2,800 at Lv10, 5,800 at Lv20, 10,300 at Lv35, 21,700 at Lv73).
+- Reason: the whole Perk Tree (31 perks) costs **72 points** = character Lv73 (1 point per level). In the simulation the character earns most XP in the first ~3 hours and then crawls, so the finishing time is very sensitive to the step: 2.6 → 5:06, 2.8 → 7:21, 2.9 → 8:41, 2.95 → 9:20, **3.0 → ~9:57** (all 5 seeds 9:56–10:01). A casual (half-pace) player does not finish the tree (29/31 perks at the ~12h end of the game).
+- Side effects (sim, main pace): final character level ~74 (was ~150); manual pickups are worth fewer units, so gather-dependent pets finish later: Sugar Glider ~4:40 (was 3:36), Bear ~5:16, Monkey ~5:17, food/water pets by ~2:40; bees (~11:50) are still last. Everything bought ~2:27.
+- `balance/` updated in the Project (new results, XP-version history table). Saves unaffected.
+
+**Files:** state.js, CHANGELOG.md.
+
+---
+
+### 2026-09-30 (42) — Character XP slowed so the character ends the game at ~Lv150
+
+**Changed:**
+- `CHARACTER_XP_STEP` (state.js) 0.5 → **0.875**: XP per level is now `100 + 87.5 × (level − 1)` (100, 187, 275, 362 … 887 at Lv10, 1,762 at Lv20, 3,075 at Lv35, 8,762 at Lv100). Entry (41)'s +50 version let the simulated player reach ~Lv210 by the end; this lands at **~Lv150** (main pace; ~Lv134 casual). Sweep results: step 0.5→210, 0.8→158, 0.85→152, 0.875→150, 0.9→147, 1.0→139, 1.2→125.
+- Balance sim re-run and `balance/` updated (everything done ~11:46, perk tree 31/31 at ~1:45, XP-version history table). Saves unaffected.
+
+**Files:** state.js, CHANGELOG.md.
+
+---
+
+### 2026-09-30 (41) — Character XP curve fixed (was ~97 million XP at Lv35)
+
+**Changed:**
+- **`getCharacterNextXP()` (state.js) is now a straight line: `100 × (1 + 0.5 × (level − 1))`** = 100, 150, 200, 250 … 1,050 at Lv20, 1,800 at Lv35. Entry (40)'s compounding `100 × 1.5^(level−1)` was a wrong reading of "+50% per level": it needed 97,073,973 XP at Lv35 (reported from a real playthrough). New constants `CHARACTER_XP_BASE` (100) and `CHARACTER_XP_STEP` (0.5 = each level adds half the base). The ORIGINAL formula (until entry 39) was `100 × level^0.6` (151 at Lv2, 398 at Lv10, 603 at Lv20, 844 at Lv35); the new line starts almost identically and then keeps climbing instead of flattening.
+- Saves are unaffected (only `character.level/xp` are stored); a character who was stuck on a huge requirement just needs the new, much smaller amount for the current level.
+- **Balance simulation re-run** (`balance/` in the Project updated): everything done ~11:40, perk tree 31/31 at ~1:18, final character level ~210 (main) / ~183 (casual). Includes a table of the three XP versions.
+
+**Files:** state.js, CHANGELOG.md.
+
+---
+
 ### 2026-09-30 (40) — Balance pass (character XP, Bear exp, glider food, perk costs + 3 new perk rows), Schrodinger's Cat achievement, Tasks system
 
 **Changed (balance):**
@@ -159,7 +192,7 @@ same size."):
 - Save: `tasks: { slots:[{id,progress,readyAt}], tracked }`. Older saves start with 3 random tasks.
 
 **Notes:**
-- The `balance/` simulation files in the Project are now OUT OF DATE (glider needs, perk layout/costs and the character XP curve changed) — re-run `balance/sim.js` after updating it if you need fresh numbers.
+- **`balance/` simulation re-run (2026-09-30)** against this version: `sim.js` now models the glider treat+water rule and loads `state.js` from `STATE_JS` or its own folder; `report.js` also reports perks unlocked and honey made; `BALANCE_SIMULATION.md` and `results.json` are regenerated. Headline: everything done ~11:52 (was 16:55), character level only ~21 (was ~815), perk tree reaches just 11/31 perks, gliders Lv30 ~6:40 (was ~16:15), monkeys ~8:00 (was ~3:00), bees (~11:50) are now the long pole.
 - Interpretations: "increase by 50%" = compounding (×1.5 each level); "bananas or honey AND water" keeps the 40/20 base as a combined treat amount.
 
 **Files:** state.js, input.js, entities.js, world.js, ui.js, index.html, style.css (`?v=2.1`), CHANGELOG.md.

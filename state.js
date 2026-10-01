@@ -244,14 +244,18 @@ let character = {
     perks: []        // ids of unlocked PERK_TREE nodes
 };
 
-// Character XP needed to get from `currentLevel` to the next one. Level 1 needs the base
-// (100 XP) and every level after that needs 50% MORE than the one before it (compounding):
-// 100, 150, 225, 337, 506... Change CHARACTER_XP_BASE / CHARACTER_XP_GROWTH to rebalance.
+// Character XP needed to get from `currentLevel` to the next one. Level 1 needs the base (100 XP)
+// and every level after that needs 300% of the BASE more than the one before (a straight line, not
+// compounding): 100, 400, 700, 1,000 ... 3,100 at Lv11, 6,100 at Lv21, 10,300 at Lv35. History: the
+// original was 100 x level^0.6; a compounding 1.5^(lvl-1) version reached ~97 million XP per level
+// by Lv35 so it was replaced. The step is tuned with the balance simulation (balance/) so the whole
+// Perk Tree (31 perks, 72 points = character Lv73) is unlocked at about the 10-hour mark of a full
+// playthrough. Change CHARACTER_XP_BASE / CHARACTER_XP_STEP to rebalance, then re-run balance/report.js.
 const CHARACTER_XP_BASE = 100;
-const CHARACTER_XP_GROWTH = 1.5;
+const CHARACTER_XP_STEP = 3;     // each level adds this fraction of the base
 function getCharacterNextXP(currentLevel) {
     const lvl = Math.max(1, Math.floor(Number(currentLevel)) || 1);
-    return Math.floor(CHARACTER_XP_BASE * Math.pow(CHARACTER_XP_GROWTH, lvl - 1));
+    return Math.floor(CHARACTER_XP_BASE * (1 + CHARACTER_XP_STEP * (lvl - 1)));
 }
 
 // ------------------------------------------------------------
