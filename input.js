@@ -247,9 +247,14 @@ if (whistleBtn) {
 
         // bee is excluded — it has its own hive-return autonomy, not whistle-recalled.
         // level < 2 pets aren't tamed enough to respond yet.
-        let eligiblePets = activePets.filter(pet => pet.type !== 'bee' && pet.level >= 2 && isPetAvailable(pet));
+        let eligiblePets = activePets.filter(pet => pet.type !== 'bee' && pet.level >= 2 && isPetAvailable(pet) && !isPetBusy(pet));
 
-        if (eligiblePets.length === 0) return;
+        if (eligiblePets.length === 0) {
+            if (activePets.some(pet => pet.type !== 'bee' && pet.level >= 2 && isPetAvailable(pet) && isPetBusy(pet))) {
+                showInfoToast('Your pet is busy right now — try again in a moment.');
+            }
+            return;
+        }
 
         if (eligiblePets.length === 1) {
             // Only one eligible pet in this region — keep the original one-tap toggle.

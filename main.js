@@ -28,12 +28,18 @@ function gameLoop(timestamp) {
     }
 }
 
+// Timestamp of the last frame that actually ran. dt below is measured from this: the old code used
+// the throttle clock (`lastTime`, which is moved back by the leftover time) as the reference, so on
+// screens faster than 60Hz the leftover was counted again by the next frame and pet timers ran
+// ~1.2-1.5x too fast.
+let prevFrameTs = 0;
 function runGameFrame(timestamp) {
     if (!lastTime) lastTime = timestamp;
     let elapsed = timestamp - lastTime;
 
     if (elapsed >= frameInterval) {
-        let dt = (timestamp - lastTime) / 1000;
+        let dt = (prevFrameTs ? (timestamp - prevFrameTs) : elapsed) / 1000;
+        prevFrameTs = timestamp;
         
         // FIXED: Re-calculated clean animation interval steps
         lastTime = timestamp - (elapsed % frameInterval);

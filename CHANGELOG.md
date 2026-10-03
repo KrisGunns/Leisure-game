@@ -143,6 +143,19 @@ same size."):
 
 ---
 
+### 2026-10-03 (48) — Sweep items 8–10 and the smaller items
+- **8 Whistle (input.js, state.js)**: new `isPetBusy()`; pets that are digging, mud-playing, swinging, in the Schrödinger box, in Bamboo Fever / Starve or playing tag are skipped by the whistle (a "busy" toast shows if nobody else is eligible), so a coin payout, box or Starve penalty can't be thrown away.
+- **9 Elephant tag (ui.js, entities.js)**: the PLAY button only shows in Region 2; the tag game ends (back to wander) when the player leaves Region 2 or after 60s.
+- **10 Dialogs (ui.js)**: `confirm()` (wipe save) and `prompt()` (dev panel) replaced by an in-page `showGameDialog()`; the wipe dialog has Cancel / DELETE. No native dialogs are left.
+- **Game speed (main.js)**: dt is now measured from the previous rendered frame. The old throttle left-over was counted twice on screens above 60Hz (10 real seconds counted as ~12.3s at 144Hz), so pet timers ran 1.2–1.5× fast. Pace on fast-refresh phones is now the real pace the balance simulation already assumed (no sim re-run needed).
+- **Riches (entities.js, world.js, ui.js)**: the +coin perk now also applies to the elephant, bird, cat (Dead or Alive) and Bamboo Fever payouts.
+- **Perk rounding (entities.js)**: Basic Resource, Glazed, Fishy Business and the coin perk use `roundStochastic` (average equals the true bonus) instead of `Math.round`, so they no longer do nothing at low yields. Manual gathering uses it too, so the Statistics/Character "manual gather +X%" is now the real average gain (it showed +40% at Lv4 but gave 0).
+- **Eggs (state.js, entities.js)**: at most `MAX_EGGS_ON_MAP` (25) eggs lie in Region 3; laying pauses while full.
+- **Resize (world.js)**: on resize/rotate, items, pets, gliders, bamboo and the player are rescaled to the new canvas size.
+- **Glider buff (world.js)**: take/drop no longer resets the stamina drain timer, so drop-and-retake within 2s can't keep the buff for free.
+- **Cleanup**: removed unused `spawnTimer` / `respawnQueue`; fixed the stale chain-egg comment (+10% per step, +60% max).
+- Not changed (by design): the task cooldown still uses the device clock (nothing spends diamonds); the dev code word stays hardcoded.
+
 ### 2026-10-03 (47) — Sweep follow-up: blocking dialogs, save-key consistency
 - **ui.js / input.js**: all `alert()` calls (name-change confirmations, locked-region message, hive-full / not-enough-coins messages) replaced by a non-blocking `showInfoToast()`. `alert()` froze the game loop and is dropped by some APK/WebView wrappers.
 - **state.js**: `saveGameProgress` now writes with `SAVE_KEY` instead of a duplicated string literal, so wipe/backup/load can never drift from the save key.

@@ -6,7 +6,6 @@
 // ============================================================
 
 const player = new Player(100, 100);
-const respawnQueue = [];
 
 const regionalItems = {
     1: { foods: [], waters: [], flowers: [], bananas: [] },
@@ -255,7 +254,7 @@ function updateBambooFever(dt) {
     if (bambooFever.timer <= 0) {
         bambooFever.active = false;
         bambooItems = [];
-        let coinsEarned = Math.floor(bambooFever.collected / 5);
+        let coinsEarned = Math.floor(bambooFever.collected / 5 * getCharacterBonuses(character.level).coin + 1e-9);   // Riches applies
         inventory.coins += coinsEarned;
         if (typeof showBambooResultToast === 'function') showBambooResultToast(bambooFever.collected, coinsEarned);
         // The panda only actually goes to sleep (the 'full' state, 💤) now that the
@@ -688,7 +687,6 @@ function takeGlider(g) {
     g.state = 'held';
     g.restTree = -1;          // releases any tree it was heading for
     g.restTimer = 0;
-    g.staminaDrainTimer = 0;
     saveGameProgress();
     updateUI();
 }
@@ -706,7 +704,6 @@ function dropGlider() {
     g.y = Math.max(pad, Math.min(canvas.height - g.size - pad - 14, hand.y));
     g.state = 'idle';
     g.stateTimer = 0.4;
-    g.staminaDrainTimer = 0;
     g.restTimer = 0;
     g.restTree = -1;
     g.pickNewWanderTarget();
@@ -1063,14 +1060,42 @@ function flushPetText() {
     labelQueue.length = 0;
 }
 
+let canvasSizedOnce = false;
+// Moves everything that has a map position to where it belongs in the new canvas size.
+function rescaleWorld(sx, sy) {
+    const fix = (o) => {
+        if (!o) return;
+        ['x', 'y', 'targetX', 'targetY'].forEach(k => {
+            if (typeof o[k] === 'number' && isFinite(o[k])) o[k] *= (k === 'x' || k === 'targetX') ? sx : sy;
+        });
+    };
+    try {
+        Object.keys(regionalItems).forEach(r => {
+            ['foods', 'waters', 'flowers', 'bananas', 'eggs'].forEach(k => {
+                if (Array.isArray(regionalItems[r][k])) regionalItems[r][k].forEach(fix);
+            });
+        });
+        Object.keys(petsByRegion).forEach(r => { if (Array.isArray(petsByRegion[r])) petsByRegion[r].forEach(fix); });
+        if (typeof birdPet !== 'undefined') fix(birdPet);
+        if (typeof gliderPets !== 'undefined') gliderPets.forEach(fix);
+        if (typeof bambooItems !== 'undefined' && Array.isArray(bambooItems)) bambooItems.forEach(fix);
+        fix(player);
+    } catch (e) { /* never let a resize break the game */ }
+}
+
 function resizeCanvas() {
     const parent = canvas.parentElement;
     let w = parent ? parent.clientWidth : 0;
     let h = parent ? parent.clientHeight : 0;
     if (w < 100) w = window.innerWidth > 100 ? window.innerWidth : 400;
     if (h < 100) h = window.innerHeight > 100 ? window.innerHeight : 600;
+    const oldW = canvas.width, oldH = canvas.height;
     canvas.width = w;
     canvas.height = h;
+    // Items, pets and the player keep their relative place when the screen resizes or rotates
+    // (they used to stay at their old pixel positions, possibly off-screen).
+    if (canvasSizedOnce && oldW > 0 && oldH > 0 && (oldW !== w || oldH !== h)) rescaleWorld(w / oldW, h / oldH);
+    canvasSizedOnce = true;
     resizeLabelCanvas();
 }
 window.addEventListener('resize', resizeCanvas);
@@ -1128,7 +1153,7 @@ function checkCollisions() {
 
                 let foodBaseGain = 1;
                 let manualFoodMultiplier = getCharacterBonuses(character.level).manualGather;
-                let foodGained = Math.round(foodBaseGain * manualFoodMultiplier);
+                let foodGained = roundStochastic(foodBaseGain * manualFoodMultiplier);
                 inventory.food += foodGained;
                 
                 gainPlayerXP(foodGained); // 1:1 with the amount actually collected (post-multiplier)
@@ -1157,7 +1182,7 @@ function checkCollisions() {
 
                 let waterBaseGain = 1;
                 let manualWaterMultiplier = getCharacterBonuses(character.level).manualGather;
-                let waterGained = Math.round(waterBaseGain * manualWaterMultiplier);
+                let waterGained = roundStochastic(waterBaseGain * manualWaterMultiplier);
                 inventory.water += waterGained;
                 
                 gainPlayerXP(waterGained); // 1:1 with the amount actually collected (post-multiplier)
@@ -1184,7 +1209,7 @@ function checkCollisions() {
 
                 let bananaBaseGain = 1;
                 let manualBananaMultiplier = getCharacterBonuses(character.level).manualGather;
-                let bananaGained = Math.round(bananaBaseGain * manualBananaMultiplier);
+                let bananaGained = roundStochastic(bananaBaseGain * manualBananaMultiplier);
                 inventory.bananas += bananaGained;
 
                 gainPlayerXP(bananaGained); // 1:1 with the amount actually collected (post-multiplier)

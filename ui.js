@@ -118,7 +118,7 @@ function showSchrodingerPicker(cat) {
         if (e) e.preventDefault();
         let correct = (guess === cat.schrodingerOutcome);
         if (correct) {
-            let catCoinsEarned = 10;
+            let catCoinsEarned = roundStochastic(10 * getCharacterBonuses(character.level).coin);   // Riches applies
             inventory.coins += catCoinsEarned;
             recordCatGuessCorrect();   // Schrodinger's Cat achievement + "Dead or Alive" task
             if (typeof spawnCoinPopup === 'function') spawnCoinPopup(cat.homeRegion || 1, cat.x + cat.size / 2, cat.y, catCoinsEarned);
@@ -507,7 +507,7 @@ function updateUI() {
     if (interactBtn) {
         // Region 2 has two elephants, and either can start the tag game — check them all.
         let elephantPlaying = false;
-        if (typeof petsByRegion !== 'undefined' && petsByRegion && Array.isArray(petsByRegion[2])) {
+        if (typeof currentRegion !== 'undefined' && currentRegion === 2 && typeof petsByRegion !== 'undefined' && petsByRegion && Array.isArray(petsByRegion[2])) {
             elephantPlaying = petsByRegion[2].some(p => p.type === 'elephant' && isPetAvailable(p) && p.state &&
                 (p.state.startsWith('playing') || p.state === 'playing_wait_for_move'));
         }
@@ -1906,10 +1906,11 @@ const closeDev = document.getElementById('closeDev');
 
 const handleSettings = (e) => {
     if (e) e.preventDefault();
-    let pass = prompt("Enter developer authorization code word:");
-    if (pass === "dev") {
-        if (devPanel) devPanel.style.display = "flex";
-    }
+    showGameDialog({ message: 'Enter developer authorization code word:', input: true }, (pass) => {
+        if (pass === "dev") {
+            if (devPanel) devPanel.style.display = "flex";
+        }
+    });
 };
 
 if (settingsBtn) {
@@ -1952,7 +1953,7 @@ if (btnAddGold) {
 
 if (btnWipeSave) {
     btnWipeSave.addEventListener('click', () => {
-        if (confirm("⚠️ WARNING: Delete all save data? This resets everything!")) {
+        showGameDialog({ message: '⚠️ WARNING: Delete all save data? This resets everything!', okText: 'DELETE', danger: true }, () => {
             // 1. Block every further save (the autosave would otherwise re-write the old progress
             //    before the reload) and wipe the local storage cache completely clean
             saveDisabled = true;
@@ -2019,7 +2020,7 @@ if (btnWipeSave) {
             
             // 5. Hard reload the page layout to compile fresh files
             window.location.reload();
-        }
+        });
     });
 }
 
@@ -2259,6 +2260,49 @@ function showInfoToast(msg) {
     toast.style.display = 'block';
     clearTimeout(toast._hideTimeout);
     toast._hideTimeout = setTimeout(() => { toast.style.display = 'none'; }, 3200);
+}
+
+// In-page replacements for confirm() / prompt(), which some WebView/APK wrappers don't support
+// (the wipe confirmation would never pass and the dev panel would never open).
+function showGameDialog(opts, onOk) {
+    let ov = document.getElementById('gameDialogOverlay');
+    if (ov) ov.remove();
+    ov = document.createElement('div');
+    ov.id = 'gameDialogOverlay';
+    ov.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:20000; display:flex; align-items:center; justify-content:center;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#2c3e50; color:#fff; font-family:monospace; padding:16px; border-radius:10px; border:2px solid #ecf0f1; width:80vw; max-width:320px; text-align:center;';
+    const msg = document.createElement('div');
+    msg.textContent = opts.message;
+    msg.style.cssText = 'font-size:13px; margin-bottom:12px; line-height:1.4;';
+    box.appendChild(msg);
+    let input = null;
+    if (opts.input) {
+        input = document.createElement('input');
+        input.type = 'password';
+        input.style.cssText = 'width:90%; font-size:14px; padding:6px; margin-bottom:12px; box-sizing:border-box;';
+        box.appendChild(input);
+    }
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex; gap:10px; justify-content:center;';
+    const mk = (label, color, fn) => {
+        const b = document.createElement('button');
+        b.textContent = label;
+        b.style.cssText = `background:${color}; color:#fff; border:none; border-radius:6px; padding:8px 14px; font-family:monospace; font-size:13px;`;
+        b.addEventListener('click', fn);
+        row.appendChild(b);
+    };
+    const close = () => { ov.remove(); };
+    mk('Cancel', '#7f8c8d', close);
+    mk(opts.okText || 'OK', opts.danger ? '#c0392b' : '#27ae60', () => {
+        const v = input ? input.value : true;
+        close();
+        onOk(v);
+    });
+    box.appendChild(row);
+    ov.appendChild(box);
+    document.body.appendChild(ov);
+    if (input) input.focus();
 }
 
 function escapeHtml(s) {

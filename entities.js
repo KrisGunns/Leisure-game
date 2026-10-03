@@ -3161,8 +3161,8 @@ class Pet {
                     if (idx > -1) {
                         targetItem.list.splice(idx, 1);
                         let y = getForageYield('glider', this.level);
-                        if (targetItem.type === 'food') inventory.food += Math.round(y.food * petFoodWaterBonus);
-                        else inventory.water += Math.round(y.water * petFoodWaterBonus);
+                        if (targetItem.type === 'food') inventory.food += roundStochastic(y.food * petFoodWaterBonus);
+                        else inventory.water += roundStochastic(y.water * petFoodWaterBonus);
                         // Strict 1:1 — one stamina per OBJECT picked up, no matter how many
                         // food/water that object was worth (level yield, perks, etc.).
                         this.stamina -= 1;
@@ -3303,7 +3303,7 @@ class Pet {
                     // Deposits into the hive's own stored pool now, not straight into the
                     // player's inventory — the player collects it manually with GIVE
                     // while standing near the hive (see executeContinuousFeed(), input.js).
-                    let honeyDeposited = Math.round(dropCount * petHoneyBonus);
+                    let honeyDeposited = roundStochastic(dropCount * petHoneyBonus);
                     // Sugar gliders dropped in Region 4 (with stamina) boost the bees' honey
                     // yield by +50% each. roundStochastic() keeps the AVERAGE at exactly the
                     // boost even at tiny loads (a plain round of 1 x 1.5 would always be 2).
@@ -3431,7 +3431,7 @@ class Pet {
                     if (Math.random() < getPerkChance('bearDoubleFish', this.level)) fishCaught *= 2;
                     // The bird's Lv20 excursion, while visiting Region 5, adds a further +25%
                     // (BIRD_VISIT_FISH_YIELD_MULT, world.js) on top of the normal petFishBonus.
-                    inventory.fish += Math.round(fishCaught * petFishBonus * getBirdVisitFishYieldBoost());
+                    inventory.fish += roundStochastic(fishCaught * petFishBonus * getBirdVisitFishYieldBoost());
                     updateUI();
                     saveGameProgress();
                     this.setNextFishingCooldown();
@@ -3510,7 +3510,7 @@ class Pet {
                 // coins instead of 1.
                 let dogCoinsBase = (this.level >= DOG_DIG_BONUS_COIN_LEVEL) ? DOG_DIG_BONUS_COIN_AMOUNT : 1;
                 dogCoinsBase = getPlayCoinPayout(dogCoinsBase, this.level, 0);   // Lv30: 25% chance to double
-                let dogCoinsEarned = Math.round(dogCoinsBase * coinBonus);
+                let dogCoinsEarned = roundStochastic(dogCoinsBase * coinBonus);
                 inventory.coins += dogCoinsEarned;
                 if (typeof spawnCoinPopup === 'function') spawnCoinPopup(this.homeRegion, this.x + this.size / 2, this.y, dogCoinsEarned);
                 updateUI();
@@ -3563,7 +3563,7 @@ class Pet {
                     spawnRegionFX(this.homeRegion, this.x, this.y, 'arrive');
                 }
 
-                let birdCoinsEarned = 2;
+                let birdCoinsEarned = roundStochastic(2 * getCharacterBonuses(character.level).coin);   // Riches applies
                 inventory.coins += birdCoinsEarned;
                 if (typeof spawnCoinPopup === 'function') spawnCoinPopup(this.homeRegion, this.x + this.size / 2, this.y, birdCoinsEarned);
                 updateUI();
@@ -3678,7 +3678,7 @@ class Pet {
                 // 2 coins for the mud-play session, 5% chance to double to 4.
                 let mudCoins = 2;
                 mudCoins = getPlayCoinPayout(mudCoins, this.level, 0.05);   // Lv30: 25% double (else 5%)
-                let pigCoinsEarned = Math.round(mudCoins * coinBonus);
+                let pigCoinsEarned = roundStochastic(mudCoins * coinBonus);
                 inventory.coins += pigCoinsEarned;
                 if (typeof spawnCoinPopup === 'function') spawnCoinPopup(this.homeRegion, this.x + this.size / 2, this.y, pigCoinsEarned);
                 updateUI();
@@ -3695,7 +3695,7 @@ class Pet {
         if (this.state === 'swinging') {
             this.stateTimer -= dt;
             if (this.stateTimer <= 0) {
-                let monkeyCoinsEarned = Math.round(5 * coinBonus);
+                let monkeyCoinsEarned = roundStochastic(5 * coinBonus);
                 inventory.coins += monkeyCoinsEarned;
                 if (typeof spawnCoinPopup === 'function') spawnCoinPopup(this.homeRegion, this.x + this.size / 2, this.y, monkeyCoinsEarned);
                 updateUI();
@@ -3718,6 +3718,22 @@ class Pet {
                 this.pickNewWanderTarget();
             }
             return;
+        }
+
+        // The tag game only runs while the player is in the elephant's region (Region 2), and gives up
+        // after 60s — it used to carry on after a region switch, with the elephant chasing the player's
+        // coordinates from another region.
+        if (this.type === 'elephant') {
+            if (typeof this.state === 'string' && this.state.indexOf('playing') === 0) {
+                this._playElapsed = (this._playElapsed || 0) + dt;
+                if (currentRegion !== 2 || this._playElapsed > 60) {
+                    this._playElapsed = 0;
+                    this.state = 'wander';
+                    this.pickNewWanderTarget();
+                }
+            } else {
+                this._playElapsed = 0;
+            }
         }
 
                 // --- MULTI-STEP ELEPHANT PLAY MECHANIC ENGINE ---
@@ -3761,7 +3777,7 @@ class Pet {
                     this.y += (dy / dist) * (this.effectiveSpeed * 1.6) * dt;
                 } else {
                     // Caught you! Award coins and reset
-                    let elephantCoinsEarned = 5;
+                    let elephantCoinsEarned = roundStochastic(5 * coinBonus);   // Riches applies
                     inventory.coins += elephantCoinsEarned;
                     addTaskProgress('playfulGiants', 1);   // "Playful Giants" task
                     if (typeof spawnCoinPopup === 'function') spawnCoinPopup(this.homeRegion, this.x + this.size / 2, this.y, elephantCoinsEarned);
@@ -3846,8 +3862,8 @@ class Pet {
                         
                         if (this.type === 'dog') {
                             let y = getForageYield('dog', this.level);
-                            if (targetItem.type === 'food') inventory.food += Math.round(y.food * petFoodWaterBonus);
-                            else inventory.water += Math.round(y.water * petFoodWaterBonus);
+                            if (targetItem.type === 'food') inventory.food += roundStochastic(y.food * petFoodWaterBonus);
+                            else inventory.water += roundStochastic(y.water * petFoodWaterBonus);
 
                             if (Math.random() < getPerkChance('dogDig', this.level)) {
                                 this.state = 'digging';
@@ -3856,12 +3872,12 @@ class Pet {
                             }
                         } else if (this.type === 'elephant') {
                             let y = getForageYield('elephant', this.level);
-                            if (targetItem.type === 'food') inventory.food += Math.round(y.food * petFoodWaterBonus);
-                            else inventory.water += Math.round(y.water * petFoodWaterBonus);
+                            if (targetItem.type === 'food') inventory.food += roundStochastic(y.food * petFoodWaterBonus);
+                            else inventory.water += roundStochastic(y.water * petFoodWaterBonus);
                         } else if (this.type === 'squirrel') {
                             let y = getForageYield('squirrel', this.level);
-                            if (targetItem.type === 'food') inventory.food += Math.round(y.food * petFoodWaterBonus);
-                            else inventory.water += Math.round(y.water * petFoodWaterBonus);
+                            if (targetItem.type === 'food') inventory.food += roundStochastic(y.food * petFoodWaterBonus);
+                            else inventory.water += roundStochastic(y.water * petFoodWaterBonus);
 
                             // Lv20+: a chance per forage to speed up EVERY pet in this region by +50%
                             // for SQUIRREL_BOOST_SECONDS (chance in PERK_CHANCES.squirrelBoost; boosts
@@ -3871,13 +3887,13 @@ class Pet {
                             }
                             } else if (this.type === 'chicken') {
                             let y = getForageYield('chicken', this.level);
-                            if (targetItem.type === 'food') inventory.food += Math.round(y.food * petFoodWaterBonus);
-                            else inventory.water += Math.round(y.water * petFoodWaterBonus);
+                            if (targetItem.type === 'food') inventory.food += roundStochastic(y.food * petFoodWaterBonus);
+                            else inventory.water += roundStochastic(y.water * petFoodWaterBonus);
 
                             // Lv20+: 10% chance per forage to lay an egg. At Lv30 the "chain egg" adds to
-                            // that: once an egg has been laid, the NEXT forage gets +5% egg chance
-                            // (15% total), and every further egg in a row raises the bonus another 5%
-                            // (up to +50%). A forage that lays no egg resets the bonus to 0.
+                            // that: once an egg has been laid, the NEXT forage gets +10% egg chance
+                            // (20% total), and every further egg in a row raises the bonus another 10%
+                            // (up to +60%). A forage that lays no egg resets the bonus to 0.
                             const chickenChain = (this.level >= CHAIN_EGG_MIN_LEVEL) ? this.chainEggBonus : 0;
                             const laysEgg = getPerkChance('chickenEgg', this.level) > 0 &&
                                             Math.random() < getPerkChance('chickenEgg', this.level) + chickenChain;
@@ -3893,7 +3909,9 @@ class Pet {
                                 if (!eggRItems.eggs) eggRItems.eggs = [];
 
                                 // Spawns the egg coordinates cleanly right at the chicken's current location
-                                eggRItems.eggs.push({ 
+                                // Capped so an unattended region can't pile up eggs forever (they are saved,
+                                // drawn and hit-tested every frame).
+                                if (eggRItems.eggs.length < MAX_EGGS_ON_MAP) eggRItems.eggs.push({ 
                                     x: this.x + this.size / 2, 
                                     y: this.y + this.size / 2 
                                 });
@@ -3903,8 +3921,8 @@ class Pet {
                             }
                         } else if (this.type === 'pig') {
                             let y = getForageYield('pig', this.level);
-                            if (targetItem.type === 'food') inventory.food += Math.round(y.food * petFoodWaterBonus);
-                            else inventory.water += Math.round(y.water * petFoodWaterBonus);
+                            if (targetItem.type === 'food') inventory.food += roundStochastic(y.food * petFoodWaterBonus);
+                            else inventory.water += roundStochastic(y.water * petFoodWaterBonus);
 
                             // 5% chance to play in the mud for 5s after a successful forage
                             // (Level 20+ only — matches the dog/chicken rare-bonus pattern),
@@ -3943,7 +3961,7 @@ class Pet {
                         } else if (this.type === 'cat') {
                             let y = getForageYield('cat', this.level);
                             let gain = (targetItem.type === 'food') ? y.food : y.water;
-                            let finalGain = Math.round(gain * petFoodWaterBonus);
+                            let finalGain = roundStochastic(gain * petFoodWaterBonus);
                             // Level 15+: 10% chance to double whatever was actually granted.
                             if (Math.random() < getPerkChance('catDouble', this.level)) finalGain *= 2;
                             if (targetItem.type === 'food') inventory.food += finalGain;
@@ -3972,7 +3990,7 @@ class Pet {
                             // regions (1, 2, 6, 7) on an excursion. No extra excursion-only
                             // bonus any more — see BIRD_VISIT_* (world.js) for what visiting
                             // actually does instead (region-specific buffs, not its own yield).
-                            let finalGain = Math.round(gain * petFoodWaterBonus);
+                            let finalGain = roundStochastic(gain * petFoodWaterBonus);
                             if (targetItem.type === 'food') inventory.food += finalGain;
                             else inventory.water += finalGain;
 
@@ -4024,7 +4042,7 @@ class Pet {
                         } else if (this.type === 'panda') {
                             let y = getForageYield('panda', this.level);
                             let gain = (targetItem.type === 'food') ? y.food : y.water;
-                            let finalGain = Math.round(gain * petFoodWaterBonus);
+                            let finalGain = roundStochastic(gain * petFoodWaterBonus);
                             if (targetItem.type === 'food') inventory.food += finalGain;
                             else inventory.water += finalGain;
 

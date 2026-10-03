@@ -20,8 +20,18 @@ const whistleBtn = document.getElementById('whistleBtn');
 // The highest level any pet can reach. Everything that used to hard-code 20 (feeding stops,
 // progress bars, the Codex's "x/20", the dev insta-max, save validation...) reads this instead.
 const MAX_PET_LEVEL = 30;
+const MAX_EGGS_ON_MAP = 25;   // chicken eggs lying in Region 3 (laying stops while the map is full)
 const MAX_NAME_LENGTH = 20;   // pet / character names (inputs have maxlength too; loaded saves are clamped)
 // Loaded-save helpers: a hand-edited or corrupt save can't put NaN, negatives, huge or non-string values into the game.
+// Pets in the middle of a mini-game / special action (dog digging, pig mud-play, monkey swinging,
+// cat in the Schrödinger box, panda Bamboo Fever or Starve, elephant tag) can't be whistled — it would
+// throw away the coin payout / penalty / box. See the whistle button in input.js.
+function isPetBusy(pet) {
+    const st = pet && pet.state;
+    if (typeof st !== 'string') return false;
+    return ['digging', 'mud_play', 'swinging', 'schrodinger', 'bamboo_wait', 'full', 'abandoned'].indexOf(st) !== -1 ||
+        st.indexOf('playing') === 0;
+}
 function cleanSavedName(v, fallback) {
     if (typeof v !== 'string') return fallback;
     const t = v.trim().slice(0, MAX_NAME_LENGTH);
@@ -231,7 +241,6 @@ function getForageYield(type, level) {
 }
 
 let currentRegion = 1;
-let spawnTimer = 0;
 let lastTime = 0;
 const frameInterval = 1000 / 60;
 
