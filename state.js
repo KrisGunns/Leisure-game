@@ -1069,7 +1069,7 @@ function saveGameProgress() {
             wisdomPotion: shopBuffs.wisdomPotion
         };
 
-        localStorage.setItem('just_a_little_leisure_save_v2', JSON.stringify(stateMatrix));
+        localStorage.setItem(SAVE_KEY, JSON.stringify(stateMatrix));
     } catch (e) {
         console.error("Auto-save failed:", e);
     }

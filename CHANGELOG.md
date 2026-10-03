@@ -143,6 +143,11 @@ same size."):
 
 ---
 
+### 2026-10-03 (47) — Sweep follow-up: blocking dialogs, save-key consistency
+- **ui.js / input.js**: all `alert()` calls (name-change confirmations, locked-region message, hive-full / not-enough-coins messages) replaced by a non-blocking `showInfoToast()`. `alert()` froze the game loop and is dropped by some APK/WebView wrappers.
+- **state.js**: `saveGameProgress` now writes with `SAVE_KEY` instead of a duplicated string literal, so wipe/backup/load can never drift from the save key.
+- Re-ran the lint pass (no undefined globals or duplicate declarations outside the intentional dev-panel `prompt`) and re-reviewed input hold timers, frame-delta clamp and save/backup paths: no further defects found. The wipe `confirm()` is kept on purpose (destructive action).
+
 ### 2026-10-03 (46) — Sweep items 5, 6, 7, 11 (TAMERS rebuild, name safety, save validation, image retry)
 - **TAMERS screen (ui.js)**: `updateCharacterScreen()` is called every frame while open; it now rebuilds the tamer cards, bonus list and perks list only when their change-signature differs (DOM mutations while idle: ~500/s → 0). Tamer cards are click-only (the `touchstart` handler is gone, so a scroll-swipe no longer switches the model).
 - **Names (ui.js, index.html, state.js)**: pet/glider names in the Codex are passed through `escapeHtml`; all 18 name inputs have `maxlength="20"`; every rename handler clamps to `MAX_NAME_LENGTH` (20); loaded names are trimmed/clamped.

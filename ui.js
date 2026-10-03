@@ -1464,7 +1464,7 @@ if (btnRenameCharacter && characterNameInput) {
             characterNameInput.value = '';
             saveGameProgress();
             updateCharacterScreen();
-            alert(`✨ Name successfully updated to: ${nameVal}!`);
+            showInfoToast(`✨ Name successfully updated to: ${nameVal}!`);
         }
     };
     btnRenameCharacter.addEventListener('click', handleCharacterRename);
@@ -2075,7 +2075,7 @@ function bindPetRename(btnId, inputId, regionIdx, petIdx) {
                 updateUI();
                 if (typeof updateCodexData === 'function') updateCodexData();
                 
-                alert(`✨ Name successfully updated to: ${nameVal}!`);
+                showInfoToast(`✨ Name successfully updated to: ${nameVal}!`);
             }
         };
         btn.addEventListener('click', handleRename);
@@ -2112,7 +2112,7 @@ function bindGliderRename(btnId, inputId, gliderIdx) {
                 saveGameProgress();
                 updateUI();
                 if (typeof updateCodexData === 'function') updateCodexData();
-                alert(`✨ Name successfully updated to: ${nameVal}!`);
+                showInfoToast(`✨ Name successfully updated to: ${nameVal}!`);
             }
         });
     }
@@ -2135,7 +2135,7 @@ bindGliderRename('btnRenameGlider2', 'inputGlider2', 1); // Miss Glider
                 saveGameProgress();
                 updateUI();
                 if (typeof updateCodexData === 'function') updateCodexData();
-                alert(`✨ Name successfully updated to: ${nameVal}!`);
+                showInfoToast(`✨ Name successfully updated to: ${nameVal}!`);
             }
         });
     }
@@ -2172,14 +2172,14 @@ if (spawnBeeBtn) {
         
         // 2. Strict Capacity Threshold Lock
         if (countHiveBees() >= HIVE_MAX_BEES) {
-            alert(`🍯 The Hive structure has reached its maximum capacity of ${HIVE_MAX_BEES} total bees!`);
+            showInfoToast(`🍯 The Hive structure has reached its maximum capacity of ${HIVE_MAX_BEES} total bees!`);
             spawnBeeBtn.style.display = 'none';
             return;
         }
 
         // 3. Financial Ledger Transaction Check
         if (inventory.coins < BEE_COST) {
-            alert(`🪙 Insufficient Coins! Buying a new bee costs ${BEE_COST} Coins. (You have: ${inventory.coins})`);
+            showInfoToast(`🪙 Insufficient Coins! Buying a new bee costs ${BEE_COST} Coins. (You have: ${inventory.coins})`);
             return;
         }
 
@@ -2239,6 +2239,27 @@ const statsOverlay = document.getElementById('statsOverlay');
 const statsContent = document.getElementById('statsContent');
 let achievementsSignature = '';
 let statsSignature = '';
+
+// Non-blocking replacement for alert(): alert() freezes the game loop and is silently dropped by
+// some WebView/APK wrappers, so name-change confirmations, locked-region and shop messages use this.
+function showInfoToast(msg) {
+    let toast = document.getElementById('infoToast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'infoToast';
+        toast.style.cssText = `
+            position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.88); color: #fff; font-family: monospace;
+            padding: 8px 14px; border-radius: 8px; z-index: 10000; font-size: 13px;
+            border: 2px solid #3498db; max-width: 88vw; text-align: center; pointer-events: none;
+        `;
+        document.body.appendChild(toast);
+    }
+    toast.textContent = String(msg);
+    toast.style.display = 'block';
+    clearTimeout(toast._hideTimeout);
+    toast._hideTimeout = setTimeout(() => { toast.style.display = 'none'; }, 3200);
+}
 
 function escapeHtml(s) {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

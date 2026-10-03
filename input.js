@@ -280,7 +280,7 @@ if (regionSelector) {
         if (!isRegionUnlocked(selectedRegion)) {
             const regionUnlockable = getUnlockable('region_' + selectedRegion);
             const price = regionUnlockable ? ` for ${regionUnlockable.cost} 🪙` : '';
-            alert(`🔒 Region locked! You can unlock Region ${selectedRegion}${price} in the Shop (Menu → Shop → Unlockables).`);
+            showInfoToast(`🔒 Region locked! You can unlock Region ${selectedRegion}${price} in the Shop (Menu → Shop → Unlockables).`);
             regionSelector.value = currentRegion;
             return;
         }
