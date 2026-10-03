@@ -909,7 +909,7 @@ function updateCodexData() {
 
     let dogReq = getLevelRequirement('dog', dog.level);
     document.getElementById('infoDog').innerHTML = `
-        <strong>${dog.level >= 2 ? dog.label : '???'}</strong><br>
+        <strong>${dog.level >= 2 ? escapeHtml(dog.label) : '???'}</strong><br>
         Status: <span class="${dog.level >= 2 ? 'codexTamed' : 'codexWild'}">${dog.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
         Level: ${dog.level >= 2 ? dog.level + '/' + MAX_PET_LEVEL : '?/' + MAX_PET_LEVEL}<br>
         Next Req: ${dog.level < 2 ? '???' : (dog.level < MAX_PET_LEVEL ? '🍪' + dogReq.food + ' 💧' + dogReq.water : 'MAX')}
@@ -919,7 +919,7 @@ function updateCodexData() {
 
     let catReq = getLevelRequirement('cat', cat.level);
     document.getElementById('infoCat').innerHTML = `
-        <strong>${cat.level >= 2 ? cat.label : '???'}</strong><br>
+        <strong>${cat.level >= 2 ? escapeHtml(cat.label) : '???'}</strong><br>
         Status: <span class="${cat.level >= 2 ? 'codexTamed' : 'codexWild'}">${cat.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
         Level: ${cat.level >= 2 ? cat.level + '/' + MAX_PET_LEVEL : '?/' + MAX_PET_LEVEL}<br>
         Next Req: ${cat.level < 2 ? '???' : (cat.level < MAX_PET_LEVEL ? '🍪' + catReq.food + ' 💧' + catReq.water : 'MAX')}
@@ -929,7 +929,7 @@ function updateCodexData() {
 
     let birdReq = getLevelRequirement('bird', bird.level);
     document.getElementById('infoBird').innerHTML = `
-        <strong>${bird.level >= 2 ? bird.label : '???'}</strong><br>
+        <strong>${bird.level >= 2 ? escapeHtml(bird.label) : '???'}</strong><br>
         Status: <span class="${bird.level >= 2 ? 'codexTamed' : 'codexWild'}">${bird.level >= 2 ? 'TAMED' : 'WILD'}${bird.excursionActive ? ' (away)' : ''}</span><br>
         Level: ${bird.level >= 2 ? bird.level + '/' + MAX_PET_LEVEL : '?/' + MAX_PET_LEVEL}<br>
         Next Req: ${bird.level < 2 ? '???' : (bird.level < MAX_PET_LEVEL ? '🍪' + birdReq.food + ' 💧' + birdReq.water : 'MAX')}
@@ -948,7 +948,7 @@ function updateCodexData() {
         let elReq = getLevelRequirement('elephant', slot.pet.level);
         let infoEl = document.getElementById(slot.infoId);
         if (infoEl) infoEl.innerHTML = `
-            <strong>${slot.pet.level >= 2 ? slot.pet.label : '???'}</strong><br>
+            <strong>${slot.pet.level >= 2 ? escapeHtml(slot.pet.label) : '???'}</strong><br>
             Status: <span class="${slot.pet.level >= 2 ? 'codexTamed' : 'codexWild'}">${slot.pet.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
             Level: ${slot.pet.level >= 2 ? slot.pet.level + '/' + MAX_PET_LEVEL : '?/' + MAX_PET_LEVEL}<br>
             Next Req: ${slot.pet.level < 2 ? '???' : (slot.pet.level < MAX_PET_LEVEL ? '🍪' + elReq.food + ' 💧' + elReq.water : 'MAX')}
@@ -960,7 +960,7 @@ function updateCodexData() {
 
     let sqReq = getLevelRequirement('squirrel', squirrel.level);
     document.getElementById('infoSquirrel').innerHTML = `
-        <strong>${squirrel.level >= 2 ? squirrel.label : '???'}</strong><br>
+        <strong>${squirrel.level >= 2 ? escapeHtml(squirrel.label) : '???'}</strong><br>
         Status: <span class="${squirrel.level >= 2 ? 'codexTamed' : 'codexWild'}">${squirrel.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
         Level: ${squirrel.level >= 2 ? squirrel.level + '/' + MAX_PET_LEVEL : '?/' + MAX_PET_LEVEL}<br>
         Next Req: ${squirrel.level < 2 ? '???' : (squirrel.level < MAX_PET_LEVEL ? '🍪' + sqReq.food + ' 💧' + sqReq.water : 'MAX')}
@@ -970,7 +970,7 @@ function updateCodexData() {
 
     let chReq = getLevelRequirement('chicken', chicken.level);
     document.getElementById('infoChicken').innerHTML = `
-        <strong>${chicken.level >= 2 ? chicken.label : '???'}</strong><br>
+        <strong>${chicken.level >= 2 ? escapeHtml(chicken.label) : '???'}</strong><br>
         Status: <span class="${chicken.level >= 2 ? 'codexTamed' : 'codexWild'}">${chicken.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
         Level: ${chicken.level >= 2 ? chicken.level + '/' + MAX_PET_LEVEL : '?/' + MAX_PET_LEVEL}<br>
         Next Req: ${chicken.level < 2 ? '???' : (chicken.level < MAX_PET_LEVEL ? '🍪' + chReq.food + ' 💧' + chReq.water : 'MAX')}
@@ -1006,7 +1006,7 @@ function updateCodexData() {
         renderMiniPet(bee, 'viewBee');
         
         document.getElementById('infoBee').innerHTML = `
-            <strong>${bee.level >= 1 ? bee.label : '???'}</strong><br>
+            <strong>${bee.level >= 1 ? escapeHtml(bee.label) : '???'}</strong><br>
             Status: <span class="${bee.level >= 1 ? 'codexTamed' : 'codexWild'}">${bee.level >= 1 ? 'TAMED' : 'WILD'}</span><br>
             Level: ${bee.level}/${MAX_PET_LEVEL}<br>
             Next Req: ${bee.level < MAX_PET_LEVEL ? '🌸 ' + beeReq + ' Flowers' : 'MAX'}
@@ -1042,7 +1042,7 @@ function updateCodexData() {
 
             let infoEl = document.getElementById(slot.infoId);
             if (infoEl) infoEl.innerHTML = `
-                <strong>${slot.bear.level >= 2 ? slot.bear.label : '???'}</strong><br>
+                <strong>${slot.bear.level >= 2 ? escapeHtml(slot.bear.label) : '???'}</strong><br>
                 Status: <span class="${slot.bear.level >= 2 ? 'codexTamed' : 'codexWild'}">${slot.bear.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
                 Level: ${slot.bear.level}/${MAX_PET_LEVEL}<br>
                 Next Req: ${slot.bear.level < MAX_PET_LEVEL ? '🍯 ' + bearReq + ' Honey' : 'MAX'}
@@ -1078,7 +1078,7 @@ function updateCodexData() {
             renderMiniPet(slot.pig, slot.viewId);
             let infoEl = document.getElementById(slot.infoId);
             if (infoEl) infoEl.innerHTML = `
-                <strong>${slot.pig.level >= 2 ? slot.pig.label : '???'}</strong><br>
+                <strong>${slot.pig.level >= 2 ? escapeHtml(slot.pig.label) : '???'}</strong><br>
                 Status: <span class="${slot.pig.level >= 2 ? 'codexTamed' : 'codexWild'}">${slot.pig.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
                 Level: ${slot.pig.level}/${MAX_PET_LEVEL}<br>
                 Next Req: ${slot.pig.level < MAX_PET_LEVEL ? '🍪' + pigReq.food + ' 💧' + pigReq.water : 'MAX'}
@@ -1103,7 +1103,7 @@ function updateCodexData() {
             let pandaReq = getLevelRequirement('panda', panda.level);
             renderMiniPet(panda, 'viewPanda');
             document.getElementById('infoPanda').innerHTML = `
-                <strong>${panda.level >= 2 ? panda.label : '???'}</strong><br>
+                <strong>${panda.level >= 2 ? escapeHtml(panda.label) : '???'}</strong><br>
                 Status: <span class="${panda.level >= 2 ? 'codexTamed' : 'codexWild'}">${panda.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
                 Level: ${panda.level}/${MAX_PET_LEVEL}<br>
                 Next Req: ${panda.level < MAX_PET_LEVEL ? '🍪' + pandaReq.food + ' 💧' + pandaReq.water : 'MAX'}
@@ -1136,7 +1136,7 @@ function updateCodexData() {
             renderMiniPet(slot.monkey, slot.viewId);
             let infoEl = document.getElementById(slot.infoId);
             if (infoEl) infoEl.innerHTML = `
-                <strong>${slot.monkey.level >= 2 ? slot.monkey.label : '???'}</strong><br>
+                <strong>${slot.monkey.level >= 2 ? escapeHtml(slot.monkey.label) : '???'}</strong><br>
                 Status: <span class="${slot.monkey.level >= 2 ? 'codexTamed' : 'codexWild'}">${slot.monkey.level >= 2 ? 'TAMED' : 'WILD'}</span><br>
                 Level: ${slot.monkey.level}/${MAX_PET_LEVEL}<br>
                 Next Req: ${slot.monkey.level < MAX_PET_LEVEL ? '🍌 ' + monkeyReq + ' Bananas' : 'MAX'}
@@ -1170,7 +1170,7 @@ function updateCodexData() {
                 renderMiniPet(slot.glider, slot.viewId);
                 let infoEl = document.getElementById(slot.infoId);
                 if (infoEl) infoEl.innerHTML = `
-                    <strong>${slot.glider.label}</strong><br>
+                    <strong>${escapeHtml(slot.glider.label)}</strong><br>
                     Status: <span class="codexTamed">TAMED</span><br>
                     Level: ${slot.glider.level}/${MAX_PET_LEVEL}<br>
                     Next Req: ${slot.glider.level < MAX_PET_LEVEL ? '🍯/🍌 ' + gliderReq.treats + ' 💧' + gliderReq.water : 'MAX'}<br>
@@ -1329,7 +1329,14 @@ function getBulkedPerkGroups() {
     return groups;
 }
 
+// updateUI() calls this every frame while the overlay is open, so every section is only rebuilt
+// when what it shows has actually changed (otherwise the cards were torn down ~60x a second and
+// a tap could land on a card that had just been replaced).
+let lastTamersSig = null;
+let lastCharBonusSig = null;
+let lastCharPerksSig = null;
 function updateCharacterScreen() {
+    const tamersSig = character.model === 'male' ? 'male' : 'female';
     const nameDisplay = document.getElementById('characterNameDisplay');
     const levelValue = document.getElementById('characterLevelValue');
     const bonusList = document.getElementById('characterBonusList');
@@ -1344,7 +1351,8 @@ function updateCharacterScreen() {
     // character.model and, immediately, player.model — no reload needed, the next frame
     // just draws with the other sprite set.
     const tamersList = document.getElementById('characterTamersList');
-    if (tamersList && typeof getPlayerSprite === 'function' && typeof PLAYER_MODELS !== 'undefined') {
+    if (tamersList && typeof getPlayerSprite === 'function' && typeof PLAYER_MODELS !== 'undefined' && tamersSig !== lastTamersSig) {
+        lastTamersSig = character.model === 'male' ? 'male' : 'female';
         while (tamersList.firstChild) tamersList.removeChild(tamersList.firstChild);
         const currentModel = character.model === 'male' ? 'male' : 'female';
         const TAMER_LABELS = { female: 'Girl', male: 'Boy' };
@@ -1377,7 +1385,6 @@ function updateCharacterScreen() {
                     updateCharacterScreen();
                 };
                 card.addEventListener('click', selectTamer);
-                card.addEventListener('touchstart', selectTamer, { passive: false });
             }
             tamersList.appendChild(card);
         });
@@ -1386,6 +1393,8 @@ function updateCharacterScreen() {
     if (bonusList && typeof getCharacterBonuses === 'function') {
         let b = getCharacterBonuses(character.level);
         const pct = (mult) => Math.round((mult - 1) * 100);
+        const bSig = [b.petFoodWater, b.petHoney, b.petFish, b.petBanana, b.coin, b.manualGather].map(pct).join('|');
+        if (bSig !== lastCharBonusSig) { lastCharBonusSig = bSig;
         bonusList.innerHTML = `
             🍪💧 Pet food/water gain: <strong>+${pct(b.petFoodWater)}%</strong><br>
             🍯 Pet honey gain: <strong>+${pct(b.petHoney)}%</strong><br>
@@ -1394,10 +1403,14 @@ function updateCharacterScreen() {
             🪙 Coin gain: <strong>+${pct(b.coin)}%</strong><br>
             🖐️ Manual gather (walking over food/water): <strong>+${pct(b.manualGather)}%</strong>
         `;
+        }
     }
 
     // Perk checklist: green + ✓ once the perk has been unlocked in the Perk Tree.
     if (perksList && typeof PERK_TREE !== 'undefined') {
+        const pSig = getBulkedPerkGroups().map(p => p.id + ':' + p.owned + ':' + p.ownedAdd).join('|');
+        if (pSig === lastCharPerksSig) return;
+        lastCharPerksSig = pSig;
         while (perksList.firstChild) perksList.removeChild(perksList.firstChild);
         // Bottom-to-top, left-to-right — the same order the tree is read in.
         // Only the bonuses that are ACTIVE: a type appears once the first perk of it is unlocked in
@@ -1445,7 +1458,7 @@ const btnRenameCharacter = document.getElementById('btnRenameCharacter');
 const characterNameInput = document.getElementById('characterNameInput');
 if (btnRenameCharacter && characterNameInput) {
     const handleCharacterRename = () => {
-        let nameVal = characterNameInput.value.trim();
+        let nameVal = characterNameInput.value.trim().slice(0, MAX_NAME_LENGTH);
         if (nameVal) {
             character.name = nameVal;
             characterNameInput.value = '';
@@ -2051,7 +2064,7 @@ function bindPetRename(btnId, inputId, regionIdx, petIdx) {
     
     if (btn && input) {
         const handleRename = () => {
-            let nameVal = input.value.trim();
+            let nameVal = input.value.trim().slice(0, MAX_NAME_LENGTH);
             if (nameVal && petsByRegion && petsByRegion[regionIdx] && petsByRegion[regionIdx][petIdx]) {
                 // Pushes the string straight into the live simulation memory array slot!
                 petsByRegion[regionIdx][petIdx].label = nameVal;
@@ -2092,7 +2105,7 @@ function bindGliderRename(btnId, inputId, gliderIdx) {
     const input = document.getElementById(inputId);
     if (btn && input) {
         btn.addEventListener('click', () => {
-            let nameVal = input.value.trim();
+            let nameVal = input.value.trim().slice(0, MAX_NAME_LENGTH);
             if (nameVal && typeof gliderPets !== 'undefined' && gliderPets[gliderIdx]) {
                 gliderPets[gliderIdx].label = nameVal;
                 input.value = '';
@@ -2115,7 +2128,7 @@ bindGliderRename('btnRenameGlider2', 'inputGlider2', 1); // Miss Glider
     const input = document.getElementById('inputBird');
     if (btn && input) {
         btn.addEventListener('click', () => {
-            let nameVal = input.value.trim();
+            let nameVal = input.value.trim().slice(0, MAX_NAME_LENGTH);
             if (nameVal && typeof birdPet !== 'undefined' && birdPet) {
                 birdPet.label = nameVal;
                 input.value = '';

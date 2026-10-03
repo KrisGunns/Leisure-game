@@ -20,6 +20,18 @@ const whistleBtn = document.getElementById('whistleBtn');
 // The highest level any pet can reach. Everything that used to hard-code 20 (feeding stops,
 // progress bars, the Codex's "x/20", the dev insta-max, save validation...) reads this instead.
 const MAX_PET_LEVEL = 30;
+const MAX_NAME_LENGTH = 20;   // pet / character names (inputs have maxlength too; loaded saves are clamped)
+// Loaded-save helpers: a hand-edited or corrupt save can't put NaN, negatives, huge or non-string values into the game.
+function cleanSavedName(v, fallback) {
+    if (typeof v !== 'string') return fallback;
+    const t = v.trim().slice(0, MAX_NAME_LENGTH);
+    return t || fallback;
+}
+function cleanSavedNum(v, min, max, fallback) {
+    const n = Number(v);
+    if (!isFinite(n)) return fallback;
+    return Math.min(max, Math.max(min, n));
+}
 
 // New Core Dynamic Math Formula Engine (scaling factor is Level ^ 1.2, so it keeps working
 // unchanged up to MAX_PET_LEVEL)
@@ -1080,13 +1092,14 @@ function loadGameProgress() {
 
         guard('inventory', () => {
             if (stateMatrix.inventory) {
-                inventory.food = stateMatrix.inventory.food || 0;
-                inventory.water = stateMatrix.inventory.water || 0;
-                inventory.honey = stateMatrix.inventory.honey || 0;
-                inventory.fish = stateMatrix.inventory.fish || 0;
-                inventory.coins = stateMatrix.inventory.coins || 0;
-                inventory.eggs = stateMatrix.inventory.eggs || 0;
-                inventory.bananas = stateMatrix.inventory.bananas || 0;
+                const invNum = (v) => Math.floor(cleanSavedNum(v, 0, 1e12, 0));
+                inventory.food = invNum(stateMatrix.inventory.food);
+                inventory.water = invNum(stateMatrix.inventory.water);
+                inventory.honey = invNum(stateMatrix.inventory.honey);
+                inventory.fish = invNum(stateMatrix.inventory.fish);
+                inventory.coins = invNum(stateMatrix.inventory.coins);
+                inventory.eggs = invNum(stateMatrix.inventory.eggs);
+                inventory.bananas = invNum(stateMatrix.inventory.bananas);
                 inventory.diamonds = Math.max(0, Math.floor(Number(stateMatrix.inventory.diamonds)) || 0);   // older saves have none
             }
 
@@ -1106,8 +1119,12 @@ function loadGameProgress() {
         guard('character', () => {
             // FIXED: Fully restore and link Character Level and XP to the HUD on page load
             if (stateMatrix.characterData) {
-                character = stateMatrix.characterData;
-                if (!character.name) character.name = 'Player'; // older saves predate the name field
+                const rawChar = (stateMatrix.characterData && typeof stateMatrix.characterData === 'object') ? stateMatrix.characterData : {};
+                character = rawChar;
+                character.level = Math.floor(cleanSavedNum(rawChar.level, 1, 1000, 1));
+                character.xp = cleanSavedNum(rawChar.xp, 0, 1e12, 0);
+                if (rawChar.perkPoints !== undefined) character.perkPoints = Math.floor(cleanSavedNum(rawChar.perkPoints, 0, 100000, 0));
+                character.name = cleanSavedName(rawChar.name, 'Player'); // older saves predate the name field
                 if (character.model !== 'male') character.model = 'female'; // older saves predate the model field
                 if (typeof player !== 'undefined') player.model = character.model; // keep the on-screen sprite in sync
                 normalizeCharacterPerks();                       // older saves predate the perk tree
@@ -1208,16 +1225,16 @@ function loadGameProgress() {
                             }
                         }
 
-                        pet.level = savedPet.level || 1;
-                        pet.label = savedPet.label || pet.label;
+                        pet.level = Math.floor(cleanSavedNum(savedPet.level, 1, MAX_PET_LEVEL, 1));
+                        pet.label = cleanSavedName(savedPet.label, pet.label);
                         // The second monkey used to be called "Coco"; its default name is now "Bow Monkey".
                         // Saves still carrying the old default name are moved over (a name the player
                         // chose themselves is left alone).
                         if (pet.type === 'monkey' && pet.label === 'Coco') pet.label = 'Bow Monkey';
-                        pet.foodEaten = savedPet.foodEaten || 0;
-                        pet.waterEaten = savedPet.waterEaten || 0;
-                        pet.honeyCarried = savedPet.honeyCarried || 0;
-                        if (pet.type === 'bear') pet.fishingTimer = savedPet.fishingTimer || 0;
+                        pet.foodEaten = cleanSavedNum(savedPet.foodEaten, 0, 1e9, 0);
+                        pet.waterEaten = cleanSavedNum(savedPet.waterEaten, 0, 1e9, 0);
+                        pet.honeyCarried = cleanSavedNum(savedPet.honeyCarried, 0, 1e9, 0);
+                        if (pet.type === 'bear') pet.fishingTimer = cleanSavedNum(savedPet.fishingTimer, 0, 1e6, 0);
                     });
                 }
 
@@ -1226,10 +1243,10 @@ function loadGameProgress() {
                 // applied) across a reload — it always comes back home, at rest. See the
                 // matching note in saveGameProgress().
                 if (stateMatrix.birdData && typeof birdPet !== 'undefined' && birdPet) {
-                    birdPet.level = stateMatrix.birdData.level || 1;
-                    birdPet.label = stateMatrix.birdData.label || birdPet.label;
-                    birdPet.foodEaten = stateMatrix.birdData.foodEaten || 0;
-                    birdPet.waterEaten = stateMatrix.birdData.waterEaten || 0;
+                    birdPet.level = Math.floor(cleanSavedNum(stateMatrix.birdData.level, 1, MAX_PET_LEVEL, 1));
+                    birdPet.label = cleanSavedName(stateMatrix.birdData.label, birdPet.label);
+                    birdPet.foodEaten = cleanSavedNum(stateMatrix.birdData.foodEaten, 0, 1e9, 0);
+                    birdPet.waterEaten = cleanSavedNum(stateMatrix.birdData.waterEaten, 0, 1e9, 0);
                     birdPet.excursionActive = false;
                     birdPet.excursionRegion = null;
                     birdPet.excursionTimer = 0;
@@ -1245,11 +1262,11 @@ function loadGameProgress() {
                     petsByRegion[r].forEach(pet => {
                         const savedPet = stateMatrix.petsData[pet.type];
                         if (savedPet) {
-                            pet.level = savedPet.level || 1;
-                            pet.label = savedPet.label || pet.label;
-                            pet.foodEaten = savedPet.foodEaten || 0;
-                            pet.waterEaten = savedPet.waterEaten || 0;
-                            if (typeof pet.honeyCarried !== 'undefined') pet.honeyCarried = savedPet.honeyCarried || 0;
+                            pet.level = Math.floor(cleanSavedNum(savedPet.level, 1, MAX_PET_LEVEL, 1));
+                            pet.label = cleanSavedName(savedPet.label, pet.label);
+                            pet.foodEaten = cleanSavedNum(savedPet.foodEaten, 0, 1e9, 0);
+                            pet.waterEaten = cleanSavedNum(savedPet.waterEaten, 0, 1e9, 0);
+                            if (typeof pet.honeyCarried !== 'undefined') pet.honeyCarried = cleanSavedNum(savedPet.honeyCarried, 0, 1e9, 0);
                         }
                     });
                 }

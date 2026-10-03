@@ -2481,9 +2481,18 @@ function getPetImage(type, anim, index) {
         // sprite. That fallback is now ONLY used after a load has actually failed — while the PNG
         // is still loading nothing is drawn — and the failing path is logged so a missing or
         // misnamed file is easy to spot (browser console / Network tab).
+        // A failed load is retried (5s, 10s, 15s) — a blip in the connection shouldn't leave the
+        // fallback model on screen for the whole session. onload clears the failed flag again.
+        img._t0 = Date.now();
+        img._failCount = 0;
+        img.onload = () => { img._failed = false; };
         img.onerror = () => {
             img._failed = true;
-            if (typeof console !== 'undefined') console.error('Pet image failed to load (showing the old fallback model instead): ' + path);
+            img._failCount++;
+            if (typeof console !== 'undefined' && img._failCount === 1) console.error('Pet image failed to load (showing the old fallback model instead): ' + path);
+            if (img._failCount <= 3) {
+                setTimeout(() => { img.src = path + (path.indexOf('?') === -1 ? '?' : '&') + 'retry=' + img._failCount; }, 5000 * img._failCount);
+            }
         };
         img.src = path;
         petImageCache[path] = img;
@@ -2496,7 +2505,9 @@ function isPetImageLoading(type, anim, index) {
     const paths = PET_IMAGE_PATHS[type] && PET_IMAGE_PATHS[type][anim];
     if (!paths || !paths.length) return false;
     const img = petImageCache[paths[index % paths.length]];
-    return !!img && !img._failed && !(img.complete && img.naturalWidth > 0);
+    // Only counts as "loading" for the first 3 seconds: a very slow download shows the fallback
+    // sprite rather than an invisible pet (the real art swaps in as soon as it arrives).
+    return !!img && !img._failed && !(img.complete && img.naturalWidth > 0) && (Date.now() - (img._t0 || 0) < 3000);
 }
 
 // Starts downloading every registered pet image up front, so the real art is ready within a

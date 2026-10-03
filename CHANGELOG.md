@@ -143,6 +143,12 @@ same size."):
 
 ---
 
+### 2026-10-03 (46) — Sweep items 5, 6, 7, 11 (TAMERS rebuild, name safety, save validation, image retry)
+- **TAMERS screen (ui.js)**: `updateCharacterScreen()` is called every frame while open; it now rebuilds the tamer cards, bonus list and perks list only when their change-signature differs (DOM mutations while idle: ~500/s → 0). Tamer cards are click-only (the `touchstart` handler is gone, so a scroll-swipe no longer switches the model).
+- **Names (ui.js, index.html, state.js)**: pet/glider names in the Codex are passed through `escapeHtml`; all 18 name inputs have `maxlength="20"`; every rename handler clamps to `MAX_NAME_LENGTH` (20); loaded names are trimmed/clamped.
+- **Save validation (state.js)**: new `cleanSavedName` / `cleanSavedNum`. Character level (1–1000), xp, perkPoints and name, inventory counts, pet and bird level (1–`MAX_PET_LEVEL`), foodEaten/waterEaten/honeyCarried/fishingTimer are validated on load; bad values fall back to defaults instead of NaN/negative/oversized.
+- **Pet images (entities.js)**: a failed image is retried up to 3 times (5s/10s/15s); `onload` clears the failed flag. A pet whose image is still loading after 3s shows the fallback sprite instead of being invisible. The failure is logged once per image.
+
 ### 2026-10-03 (45) — Code sweep fixes 1-4: save/load can't lose progress, a frame error can't freeze the game, save when backgrounded
 
 Found by a full code sweep (static lint, three file-by-file reviews, Chromium repro tests). Items 1-4 of that report:
