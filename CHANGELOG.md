@@ -143,6 +143,27 @@ same size."):
 
 ---
 
+### 2026-10-03 (45) — Code sweep fixes 1-4: save/load can't lose progress, a frame error can't freeze the game, save when backgrounded
+
+Found by a full code sweep (static lint, three file-by-file reviews, Chromium repro tests). Items 1-4 of that report:
+
+**Fixed:**
+1. **Task restore crashed on an invalid task entry (bug from entry 40).** If a saved task slot had an unknown/removed task id or a duplicate, `loadGameProgress()` threw a TypeError on `null.id` and everything after the tasks (current region, all pets, bird, gliders, purchases) was skipped — reproduced: dog back to Lv1, 0 unlocks. The task restore now simply skips bad/duplicate entries and fills the free slots with new random tasks (valid ones keep their progress and the tracked task).
+2. **A failed load could be overwritten by the next autosave.**
+   - Every part of the save (inventory, character, shop buffs, achievements+tasks, region, pets, gliders, purchases) is now restored in its own guard: one bad part is skipped and logged instead of aborting all the parts after it.
+   - A saved `currentRegion` that isn't a real region (e.g. 12) is ignored (it used to throw).
+   - Whenever any part fails, or the save isn't even valid JSON, the original raw save text is copied ONCE to `just_a_little_leisure_save_v2_backup` (`backupSaveOnce()`, state.js) before autosave can overwrite it; the first copy is kept. Wipe Save also deletes that backup. (There is no in-game restore button; the backup is for manual recovery.)
+3. **One error inside a frame froze the game for good.** `gameLoop()` (main.js) now wraps the frame in try/catch/finally: the next frame is always scheduled, the canvas transform/alpha are reset, and errors are logged (first 10, then every 600th) so a bug that throws every frame can't flood the console. The frame body moved to `runGameFrame()` unchanged.
+4. **Nothing saved when the app went to the background/closed.** The game now also saves on `visibilitychange` (page hidden) and `pagehide`, besides the 10-second timer and event saves. (Blocked while a wipe is in progress.)
+
+**Verified (Chromium):** bogus/duplicate task slots load with the dog Lv9 and all 13 purchases intact; bad region falls back to Region 1 with progress intact; a section forced to throw still restores the later sections and creates the backup; corrupt JSON starts a fresh game and keeps the raw text in the backup; Wipe removes the backup; a throwing task tick and a throwing player update both leave the loop running; hiding the page and pagehide both write the save; the earlier stress run (all regions/screens) still has no errors.
+
+**Not changed yet (from the same sweep):** TAMERS screen rebuilt every frame, unescaped pet names / no name length limit, unvalidated character/pet values in saves, whistle overwriting mini-game states, PLAY label outside Region 2, failed pet images never retried, game-loop over-count of dt (pet timers ~1.2-1.5x fast), and the smaller items.
+
+**Files:** state.js, main.js, ui.js, CHANGELOG.md.
+
+---
+
 ### 2026-10-01 (44) — Tamers perks show active bonuses only, wipe resets play time, pet-image loading hardened (elephant "old model")
 
 **Fixed / changed:**

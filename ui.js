@@ -1944,6 +1944,7 @@ if (btnWipeSave) {
             //    before the reload) and wipe the local storage cache completely clean
             saveDisabled = true;
             localStorage.removeItem('just_a_little_leisure_save_v2');
+            localStorage.removeItem(SAVE_BACKUP_KEY);   // the safety copy made by a failed load goes too
 
             // Achievements, statistics, diamonds, tasks and the character go back to a brand-new
             // game too (the total game time shown in STATISTICS resets with them).

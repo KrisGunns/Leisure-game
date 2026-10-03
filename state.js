@@ -947,6 +947,20 @@ let feedHoldCounter = 0;
 // a claim — can write the old progress back into localStorage between the wipe and the page reload.
 let saveDisabled = false;
 
+// The localStorage key of the save, and of the one-time safety copy made when a save could not be
+// (fully) read — the next autosave would otherwise overwrite the original with whatever half-loaded.
+const SAVE_KEY = 'just_a_little_leisure_save_v2';
+const SAVE_BACKUP_KEY = SAVE_KEY + '_backup';
+
+// Copies the raw save text to SAVE_BACKUP_KEY — only if there is no backup yet, so the FIRST
+// (original) copy is the one that survives repeated failures.
+function backupSaveOnce(raw) {
+    if (!raw) return;
+    try {
+        if (localStorage.getItem(SAVE_BACKUP_KEY) === null) localStorage.setItem(SAVE_BACKUP_KEY, raw);
+    } catch (e) { /* storage full/unavailable: nothing more we can do */ }
+}
+
 function saveGameProgress() {
     if (saveDisabled) return;
     try {
@@ -1051,248 +1065,277 @@ function saveGameProgress() {
 
 function loadGameProgress() {
     try {
-        const savedData = localStorage.getItem('just_a_little_leisure_save_v2');
+        const savedData = localStorage.getItem(SAVE_KEY);
         if (!savedData) return;
 
         const stateMatrix = JSON.parse(savedData);
 
-        if (stateMatrix.inventory) {
-            inventory.food = stateMatrix.inventory.food || 0;
-            inventory.water = stateMatrix.inventory.water || 0;
-            inventory.honey = stateMatrix.inventory.honey || 0;
-            inventory.fish = stateMatrix.inventory.fish || 0;
-            inventory.coins = stateMatrix.inventory.coins || 0;
-            inventory.eggs = stateMatrix.inventory.eggs || 0;
-            inventory.bananas = stateMatrix.inventory.bananas || 0;
-            inventory.diamonds = Math.max(0, Math.floor(Number(stateMatrix.inventory.diamonds)) || 0);   // older saves have none
-        }
+        // Each part of the save is restored on its own: if one part is bad it is skipped (and
+        // logged) instead of aborting everything after it, and the untouched original save is
+        // copied to a backup key before anything can overwrite it (see backupSaveOnce).
+        const failedSections = [];
+        const guard = (name, fn) => {
+            try { fn(); } catch (e) { failedSections.push(name); console.error('Loading save: "' + name + '" failed:', e); }
+        };
 
-        if (typeof region4Hive !== 'undefined' && region4Hive) {
-            region4Hive.honey = stateMatrix.hiveHoney || 0;
-        }
+        guard('inventory', () => {
+            if (stateMatrix.inventory) {
+                inventory.food = stateMatrix.inventory.food || 0;
+                inventory.water = stateMatrix.inventory.water || 0;
+                inventory.honey = stateMatrix.inventory.honey || 0;
+                inventory.fish = stateMatrix.inventory.fish || 0;
+                inventory.coins = stateMatrix.inventory.coins || 0;
+                inventory.eggs = stateMatrix.inventory.eggs || 0;
+                inventory.bananas = stateMatrix.inventory.bananas || 0;
+                inventory.diamonds = Math.max(0, Math.floor(Number(stateMatrix.inventory.diamonds)) || 0);   // older saves have none
+            }
 
-        // Eggs that were lying on the Region 3 map. Each entry is validated (a bad one is just
-        // skipped); saves from before this existed have no `eggsOnMap` and simply start with none.
-        if (Array.isArray(stateMatrix.eggsOnMap) && typeof regionalItems !== 'undefined' && regionalItems[3]) {
-            regionalItems[3].eggs = stateMatrix.eggsOnMap
-                .filter(e => e && isFinite(Number(e.x)) && isFinite(Number(e.y)))
-                .map(e => ({ x: Number(e.x), y: Number(e.y) }));
-        }
+            if (typeof region4Hive !== 'undefined' && region4Hive) {
+                region4Hive.honey = stateMatrix.hiveHoney || 0;
+            }
 
-        // FIXED: Fully restore and link Character Level and XP to the HUD on page load
-        if (stateMatrix.characterData) {
-            character = stateMatrix.characterData;
-            if (!character.name) character.name = 'Player'; // older saves predate the name field
-            if (character.model !== 'male') character.model = 'female'; // older saves predate the model field
-            if (typeof player !== 'undefined') player.model = character.model; // keep the on-screen sprite in sync
-            normalizeCharacterPerks();                       // older saves predate the perk tree
-            
-            const charLevel = document.getElementById('charLevel');
-            const charXP = document.getElementById('charXP');
-            const charNextXP = document.getElementById('charNextXP');
-            
-            if (charLevel) charLevel.textContent = character.level;
-            if (charXP) charXP.textContent = Math.floor(character.xp);
-            if (charNextXP) charNextXP.textContent = getCharacterNextXP(character.level);
-        }
-
-        // Shop buff time remaining. Saves from before this existed (including the short-lived
-        // permanent-purchase `shopPurchases` format) simply don't have this key -> nothing
-        // active. Values are validated and capped at the item's duration.
-        if (stateMatrix.shopBuffs) {
-            SHOP_ITEMS.forEach(item => {
-                let remaining = Number(stateMatrix.shopBuffs[item.id]);
-                shopBuffs[item.id] = (isFinite(remaining) && remaining > 0) ? Math.min(remaining, item.duration) : 0;
-            });
-        }
-
-        // Achievements + total play time. Older saves have neither: claimed starts at 0 and any
-        // tiers the save's pets have already earned are simply waiting to be claimed.
-        ACHIEVEMENT_DEFS.forEach(d => {
-            const saved = stateMatrix.achievements && stateMatrix.achievements[d.id];
-            const c = saved ? Math.floor(Number(saved.claimed)) : 0;
-            achievements[d.id].claimed = (isFinite(c) && c > 0) ? Math.min(c, d.tiers.length) : 0;
+            // Eggs that were lying on the Region 3 map. Each entry is validated (a bad one is just
+            // skipped); saves from before this existed have no `eggsOnMap` and simply start with none.
+            if (Array.isArray(stateMatrix.eggsOnMap) && typeof regionalItems !== 'undefined' && regionalItems[3]) {
+                regionalItems[3].eggs = stateMatrix.eggsOnMap
+                    .filter(e => e && isFinite(Number(e.x)) && isFinite(Number(e.y)))
+                    .map(e => ({ x: Number(e.x), y: Number(e.y) }));
+            }
         });
-        const savedPlay = Number(stateMatrix.playSeconds);
-        gameStats.playSeconds = (isFinite(savedPlay) && savedPlay > 0) ? savedPlay : 0;
-        const savedCatGuesses = Math.floor(Number(stateMatrix.catGuessesCorrect));
-        gameStats.catGuessesCorrect = (isFinite(savedCatGuesses) && savedCatGuesses > 0) ? savedCatGuesses : 0;
 
-        // Tasks: older saves have none (they keep the three random ones made at startup). Bad or
-        // duplicate entries are replaced, progress is clamped to its goal, and a countdown can
-        // never be longer than 3 hours (guards against a bad clock/edited save).
-        if (stateMatrix.tasks && Array.isArray(stateMatrix.tasks.slots)) {
-            const nowMs = Date.now();
-            const restored = [];
-            for (let i = 0; i < TASK_SLOT_COUNT; i++) {
-                const sv = stateMatrix.tasks.slots[i];
-                const def = sv ? getTaskDef(sv.id) : null;
-                if (def && !restored.some(r => r.id === def.id)) {
+        guard('character', () => {
+            // FIXED: Fully restore and link Character Level and XP to the HUD on page load
+            if (stateMatrix.characterData) {
+                character = stateMatrix.characterData;
+                if (!character.name) character.name = 'Player'; // older saves predate the name field
+                if (character.model !== 'male') character.model = 'female'; // older saves predate the model field
+                if (typeof player !== 'undefined') player.model = character.model; // keep the on-screen sprite in sync
+                normalizeCharacterPerks();                       // older saves predate the perk tree
+            
+                const charLevel = document.getElementById('charLevel');
+                const charXP = document.getElementById('charXP');
+                const charNextXP = document.getElementById('charNextXP');
+            
+                if (charLevel) charLevel.textContent = character.level;
+                if (charXP) charXP.textContent = Math.floor(character.xp);
+                if (charNextXP) charNextXP.textContent = getCharacterNextXP(character.level);
+            }
+        });
+
+        guard('shopBuffs', () => {
+            // Shop buff time remaining. Saves from before this existed (including the short-lived
+            // permanent-purchase `shopPurchases` format) simply don't have this key -> nothing
+            // active. Values are validated and capped at the item's duration.
+            if (stateMatrix.shopBuffs) {
+                SHOP_ITEMS.forEach(item => {
+                    let remaining = Number(stateMatrix.shopBuffs[item.id]);
+                    shopBuffs[item.id] = (isFinite(remaining) && remaining > 0) ? Math.min(remaining, item.duration) : 0;
+                });
+            }
+        });
+
+        guard('achievementsAndTasks', () => {
+            // Achievements + total play time. Older saves have neither: claimed starts at 0 and any
+            // tiers the save's pets have already earned are simply waiting to be claimed.
+            ACHIEVEMENT_DEFS.forEach(d => {
+                const saved = stateMatrix.achievements && stateMatrix.achievements[d.id];
+                const c = saved ? Math.floor(Number(saved.claimed)) : 0;
+                achievements[d.id].claimed = (isFinite(c) && c > 0) ? Math.min(c, d.tiers.length) : 0;
+            });
+            const savedPlay = Number(stateMatrix.playSeconds);
+            gameStats.playSeconds = (isFinite(savedPlay) && savedPlay > 0) ? savedPlay : 0;
+            const savedCatGuesses = Math.floor(Number(stateMatrix.catGuessesCorrect));
+            gameStats.catGuessesCorrect = (isFinite(savedCatGuesses) && savedCatGuesses > 0) ? savedCatGuesses : 0;
+
+            // Tasks: older saves have none (they keep the three random ones made at startup). Entries
+            // with an unknown task id (e.g. a task removed in a later version) or a duplicate are
+            // skipped and replaced by new random ones, progress is clamped to its goal, and a countdown
+            // can never be longer than 3 hours (guards against a bad clock/edited save).
+            if (stateMatrix.tasks && Array.isArray(stateMatrix.tasks.slots)) {
+                const nowMs = Date.now();
+                const restored = [];
+                stateMatrix.tasks.slots.slice(0, TASK_SLOT_COUNT).forEach(sv => {
+                    const def = (sv && typeof sv === 'object') ? getTaskDef(sv.id) : null;
+                    if (!def || restored.some(r => r.id === def.id)) return;
                     const prog = Math.max(0, Math.min(def.goal, Math.floor(Number(sv.progress)) || 0));
                     let ready = Number(sv.readyAt);
                     ready = (isFinite(ready) && ready > 0) ? Math.min(ready, nowMs + TASK_COOLDOWN_MS) : 0;
                     restored.push({ id: def.id, progress: ready > 0 ? def.goal : Math.min(prog, def.goal - 1), readyAt: ready });
-                } else {
-                    restored.push(null);
-                }
-            }
-            taskState.slots = restored.filter(Boolean);
-            while (taskState.slots.length < TASK_SLOT_COUNT) {
-                taskState.slots.push({ id: pickNewTaskId(null), progress: 0, readyAt: 0 });
-            }
-            const trk = stateMatrix.tasks.tracked;
-            taskState.tracked = taskState.slots.some(s => s.id === trk && s.readyAt === 0) ? trk : null;
-        }
-
-        if (stateMatrix.currentRegion) {
-            currentRegion = stateMatrix.currentRegion;
-            if (regionSelector) regionSelector.value = currentRegion;
-            foods = regionalItems[currentRegion].foods;
-            waters = regionalItems[currentRegion].waters;
-            flowers = regionalItems[currentRegion].flowers;
-            bananas = regionalItems[currentRegion].bananas;
-        }
-
-        if (stateMatrix.petsByRegion) {
-            // Current format: array per region, positional. Index 0..N-1 line up with
-            // the default pets already in petsByRegion; anything beyond that (e.g. a
-            // purchased worker bee) didn't exist yet and needs to be recreated.
-            for (let r in petsByRegion) {
-                const savedArr = stateMatrix.petsByRegion[r];
-                if (!Array.isArray(savedArr)) continue;
-
-                savedArr.forEach((savedPet, i) => {
-                    let pet = petsByRegion[r][i];
-
-                    if (!pet) {
-                        // No default slot at this index — this is an extra purchased pet.
-                        // Only region 4 (bees) supports buying extras today; skip anything
-                        // we don't have a factory for rather than guessing.
-                        if (savedPet.type === 'bee' && typeof createBee === 'function') {
-                            pet = createBee(savedPet.label);
-                            petsByRegion[r].push(pet);
-                        } else {
-                            return;
-                        }
-                    }
-
-                    pet.level = savedPet.level || 1;
-                    pet.label = savedPet.label || pet.label;
-                    // The second monkey used to be called "Coco"; its default name is now "Bow Monkey".
-                    // Saves still carrying the old default name are moved over (a name the player
-                    // chose themselves is left alone).
-                    if (pet.type === 'monkey' && pet.label === 'Coco') pet.label = 'Bow Monkey';
-                    pet.foodEaten = savedPet.foodEaten || 0;
-                    pet.waterEaten = savedPet.waterEaten || 0;
-                    pet.honeyCarried = savedPet.honeyCarried || 0;
-                    if (pet.type === 'bear') pet.fishingTimer = savedPet.fishingTimer || 0;
                 });
+                taskState.slots = restored;
+                while (taskState.slots.length < TASK_SLOT_COUNT) {
+                    taskState.slots.push({ id: pickNewTaskId(null), progress: 0, readyAt: 0 });
+                }
+                const trk = stateMatrix.tasks.tracked;
+                taskState.tracked = taskState.slots.some(s => s.id === trk && s.readyAt === 0) ? trk : null;
             }
+        });
 
-            // Bird: restore persistent stats only. Deliberately does NOT attempt to
-            // resume an in-progress excursion (region, timer, any bee-speed boost it had
-            // applied) across a reload — it always comes back home, at rest. See the
-            // matching note in saveGameProgress().
-            if (stateMatrix.birdData && typeof birdPet !== 'undefined' && birdPet) {
-                birdPet.level = stateMatrix.birdData.level || 1;
-                birdPet.label = stateMatrix.birdData.label || birdPet.label;
-                birdPet.foodEaten = stateMatrix.birdData.foodEaten || 0;
-                birdPet.waterEaten = stateMatrix.birdData.waterEaten || 0;
-                birdPet.excursionActive = false;
-                birdPet.excursionRegion = null;
-                birdPet.excursionTimer = 0;
-                birdPet.state = 'wander';
+        guard('region', () => {
+            // The saved region must be a real one (1-9); anything else keeps the starting region.
+            const savedRegion = Math.floor(Number(stateMatrix.currentRegion));
+            if (isFinite(savedRegion) && regionalItems[savedRegion]) {
+                currentRegion = savedRegion;
+                if (regionSelector) regionSelector.value = currentRegion;
+                foods = regionalItems[currentRegion].foods;
+                waters = regionalItems[currentRegion].waters;
+                flowers = regionalItems[currentRegion].flowers;
+                bananas = regionalItems[currentRegion].bananas;
             }
-        } else if (stateMatrix.petsData) {
-            // Legacy format from before this fix (keyed by pet.type, so multiple bees
-            // collided into one saved entry). Best-effort one-time read so existing
-            // saves don't lose their dog/elephant/squirrel/chicken/bear progress —
-            // any previously-purchased extra bees can't be recovered from this format,
-            // but nothing else is lost, and every save from now on uses the array format above.
-            for (let r in petsByRegion) {
-                petsByRegion[r].forEach(pet => {
-                    const savedPet = stateMatrix.petsData[pet.type];
-                    if (savedPet) {
+        });
+
+        guard('pets', () => {
+            if (stateMatrix.petsByRegion) {
+                // Current format: array per region, positional. Index 0..N-1 line up with
+                // the default pets already in petsByRegion; anything beyond that (e.g. a
+                // purchased worker bee) didn't exist yet and needs to be recreated.
+                for (let r in petsByRegion) {
+                    const savedArr = stateMatrix.petsByRegion[r];
+                    if (!Array.isArray(savedArr)) continue;
+
+                    savedArr.forEach((savedPet, i) => {
+                        let pet = petsByRegion[r][i];
+
+                        if (!pet) {
+                            // No default slot at this index — this is an extra purchased pet.
+                            // Only region 4 (bees) supports buying extras today; skip anything
+                            // we don't have a factory for rather than guessing.
+                            if (savedPet.type === 'bee' && typeof createBee === 'function') {
+                                pet = createBee(savedPet.label);
+                                petsByRegion[r].push(pet);
+                            } else {
+                                return;
+                            }
+                        }
+
                         pet.level = savedPet.level || 1;
                         pet.label = savedPet.label || pet.label;
+                        // The second monkey used to be called "Coco"; its default name is now "Bow Monkey".
+                        // Saves still carrying the old default name are moved over (a name the player
+                        // chose themselves is left alone).
+                        if (pet.type === 'monkey' && pet.label === 'Coco') pet.label = 'Bow Monkey';
                         pet.foodEaten = savedPet.foodEaten || 0;
                         pet.waterEaten = savedPet.waterEaten || 0;
-                        if (typeof pet.honeyCarried !== 'undefined') pet.honeyCarried = savedPet.honeyCarried || 0;
+                        pet.honeyCarried = savedPet.honeyCarried || 0;
+                        if (pet.type === 'bear') pet.fishingTimer = savedPet.fishingTimer || 0;
+                    });
+                }
+
+                // Bird: restore persistent stats only. Deliberately does NOT attempt to
+                // resume an in-progress excursion (region, timer, any bee-speed boost it had
+                // applied) across a reload — it always comes back home, at rest. See the
+                // matching note in saveGameProgress().
+                if (stateMatrix.birdData && typeof birdPet !== 'undefined' && birdPet) {
+                    birdPet.level = stateMatrix.birdData.level || 1;
+                    birdPet.label = stateMatrix.birdData.label || birdPet.label;
+                    birdPet.foodEaten = stateMatrix.birdData.foodEaten || 0;
+                    birdPet.waterEaten = stateMatrix.birdData.waterEaten || 0;
+                    birdPet.excursionActive = false;
+                    birdPet.excursionRegion = null;
+                    birdPet.excursionTimer = 0;
+                    birdPet.state = 'wander';
+                }
+            } else if (stateMatrix.petsData) {
+                // Legacy format from before this fix (keyed by pet.type, so multiple bees
+                // collided into one saved entry). Best-effort one-time read so existing
+                // saves don't lose their dog/elephant/squirrel/chicken/bear progress —
+                // any previously-purchased extra bees can't be recovered from this format,
+                // but nothing else is lost, and every save from now on uses the array format above.
+                for (let r in petsByRegion) {
+                    petsByRegion[r].forEach(pet => {
+                        const savedPet = stateMatrix.petsData[pet.type];
+                        if (savedPet) {
+                            pet.level = savedPet.level || 1;
+                            pet.label = savedPet.label || pet.label;
+                            pet.foodEaten = savedPet.foodEaten || 0;
+                            pet.waterEaten = savedPet.waterEaten || 0;
+                            if (typeof pet.honeyCarried !== 'undefined') pet.honeyCarried = savedPet.honeyCarried || 0;
+                        }
+                    });
+                }
+            }
+        
+        });
+
+        guard('gliders', () => {
+            // Sugar gliders. Saves from before Region 9 have no gliderData, in which case both
+            // gliders simply keep their defaults (Lv1, full stamina, resting place in Region 9).
+            // Every value is validated: a hand-edited/corrupt save can't produce a glider with
+            // NaN stamina, a level outside 1-MAX_PET_LEVEL or a region that doesn't exist.
+            if (Array.isArray(stateMatrix.gliderData) && typeof gliderPets !== 'undefined') {
+                let alreadyHolding = false;
+                stateMatrix.gliderData.forEach((saved, i) => {
+                    const g = gliderPets[i];
+                    if (!g || !saved || typeof saved !== 'object') return;
+
+                    let lvl = Math.floor(Number(saved.level));
+                    g.level = (isFinite(lvl) && lvl >= 1) ? Math.min(lvl, MAX_PET_LEVEL) : 1;
+                    if (typeof saved.label === 'string' && saved.label.trim()) g.label = saved.label;
+                    g.honeyEaten = Math.max(0, Math.floor(Number(saved.honeyEaten)) || 0);
+                    g.bananaEaten = Math.max(0, Math.floor(Number(saved.bananaEaten)) || 0);
+                    g.waterEaten = Math.max(0, Math.floor(Number(saved.waterEaten)) || 0);
+
+                    const maxStamina = getGliderMaxStamina(g.level);
+                    let st = Number(saved.stamina);
+                    g.stamina = (saved.stamina !== undefined && saved.stamina !== null && isFinite(st))
+                        ? Math.min(maxStamina, Math.max(0, st)) : maxStamina;
+
+                    let region = Math.floor(Number(saved.region));
+                    g.regionNow = (isFinite(region) && region >= 1 && region <= 9) ? region : 9;
+
+                    // Timers/reservations are never resumed — same simplification as every other
+                    // pet's transient state (the bird's excursion, mini-games, etc.).
+                    g.staminaDrainTimer = 0;
+                    g.restTimer = 0;
+                    g.restTree = -1;
+                    g.pickNewWanderTarget();
+
+                    if (saved.held && !alreadyHolding) {
+                        // Still in the player's arms — one at a time.
+                        alreadyHolding = true;
+                        g.held = true;
+                        g.state = 'held';
+                    } else {
+                        g.held = false;
+                        g.state = 'idle';
+                        g.stateTimer = 0.5;
                     }
                 });
             }
-        }
-        
-        // Sugar gliders. Saves from before Region 9 have no gliderData, in which case both
-        // gliders simply keep their defaults (Lv1, full stamina, resting place in Region 9).
-        // Every value is validated: a hand-edited/corrupt save can't produce a glider with
-        // NaN stamina, a level outside 1-MAX_PET_LEVEL or a region that doesn't exist.
-        if (Array.isArray(stateMatrix.gliderData) && typeof gliderPets !== 'undefined') {
-            let alreadyHolding = false;
-            stateMatrix.gliderData.forEach((saved, i) => {
-                const g = gliderPets[i];
-                if (!g || !saved || typeof saved !== 'object') return;
+        });
 
-                let lvl = Math.floor(Number(saved.level));
-                g.level = (isFinite(lvl) && lvl >= 1) ? Math.min(lvl, MAX_PET_LEVEL) : 1;
-                if (typeof saved.label === 'string' && saved.label.trim()) g.label = saved.label;
-                g.honeyEaten = Math.max(0, Math.floor(Number(saved.honeyEaten)) || 0);
-                g.bananaEaten = Math.max(0, Math.floor(Number(saved.bananaEaten)) || 0);
-                g.waterEaten = Math.max(0, Math.floor(Number(saved.waterEaten)) || 0);
+        guard('unlocks', () => {
+            // Purchased regions / pets. A save from before the shop existed has no `unlocks`
+            // list: grandfather it in by the OLD rules, so a player keeps every region they had
+            // already unlocked (and the pets in them) rather than losing access or re-buying them.
+            // This must run AFTER the pets above are restored, since the old rules read their levels.
+            if (Array.isArray(stateMatrix.unlocks)) {
+                stateMatrix.unlocks.forEach(id => {
+                    if (typeof id === 'string' && getUnlockable(id)) unlockedIds[id] = true;
+                });
+            } else {
+                UNLOCKABLES.forEach(u => {
+                    if (legacyRegionUnlocked(u.region)) unlockedIds[u.id] = true;
+                });
+            }
 
-                const maxStamina = getGliderMaxStamina(g.level);
-                let st = Number(saved.stamina);
-                g.stamina = (saved.stamina !== undefined && saved.stamina !== null && isFinite(st))
-                    ? Math.min(maxStamina, Math.max(0, st)) : maxStamina;
+            // Never resume standing in a locked region: pets in a locked region are neither
+            // updated nor drawn (main.js), so the player would see an empty, frozen area. It can
+            // happen if the save was made in a region that isn't owned (e.g. a hand-edited save).
+            // This has to run AFTER the purchases above are restored. Regions 1-3 are always open.
+            if (typeof isRegionUnlocked === 'function' && !isRegionUnlocked(currentRegion)) {
+                currentRegion = 1;
+                if (regionSelector) regionSelector.value = currentRegion;
+                foods = regionalItems[currentRegion].foods;
+                waters = regionalItems[currentRegion].waters;
+                flowers = regionalItems[currentRegion].flowers;
+                bananas = regionalItems[currentRegion].bananas;
+            }
+        });
 
-                let region = Math.floor(Number(saved.region));
-                g.regionNow = (isFinite(region) && region >= 1 && region <= 9) ? region : 9;
-
-                // Timers/reservations are never resumed — same simplification as every other
-                // pet's transient state (the bird's excursion, mini-games, etc.).
-                g.staminaDrainTimer = 0;
-                g.restTimer = 0;
-                g.restTree = -1;
-                g.pickNewWanderTarget();
-
-                if (saved.held && !alreadyHolding) {
-                    // Still in the player's arms — one at a time.
-                    alreadyHolding = true;
-                    g.held = true;
-                    g.state = 'held';
-                } else {
-                    g.held = false;
-                    g.state = 'idle';
-                    g.stateTimer = 0.5;
-                }
-            });
-        }
-
-        // Purchased regions / pets. A save from before the shop existed has no `unlocks`
-        // list: grandfather it in by the OLD rules, so a player keeps every region they had
-        // already unlocked (and the pets in them) rather than losing access or re-buying them.
-        // This must run AFTER the pets above are restored, since the old rules read their levels.
-        if (Array.isArray(stateMatrix.unlocks)) {
-            stateMatrix.unlocks.forEach(id => {
-                if (typeof id === 'string' && getUnlockable(id)) unlockedIds[id] = true;
-            });
-        } else {
-            UNLOCKABLES.forEach(u => {
-                if (legacyRegionUnlocked(u.region)) unlockedIds[u.id] = true;
-            });
-        }
-
-        // Never resume standing in a locked region: pets in a locked region are neither
-        // updated nor drawn (main.js), so the player would see an empty, frozen area. It can
-        // happen if the save was made in a region that isn't owned (e.g. a hand-edited save).
-        // This has to run AFTER the purchases above are restored. Regions 1-3 are always open.
-        if (typeof isRegionUnlocked === 'function' && !isRegionUnlocked(currentRegion)) {
-            currentRegion = 1;
-            if (regionSelector) regionSelector.value = currentRegion;
-            foods = regionalItems[currentRegion].foods;
-            waters = regionalItems[currentRegion].waters;
-            flowers = regionalItems[currentRegion].flowers;
-            bananas = regionalItems[currentRegion].bananas;
+        if (failedSections.length) {
+            console.error('Loading save: these parts could not be restored: ' + failedSections.join(', '));
+            backupSaveOnce(savedData);
         }
 
         // Refresh display layers immediately after unpacking variables
@@ -1301,6 +1344,7 @@ function loadGameProgress() {
 
     } catch (e) {
         console.error("Loading save failed:", e);
+        try { backupSaveOnce(localStorage.getItem(SAVE_KEY)); } catch (e2) { /* storage unavailable */ }
     }
 }
 

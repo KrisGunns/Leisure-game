@@ -4,7 +4,31 @@
 // kick off the loop). Depends on ALL other files. Load LAST.
 // ============================================================
 
+// Frame errors seen so far (see the try/catch in gameLoop). Logged for the first few and then once
+// in a while, so a bug that throws every frame can't flood the console.
+let frameErrorCount = 0;
+
 function gameLoop(timestamp) {
+    // One thrown error in a frame must NOT end the game: the next frame is always scheduled (the
+    // `finally` below), and anything the failed frame left half-done on the canvas is reset.
+    try {
+        runGameFrame(timestamp);
+    } catch (err) {
+        frameErrorCount++;
+        if (frameErrorCount <= 10 || frameErrorCount % 600 === 0) {
+            console.error('Game frame failed (frame error #' + frameErrorCount + '), carrying on:', err);
+        }
+        try {
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.globalAlpha = 1;
+            ctx.imageSmoothingEnabled = true;
+        } catch (e2) { /* nothing to reset */ }
+    } finally {
+        requestAnimationFrame(gameLoop);
+    }
+}
+
+function runGameFrame(timestamp) {
     if (!lastTime) lastTime = timestamp;
     let elapsed = timestamp - lastTime;
 
@@ -323,9 +347,6 @@ function gameLoop(timestamp) {
         // Draw this frame's queued pet labels onto the full-resolution overlay (world.js).
         flushPetText();
     } // This bracket cleanly closes the frameInterval condition block scope layer
-
-    // FIXED: Only requestAnimationFrame sits down here at the safe root level!
-    requestAnimationFrame(gameLoop);
 }
 
 // Ensure your game startup chain initializes your Codex masks tightly at launch:
@@ -334,6 +355,16 @@ updateUI();
 if (typeof updateCodexData === 'function') updateCodexData(); // FIXED: Synchronizes canvas masks on load
 
 setInterval(saveGameProgress, 10000);
+
+// Also save the moment the app is sent to the background, switched away from, or closed: on a phone
+// the WebView can be frozen or killed at that point, and the 10-second timer above would never run
+// again (everything since the last tick would be lost). `visibilitychange` (hidden) is the reliable
+// one on mobile; `pagehide` covers closing/navigating away. saveGameProgress() does nothing while
+// a save wipe is in progress (saveDisabled), so these can't undo a wipe.
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') saveGameProgress();
+});
+window.addEventListener('pagehide', saveGameProgress);
 
 FOOD_WATER_REGIONS.forEach(r => {
     for (let i = 0; i < 3; i++) {
