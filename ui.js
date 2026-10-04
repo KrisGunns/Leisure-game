@@ -335,11 +335,7 @@ function getPetPerkDescriptions(type) {
         addChance('catSchrodinger', c => `${c} chance per forage to enter Schr\u00F6dinger's state`, c => `Schr\u00F6dinger's state chance increases to ${c}`);
     } else if (type === 'bird') {
         addChance('birdFly', c => `${c} chance per forage to fly off on a ${BIRD_EXCURSION_SECONDS}s excursion to a random unlocked region`, c => `Chance to fly off increases to ${c}`);
-        perks.push({ level: 20, text: `Regions 1, 2, 6, 7: forages there like normal (its own yield plus your usual bonuses) and speeds up every pet already there by ${Math.round((BIRD_VISIT_PET_SPEED_MULT - 1) * 100)}%` });
-        perks.push({ level: 20, text: `Region 4: speeds up the bees by ${Math.round((BIRD_VISIT_BEE_SPEED_MULT - 1) * 100)}% and boosts honey gained per hive trip by ${Math.round((BIRD_VISIT_HONEY_GAIN_MULT - 1) * 100)}%` });
-        perks.push({ level: 20, text: `Region 5: boosts the bear's catch by ${Math.round((BIRD_VISIT_FISH_YIELD_MULT - 1) * 100)}% and speeds up its whole fishing cycle by ${Math.round((BIRD_VISIT_FISH_SPEED_MULT - 1) * 100)}%` });
-        perks.push({ level: 20, text: `Region 8: speeds up the monkeys by ${Math.round((BIRD_VISIT_PET_SPEED_MULT - 1) * 100)}%` });
-        perks.push({ level: 20, text: `Region 9: speeds up sugar gliders' stamina regen while resting by ${Math.round((BIRD_VISIT_GLIDER_STAMINA_MULT - 1) * 100)}%` });
+        perks.push({ level: 20, text: `While visiting: Regions 1, 2, 6, 7 \u2013 forages like normal (its own yield plus your usual bonuses) and speeds up every pet already there by ${Math.round((BIRD_VISIT_PET_SPEED_MULT - 1) * 100)}%; Region 4 \u2013 bees ${Math.round((BIRD_VISIT_BEE_SPEED_MULT - 1) * 100)}% faster and ${Math.round((BIRD_VISIT_HONEY_GAIN_MULT - 1) * 100)}% more honey per hive trip; Region 5 \u2013 bear's catch ${Math.round((BIRD_VISIT_FISH_YIELD_MULT - 1) * 100)}% bigger and its fishing cycle ${Math.round((BIRD_VISIT_FISH_SPEED_MULT - 1) * 100)}% faster; Region 8 \u2013 monkeys ${Math.round((BIRD_VISIT_PET_SPEED_MULT - 1) * 100)}% faster; Region 9 \u2013 sugar gliders' stamina regen while resting ${Math.round((BIRD_VISIT_GLIDER_STAMINA_MULT - 1) * 100)}% faster` });
     } else if (type === 'panda') {
         addChance('pandaFever', c => `${c} chance per forage (while you're in Region 7) to start "Bamboo Fever" -- choose Play to collect bamboo for coins while it naps, or Starve and it flees you for 30s`, c => `Bamboo Fever chance increases to ${c}`);
     } else if (type === 'bee') {
@@ -371,11 +367,7 @@ function getPetPerkDescriptions(type) {
         addChance('monkeySwing', c => `${c} chance per forage to swing on the vines for 20s, then +5 coins`, c => `Vine-swing chance increases to ${c}`);
     } else if (type === 'glider') {
         // What it does depends on the region it's dropped in — all of it needs stamina above 0.
-        perks.push({ level: 1, text: 'Dropped in Regions 1, 2, 3, 6 or 7: forages food & water (1 stamina per object picked up)' });
-        perks.push({ level: 1, text: 'Dropped in Region 4: bees produce +50% honey (1 stamina per 2 seconds)' });
-        perks.push({ level: 1, text: 'Dropped in Region 5: bears fish 25% faster (1 stamina per 2 seconds)' });
-        perks.push({ level: 1, text: 'Dropped in Region 8: monkeys forage +50% more (1 stamina per 2 seconds)' });
-        perks.push({ level: 1, text: 'Dropped in Region 9: rests in a tree to recharge (+1 stamina per 2 seconds)' });
+        perks.push({ level: 1, text: "Needs stamina above 0. Depends on where it's dropped: Regions 1, 2, 3, 6, 7 \u2013 forages food & water (1 stamina per object); Region 4 \u2013 bees produce +50% honey (1 stamina per 2s); Region 5 \u2013 bears fish 25% faster (1 stamina per 2s); Region 8 \u2013 monkeys forage +50% more (1 stamina per 2s); Region 9 \u2013 rests in a tree to recharge (+1 stamina per 2s)" });
         perks.push({ level: GLIDER_SPEED_BOOST_MIN_LEVEL, text: `Speeds up every pet in whatever region it's dropped in by +${Math.round(GLIDER_SPEED_BOOST_PER_GLIDER * 100)}%` });
         if (typeof GLIDER_STAMINA_TIERS !== 'undefined') {
             GLIDER_STAMINA_TIERS.forEach(tier => {
@@ -386,8 +378,19 @@ function getPetPerkDescriptions(type) {
         }
     }
 
+    // One line per level: every perk granted at the same level is compiled into a single entry
+    // (clauses joined into sentences) so the pet card shows exactly one "Lv.N:" row per milestone.
     perks.sort((a, b) => a.level - b.level);
-    return perks;
+    const merged = [];
+    perks.forEach(p => {
+        const last = merged[merged.length - 1];
+        if (last && last.level === p.level) last.parts.push(p.text);
+        else merged.push({ level: p.level, parts: [p.text] });
+    });
+    return merged.map(m => ({
+        level: m.level,
+        text: m.parts.map(t => t.replace(/[.\s]+$/, '')).join('. ')
+    }));
 }
 
 // Built dynamically in JS (same technique as showWhistlePicker/showLevelUpToast) —

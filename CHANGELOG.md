@@ -145,6 +145,9 @@ same size."):
 
 ---
 
+### 2026-10-04 (56) — Pet card: one perk line per level
+- `getPetPerkDescriptions()` (ui.js) now merges every perk granted at the same level into a single `Lv.N:` entry (yield bump + chance/minigame perks joined as sentences; still driven by the same tables, so numbers can't drift). The bird's five separate Lv.20 visit-effect lines are compiled into one "While visiting: Regions … ; Region 4 – … " entry, and the glider's five Lv.1 "Dropped in Region…" lines into one. Checked in Chromium for all 12 pet types: no duplicate levels, no errors.
+
 ### 2026-10-04 (55) — Tutorial text trims + one-tap feeder deposit
 - **Feeder deposit:** the Deposit Food button now tops the feeder up in ONE tap — it moves `min(room, bag food)` (all of the bag if it has less than the room). "Feeder is full" / "no food" toasts unchanged. `FEEDER_DEPOSIT_CHUNK` removed from `state.js`; supersedes the 100-per-tap wording in (52).
 - **tutorial.js text:** Welcome 1/6 now "Fed pets level up and tamed pets help you gather resources automatically."; Welcome 5/6 loses its last sentence; Perk points ends at "permanent bonuses."; Hunger & feeder 2/2 drops "(it holds 500)" and the closing "Every region…" line; Region 4 now reads "Stand near the hive and tap the button to collect the 🍯 honey stored there." (Buy Bee / bears / sugar gliders text removed).
