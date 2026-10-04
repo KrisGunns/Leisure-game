@@ -4369,35 +4369,9 @@ class Pet {
         ctx.font = '10px monospace';
         ctx.textAlign = 'center';
         
+        // Name + level only: the state tag ([FORAGE], [IDLE], [FISHING]...) was removed on request.
         let text = `${this.label} Lv.${this.level}`;
-        
-        if (this.state === 'whistled') {
-            text += ' [WHISTLED]';
-        } else if (this.level > 1 || this.type === 'bee' || this.type === 'bear' || this.type === 'glider') {
-            // FIXED: Checks if Elephant is in any of its custom chase sub-states, keeping tag as [PLAYING]
-            if (this.type === 'glider' && this.state === 'to_rest') {
-                // Heading for a tree opening in Region 9 (the label becomes [RESTING] once inside).
-                text += ' [TO TREE]';
-            } else if (this.type === 'glider' && this.stamina <= 0 && this.regionNow !== 9 &&
-                       this.state !== 'held' && this.state !== 'resting') {
-                // Out of stamina away from Region 9: it does nothing until it's taken back to rest.
-                text += ' [TIRED]';
-            } else if (this.state.startsWith('playing') || this.state === 'playing_wait_for_move') {
-                text += ' [PLAYING]';
-            } else if (this.type === 'bee' && (this.state === 'travel' || this.state === 'return_hive')) {
-                // Both legs of the bee's flower run (heading to a flower, or heading
-                // back to the hive to drop off honey) read simply as foraging.
-                text += ' [FORAGE]';
-            } else if (this.type === 'bear' && this.state === 'fishing_travel') {
-                // Heading to the lake is still just "fishing" from the player's view.
-                text += ' [FISHING]';
-            } else if (this.state === 'mud_play') {
-                text += ' [MUD PLAY]';
-            } else {
-                text += ` [${this.state.toUpperCase()}]`;
-            }
-        }
-        
+
         // A speed boost from the squirrel is running in this pet's region.
         if (this._regionSpeedMult > 1) text += ' \u26A1';
 

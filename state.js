@@ -244,15 +244,33 @@ let currentRegion = 1;
 let lastTime = 0;
 const frameInterval = 1000 / 60;
 
+// Lifetime totals (gameStats.lifetimeCoins / lifetimeDiamonds, shown on the Statistics screen) are
+// kept by making `coins` and `diamonds` accessor properties: every `inventory.coins += n` anywhere in
+// the game still works unchanged, and any INCREASE is also added to the lifetime total. Spending
+// (a decrease) never lowers it. Loading a save or wiping sets the values with tracking paused (see
+// lifetimeTrackingPaused), so a load never counts as "earning".
+let lifetimeTrackingPaused = false;
 const inventory = {
     food: 0,
     water: 0,
     honey: 0,
     fish: 0,
-    coins: 0,
+    _coins: 0,
     eggs: 0,
     bananas: 0,
-    diamonds: 0   // 💎 earned from achievements (see ANIMAL_TAMER_TIERS)
+    _diamonds: 0,   // 💎 earned from achievements (see ANIMAL_TAMER_TIERS)
+    get coins() { return this._coins; },
+    set coins(v) {
+        const gain = v - this._coins;
+        if (gain > 0 && !lifetimeTrackingPaused) gameStats.lifetimeCoins += gain;
+        this._coins = v;
+    },
+    get diamonds() { return this._diamonds; },
+    set diamonds(v) {
+        const gain = v - this._diamonds;
+        if (gain > 0 && !lifetimeTrackingPaused) gameStats.lifetimeDiamonds += gain;
+        this._diamonds = v;
+    }
 };
 
 // NEW: Core Character Database Profile Properties
@@ -306,11 +324,11 @@ const PERK_TYPES = {
     // type into one line with a SUMMED percentage, so it can't just reuse `text`, which is
     // one specific node's own fixed +NN%. The Perk Tree screen itself still shows each
     // node's own individual `text` unchanged — this doesn't touch that.
-    basicResource: { name: 'Basic Resource', icon: '🍪💧', cost: 1,  stat: 'petFoodWater', add: 0.30, text: '+30% food & water gained from pets', desc: 'food & water gained from pets' },
-    glazed:        { name: 'Glazed',         icon: '🍯',   cost: 3,  stat: 'petHoney',     add: 0.25, text: '+25% honey gained from pets',        desc: 'honey gained from pets' },
-    fishyBusiness: { name: 'Fishy Business', icon: '🐟',   cost: 2,  stat: 'petFish',      add: 0.25, text: '+25% fish gained from pets',         desc: 'fish gained from pets' },
-    riches:        { name: 'Riches',         icon: '🪙',   cost: 5,  stat: 'coin',         add: 0.25, text: '+25% coin gained',                   desc: 'coin gained' },
-    bananas:       { name: 'Bananas!',       icon: '🍌',   cost: 2,  stat: 'petBanana',    add: 0.20, text: '+20% bananas gained from pets',      desc: 'bananas gained from pets' }
+    basicResource: { name: 'Basic Resource', icon: '🍪💧', cost: 1,  stat: 'petFoodWater', add: 0.15, text: '+15% food & water gained from pets', desc: 'food & water gained from pets' },
+    glazed:        { name: 'Glazed',         icon: '🍯',   cost: 3,  stat: 'petHoney',     add: 0.10, text: '+10% honey gained from pets',        desc: 'honey gained from pets' },
+    fishyBusiness: { name: 'Fishy Business', icon: '🐟',   cost: 2,  stat: 'petFish',      add: 0.12, text: '+12% fish gained from pets',         desc: 'fish gained from pets' },
+    riches:        { name: 'Riches',         icon: '🪙',   cost: 5,  stat: 'coin',         add: 0.10, text: '+10% coin gained',                   desc: 'coin gained' },
+    bananas:       { name: 'Bananas!',       icon: '🍌',   cost: 2,  stat: 'petBanana',    add: 0.12, text: '+12% bananas gained from pets',      desc: 'bananas gained from pets' }
 };
 
 // Ids are `<type>_c<col>t<tier>` (by the node's ORIGINAL position). They're stored in
@@ -761,7 +779,9 @@ const SCHRODINGER_TIERS = [
     { goal: 70, reward: 15 }
 ];
 
-const gameStats = { playSeconds: 0, catGuessesCorrect: 0 };   // saved; playSeconds ticked by tickShopBuffs() below
+// saved; playSeconds ticked by tickShopBuffs() below; lifetimeCoins/lifetimeDiamonds are fed by the
+// inventory.coins / inventory.diamonds setters (top of this file)
+const gameStats = { playSeconds: 0, catGuessesCorrect: 0, lifetimeCoins: 0, lifetimeDiamonds: 0 };
 
 // Every achievement in the game. To add one: add its tier table + a row here (title, description,
 // and getCount = how far along the player is); the Achievements/Statistics screens and the save
@@ -1066,6 +1086,8 @@ function saveGameProgress() {
         ACHIEVEMENT_DEFS.forEach(d => { stateMatrix.achievements[d.id] = { claimed: achievements[d.id].claimed }; });
         stateMatrix.playSeconds = gameStats.playSeconds;
         stateMatrix.catGuessesCorrect = gameStats.catGuessesCorrect;
+        stateMatrix.lifetimeCoins = gameStats.lifetimeCoins;
+        stateMatrix.lifetimeDiamonds = gameStats.lifetimeDiamonds;
         stateMatrix.tasks = {
             slots: taskState.slots.map(s => ({ id: s.id, progress: s.progress, readyAt: s.readyAt })),
             tracked: taskState.tracked
@@ -1100,6 +1122,8 @@ function loadGameProgress() {
         };
 
         guard('inventory', () => {
+            lifetimeTrackingPaused = true;   // restoring the saved counts is not "earning" them
+            try {
             if (stateMatrix.inventory) {
                 const invNum = (v) => Math.floor(cleanSavedNum(v, 0, 1e12, 0));
                 inventory.food = invNum(stateMatrix.inventory.food);
@@ -1111,6 +1135,15 @@ function loadGameProgress() {
                 inventory.bananas = invNum(stateMatrix.inventory.bananas);
                 inventory.diamonds = Math.max(0, Math.floor(Number(stateMatrix.inventory.diamonds)) || 0);   // older saves have none
             }
+            } finally {
+                lifetimeTrackingPaused = false;
+            }
+            // Lifetime totals. Saves from before they existed start at what the player holds now (the
+            // best available figure); a lifetime total is never lower than the current amount.
+            const savedLifeCoins = Math.floor(Number(stateMatrix.lifetimeCoins));
+            const savedLifeDiamonds = Math.floor(Number(stateMatrix.lifetimeDiamonds));
+            gameStats.lifetimeCoins = Math.max(isFinite(savedLifeCoins) && savedLifeCoins > 0 ? savedLifeCoins : 0, inventory.coins);
+            gameStats.lifetimeDiamonds = Math.max(isFinite(savedLifeDiamonds) && savedLifeDiamonds > 0 ? savedLifeDiamonds : 0, inventory.diamonds);
 
             if (typeof region4Hive !== 'undefined' && region4Hive) {
                 region4Hive.honey = stateMatrix.hiveHoney || 0;

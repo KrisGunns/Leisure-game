@@ -84,7 +84,7 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 - Settings/dev panel: add 50 food/water, add 500 gold, wipe save, insta-max a region's pets to level 20 (dev/testing tools).
 - **Shop** (🛒 SHOP in the MENU overlay — see 2026-09-19 (6)): Buy tab (Cake 200🪙, Wisdom Potion 500🪙 — each a 3-minute timed buff) and Sell tab (eggs 1🪙 each, fish 2🪙 each, with Sell 1 / Sell all).
 - Pet renaming via text inputs bound per pet slot.
-- Bag overlay: shows "vault" resources (coins, eggs, honey, fish, bananas) separately from the pinned food/water HUD.
+- Bag overlay: shows "vault" resources (eggs, honey, fish, bananas) separately from the pinned food/water HUD — each row only once the player can get it (its region is bought, or they hold some); gold and diamonds are not listed (see 2026-10-04 (49)).
 - Auto-save every 10 seconds, plus on most state-changing events (level-ups, pet levels, purchases).
 
 ---
@@ -142,6 +142,15 @@ same size."):
   hand-drawn canvas code (in both entities.js and ui.js) was removed.
 
 ---
+
+### 2026-10-04 (49) — Pet labels simplified, Bag only lists what you can get, lifetime Statistics, active-only bonuses, perk % reduced
+- **Pet labels (entities.js)**: the state tag over a pet's head ([FORAGE], [IDLE], [FISHING], [PLAYING], [TIRED], [TO TREE]...) is gone. The label is now just `Name Lv.N` (plus the ⚡ when a squirrel boost is running). The progress bar, 💤/😢 panda icons and the glider stamina bar are unchanged.
+- **Bag (ui.js `updateUI()`)**: 🪙 gold and 💎 diamonds no longer appear in the Bag (they are in the Shop / Statistics). The other rows show only when the player can actually get the item: eggs once a chicken is Lv20+ (or eggs > 0), honey once Region 4 is bought, fish once Region 5 is bought, bananas once Region 8 is bought — or whenever the player already holds some. Done from JS (`setBagRowVisible()`), no index.html change.
+- **Statistics (ui.js `renderStatsScreen()`)**: coins and diamonds are now **lifetime earned** totals, not current holdings. State: `gameStats.lifetimeCoins` / `lifetimeDiamonds` (saved as `lifetimeCoins` / `lifetimeDiamonds`). `inventory.coins` / `inventory.diamonds` are now getter/setter properties (state.js) so every existing `+=` call site counts gains automatically; spending never lowers the total, loading a save does not count as earning (`lifetimeTrackingPaused`). Older saves start at the amount currently held. Wipe Save resets both. Coins from selling items and the dev +500 gold button count as earned.
+- **Statistics bonuses** list only active bonuses (above +0%); the whole Bonuses card is hidden if none are active. (Manual gather is +10% per character level, so it is always listed.)
+- **Perk Tree values (state.js `PERK_TYPES`)**: Basic Resource 30% → **15%**, Glazed 25% → **10%**, Fishy Business 25% → **12%**, Riches 25% → **10%**, Bananas! 20% → **12%**. Costs unchanged. Perk ids unchanged, so saves keep their perks; the new values apply immediately (no refunds needed). The full tree now gives: food/water +90%, honey +30%, fish +24%, coin +40%, bananas +24%.
+- **Not re-run**: the `balance/` simulation was not re-run for the lower perk values; the perk-tree/finish times in `balance/BALANCE_SIMULATION.md` assume the old percentages. The Tamers screen's bonus list is unchanged (it still lists all six bonuses, including 0%).
+- **Files:** entities.js, state.js, ui.js, CHANGELOG.md.
 
 ### 2026-10-03 (48) — Sweep items 8–10 and the smaller items
 - **8 Whistle (input.js, state.js)**: new `isPetBusy()`; pets that are digging, mud-playing, swinging, in the Schrödinger box, in Bamboo Fever / Starve or playing tag are skipped by the whistle (a "busy" toast shows if nobody else is eligible), so a coin payout, box or Starve penalty can't be thrown away.

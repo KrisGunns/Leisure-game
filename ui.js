@@ -487,18 +487,40 @@ function hidePetDetail() {
     if (overlay) overlay.style.display = 'none';
 }
 
+// Shows/hides the whole bag row (.bagItemRow) that contains a bag value element.
+function setBagRowVisible(valueEl, visible) {
+    if (!valueEl) return;
+    const row = valueEl.closest ? valueEl.closest('.bagItemRow') : null;
+    const target = row || valueEl.parentElement;
+    if (target) target.style.display = visible ? '' : 'none';
+}
+
+// True once any chicken has reached the level that lets it lay eggs (first PERK_CHANCES.chickenEgg tier).
+function isChickenEggLayer() {
+    if (typeof petsByRegion === 'undefined' || !petsByRegion) return false;
+    const eggLevel = (PERK_CHANCES.chickenEgg && PERK_CHANCES.chickenEgg[0]) ? PERK_CHANCES.chickenEgg[0][0] : 20;
+    return Object.keys(petsByRegion).some(r => Array.isArray(petsByRegion[r]) &&
+        petsByRegion[r].some(p => p.type === 'chicken' && p.level >= eggLevel));
+}
+
 function updateUI() {
     // Pinned Playfield Resources
     if (lblFood) lblFood.textContent = inventory.food;
     if (lblWater) lblWater.textContent = inventory.water;
     
-    // Hidden Tucked-Away Vault Resources
-    if (bagCoins) bagCoins.textContent = inventory.coins;
+    // Hidden Tucked-Away Vault Resources. The Bag no longer lists gold or diamonds (they are shown in
+    // the Shop and Statistics), and only lists an item once the player can actually get it: it shows
+    // when the region that produces it is owned, or when the player already holds some.
     if (bagEggs) bagEggs.textContent = inventory.eggs;
     if (bagHoney) bagHoney.textContent = inventory.honey;
     if (bagFish) bagFish.textContent = inventory.fish;
     if (bagBananas) bagBananas.textContent = inventory.bananas;
-    if (bagDiamonds) bagDiamonds.textContent = inventory.diamonds;
+    setBagRowVisible(bagCoins, false);
+    setBagRowVisible(bagDiamonds, false);
+    setBagRowVisible(bagEggs, inventory.eggs > 0 || isChickenEggLayer());   // eggs: a chicken at Lv20+ (Region 3 is always open)
+    setBagRowVisible(bagHoney, inventory.honey > 0 || isRegionOwned(4));    // honey: Region 4 (bees)
+    setBagRowVisible(bagFish, inventory.fish > 0 || isRegionOwned(5));      // fish: Region 5 (bears)
+    setBagRowVisible(bagBananas, inventory.bananas > 0 || isRegionOwned(8)); // bananas: Region 8 (monkeys)
 
     // Keeps the Achievements / Statistics screens live while they're open (cheap no-ops otherwise).
     if (typeof refreshAchievementScreens === 'function') refreshAchievementScreens();
@@ -1981,6 +2003,8 @@ if (btnWipeSave) {
             inventory.coins = 0; 
             inventory.eggs = 0;
             inventory.bananas = 0;
+            gameStats.lifetimeCoins = 0;      // lifetime totals (Statistics) restart too
+            gameStats.lifetimeDiamonds = 0;
             shopBuffs.cake = 0;
             shopBuffs.wisdomPotion = 0;
             if (typeof region4Hive !== 'undefined' && region4Hive) region4Hive.honey = 0;
@@ -2357,7 +2381,7 @@ function renderStatsScreen(force) {
     if (!statsContent) return;
     const p = getAchievementProgress('animalTamer');
     const doneCount = getAchievementsDoneCount();
-    const sig = [Math.floor(gameStats.playSeconds), p.count, doneCount, ACHIEVEMENT_DEFS.map(d => achievements[d.id].claimed).join(','), inventory.diamonds, inventory.coins, character.level, character.name, character.perks.length].join('|');
+    const sig = [Math.floor(gameStats.playSeconds), p.count, doneCount, ACHIEVEMENT_DEFS.map(d => achievements[d.id].claimed).join(','), gameStats.lifetimeDiamonds, gameStats.lifetimeCoins, character.level, character.name, character.perks.join(',')].join('|');
     if (!force && sig === statsSignature) return;
     statsSignature = sig;
 
@@ -2371,19 +2395,25 @@ function renderStatsScreen(force) {
         <div class="statsRow"><span>🐾 Pets tamed</span><strong>${p.count}/${totalPets}</strong></div>
         <div class="statsRow"><span>🏆 Achievements accomplished</span><strong>${doneCount}/${ACHIEVEMENT_TOTAL}</strong></div>
         <div class="statsRow"><span>⭐ Character level</span><strong>${character.level}</strong></div>
-        <div class="statsRow"><span>🪙 Coins</span><strong>${inventory.coins}</strong></div>
-        <div class="statsRow"><span>💎 Diamonds</span><strong>${inventory.diamonds}</strong></div>
-    </div>
-    <div class="statsCard">
-        <div class="statsCardTitle">✨ Bonuses</div>
-        <div class="statsRow"><span>🍪💧 Pet food/water gain</span><strong>+${pct(b.petFoodWater)}%</strong></div>
-        <div class="statsRow"><span>🍯 Pet honey gain</span><strong>+${pct(b.petHoney)}%</strong></div>
-        <div class="statsRow"><span>🐟 Pet fish gain</span><strong>+${pct(b.petFish)}%</strong></div>
-        <div class="statsRow"><span>🍌 Pet banana gain</span><strong>+${pct(b.petBanana)}%</strong></div>
-        <div class="statsRow"><span>🪙 Coin gain</span><strong>+${pct(b.coin)}%</strong></div>
-        <div class="statsRow"><span>🖐️ Manual gather</span><strong>+${pct(b.manualGather)}%</strong></div>
-    </div>
+        <div class="statsRow"><span>🪙 Coins earned (lifetime)</span><strong>${gameStats.lifetimeCoins}</strong></div>
+        <div class="statsRow"><span>💎 Diamonds earned (lifetime)</span><strong>${gameStats.lifetimeDiamonds}</strong></div>
     </div>`;
+    // Only the bonuses that are active (above +0%) are listed — e.g. no "honey +0%" before a Glazed
+    // perk is unlocked.
+    const bonusRows = [
+        ['🍪💧 Pet food/water gain', b.petFoodWater],
+        ['🍯 Pet honey gain', b.petHoney],
+        ['🐟 Pet fish gain', b.petFish],
+        ['🍌 Pet banana gain', b.petBanana],
+        ['🪙 Coin gain', b.coin],
+        ['🖐️ Manual gather', b.manualGather]
+    ].filter(r => pct(r[1]) > 0);
+    if (bonusRows.length > 0) {
+        html += `<div class="statsCard">
+        <div class="statsCardTitle">✨ Bonuses</div>
+        ${bonusRows.map(r => `<div class="statsRow"><span>${r[0]}</span><strong>+${pct(r[1])}%</strong></div>`).join('\n        ')}
+    </div>`;
+    }
     statsContent.innerHTML = html;
 }
 
