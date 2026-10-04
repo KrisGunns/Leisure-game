@@ -144,6 +144,14 @@ same size."):
 
 ---
 
+### 2026-10-04 (53) — Tasks locked until Regions 1–9 are unlocked; sell gold for diamonds
+
+- **Tasks lock:** the MENU's TASKS button reads **🔒 TASKS** and shows a toast instead of opening until Regions 1–9 are all owned (`areTasksUnlocked()` in ui.js; Regions 4–9 are the shop unlockables, Region 10 is not required). The tracked-task box under MENU is hidden while locked. Task progress itself is untouched, so nothing is lost.
+- **Shop → Sell → Gold:** a **Gold** row appears once you hold 1000+ 🪙. **Sell 1000** = 1 💎; **Sell max** = as many whole thousands as you have (`GOLD_PER_DIAMOND` in state.js, `sellGoldForDiamonds()` in ui.js). Diamonds gained this way count toward lifetime diamonds in Statistics, like any other diamond income. Selling gold is a spend, so the Region 10 coin bonus does not apply.
+- **Check (Chromium):** with Regions 1–8 owned the button was locked and the overlay stayed closed; adding Region 9 unlocked it. 3500 🪙/2 💎 → Sell 1000 → 2500/3 → Sell max → 500/5. No script errors.
+
+---
+
 ### 2026-10-04 (52) — Garden refill 1000 water; max-level pet hunger + feeder boxes
 
 - **Garden:** refill cost per 10 minutes 3000 → **1000** (`GARDEN_REWATER_COST`, world.js). First bloom watering stays 8000.

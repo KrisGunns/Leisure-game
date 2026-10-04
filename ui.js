@@ -1560,6 +1560,17 @@ function buyShopItem(item) {
     updateUI();
 }
 
+// Gold -> diamonds. `sets` may be Infinity for "sell max" (as many whole 1000s as you own).
+function sellGoldForDiamonds(sets) {
+    const n = Math.min(sets, Math.floor(inventory.coins / GOLD_PER_DIAMOND));
+    if (n < 1) return;
+    inventory.coins -= n * GOLD_PER_DIAMOND;
+    inventory.diamonds += n;
+    saveGameProgress();
+    renderShop();
+    updateUI();
+}
+
 function buyShopSupply(item) {
     if (inventory.coins < item.cost) return;
     inventory.coins -= item.cost;
@@ -1705,7 +1716,14 @@ function renderShop() {
         // Only things the player actually has show up here; with nothing to sell, a short
         // note replaces the list so the tab doesn't look broken.
         let sellable = SELL_ITEMS.filter(item => (inventory[item.key] || 0) > 0);
-        if (sellable.length === 0) {
+        // Gold can be sold too: every 1000 🪙 buys 1 💎.
+        let diamondSets = Math.floor(inventory.coins / GOLD_PER_DIAMOND);
+        if (inventory.coins >= GOLD_PER_DIAMOND) {
+            let sellOneD = makeShopButton('Sell 1000', 'shopActionBtnSell', diamondSets < 1, () => sellGoldForDiamonds(1));
+            let sellMaxD = makeShopButton('Sell max', 'shopActionBtnSell', diamondSets < 1, () => sellGoldForDiamonds(Infinity));
+            shopContent.appendChild(makeShopRow('🪙', 'Gold', null, `You have ${inventory.coins} · every ${GOLD_PER_DIAMOND} 🪙 sells for 1 💎`, [sellOneD, sellMaxD]));
+        }
+        if (sellable.length === 0 && inventory.coins < GOLD_PER_DIAMOND) {
             let empty = document.createElement('div');
             empty.className = 'shopEmptyNote';
             empty.textContent = 'Nothing to sell yet.';
@@ -2574,7 +2592,7 @@ function renderTasksScreen(force) {
 function refreshTrackedTaskBox() {
     if (!trackedTaskBox) return;
     let text = null;
-    if (taskState.tracked) {
+    if (taskState.tracked && areTasksUnlocked()) {
         const slot = taskState.slots.find(s => s.id === taskState.tracked && s.readyAt === 0);
         const def = slot ? getTaskDef(slot.id) : null;
         if (def) text = `${def.name} ${slot.progress}/${def.goal}`;
@@ -2586,12 +2604,31 @@ function refreshTrackedTaskBox() {
 }
 
 function refreshTasksUI() {
+    updateTasksMenuLabel();
     refreshTrackedTaskBox();
     if (tasksOverlay && tasksOverlay.style.display !== 'none') renderTasksScreen(false);
 }
 
+// TASKS stay locked until every region from 1 to 9 has been unlocked (Regions 1-3 are free, 4-9 are
+// bought in Shop -> Unlockables). Region 10 is not required.
+function areTasksUnlocked() {
+    for (let r = 1; r <= 9; r++) if (!isRegionOwned(r)) return false;
+    return true;
+}
+function updateTasksMenuLabel() {
+    const btn = document.getElementById('openTasksBtn');
+    if (!btn) return;
+    const label = areTasksUnlocked() ? '📋 TASKS' : '🔒 TASKS';
+    if (btn.textContent !== label) btn.textContent = label;
+}
+updateTasksMenuLabel();
+
 bindOverlayButton(document.getElementById('openTasksBtn'), (e) => {
     if (e) e.preventDefault();
+    if (!areTasksUnlocked()) {
+        showInfoToast('🔒 Tasks unlock once Regions 1–9 are all unlocked (Menu → Shop → Unlockables).');
+        return;
+    }
     renderTasksScreen(true);
     if (tasksOverlay) tasksOverlay.style.display = 'flex';
 });

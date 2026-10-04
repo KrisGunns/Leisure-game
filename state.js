@@ -559,6 +559,9 @@ const SHOP_SUPPLIES = [
     { key: 'seeds', icon: '🌱', name: 'Flower Seed',   cost: 300, gives: 1, desc: 'One hydrangea seed. Planted when you fertilize a plot in Region 10.' }
 ];
 
+// Selling gold in the shop: this much gold buys exactly 1 diamond.
+const GOLD_PER_DIAMOND = 1000;
+
 function isShopBuffActive(id) { return shopBuffs[id] > 0; }
 
 // ------------------------------------------------------------------
