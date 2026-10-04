@@ -10,19 +10,19 @@
 // and can't drift from the real rules). \n becomes a line break.
 const TUTORIAL_TIPS = [
     { id: 'intro', icon: '🌟', title: 'Welcome!', pages: [
-        "Welcome to Just a Little Leisure! 🐾\n\nThe idea is simple: pick up 🍪 food and 💧 water lying around the map and feed it to your pets. Fed pets level up, and grown-up pets start working for you — gathering resources, earning coins and opening up new corners of the world.",
+        "Welcome to Just a Little Leisure! 🐾\n\nThe idea is simple: pick up 🍪 food and 💧 water lying around the map and feed it to your pets. Fed pets level up and tamed pets help you gather resources automatically.",
         "🕹️ How to play\n\n• Touch and drag anywhere on the field to move — a joystick appears under your finger.\n• Walk over 🍪 and 💧 to pick them up.\n• Stand next to a pet and HOLD the GIVE button to feed it (the longer you hold, the faster it goes).\n• Tap WHISTLE to call your tamed pets over to you.",
         "🐶 Taming and levelling up\n\nNew pets start out wild (Lv.1) and stay put. Feed one until it reaches Lv.2 and it is tamed: it wanders around and gathers food and water for you on its own. Keep feeding to level it up — higher levels gather more and unlock special perks. Feeding pets also earns YOU experience.",
         "🔓 Unlocking more pets and regions\n\nOpen ☰ MENU → 🛒 SHOP → Unlockables. Regions 1–3 are free; Regions 4–10 and extra pets (Cat, Bird, the 'Bow' pets…) are bought with 🪙 coins. Earn coins from your pets' special perks, from mini-games, and by selling eggs, fish (and spare gold for 💎) in the Shop's Sell tab. Use the 🗺️ dropdown at the top right to travel to regions you own.",
-        "🍖 Feeder boxes\n\nFully grown pets (Lv.30) get hungry and stop moving if they run out of food. Every region except Regions 4 and 10 has a wooden feeder box: stand next to it, tap Deposit Food to fill it, and hungry pets will walk over and eat from it by themselves. You'll get a full guide when your first pet is fully grown.",
+        "🍖 Feeder boxes\n\nFully grown pets (Lv.30) get hungry and stop moving if they run out of food. Every region except Regions 4 and 10 has a wooden feeder box: stand next to it, tap Deposit Food to fill it, and hungry pets will walk over and eat from it by themselves.",
         "📚 More to explore\n\n☰ MENU holds your 🎒 Bag, 🧑 Tamers, 🌳 Perk Tree, 📋 Tasks (they unlock once you own Regions 1–9), 🏆 Achievements and 📊 Statistics. Every tip you see is saved in ❓ HELP, so you can read it again any time. The game saves automatically — have fun!"
     ] },
     { id: 'perks', icon: '🌳', title: 'Perk points', pages: [
-        "You earned a perk point! ✨\n\nEvery time YOU level up you get a perk point. Spend them in ☰ MENU → 🌳 PERK TREE to unlock permanent bonuses — like more food and water from your pets, or extra coins."
+        "You earned a perk point! ✨\n\nEvery time YOU level up you get a perk point. Spend them in ☰ MENU → 🌳 PERK TREE to unlock permanent bonuses."
     ] },
     { id: 'feeder', icon: '🍖', title: 'Hunger and feeder boxes', pages: [
         () => `Your pet is fully grown! 🎉\n\nPets at max level (Lv.${MAX_PET_LEVEL}) get a hunger bar over their head. It drops by 1 every ${HUNGER_SECONDS_PER_POINT} seconds, and when it reaches 0 the pet stops dead and does nothing until it is fed again. (Bees never get hungry.)`,
-        () => `How to keep them fed\n\n• HOLD GIVE next to a pet: ${HUNGER_FOOD_PER_POINT} food refills 1 point, so ${HUNGER_MAX * HUNGER_FOOD_PER_POINT} food fills a whole bar.\n• Or fill a feeder box: stand next to the wooden box and tap Deposit Food (it holds ${FEEDER_CAPACITY}). Pets at ${HUNGER_SEEK_BELOW} hunger or less walk over and eat from it on their own — so you can leave them.\n• A pet at 0 can't walk, so feed it by hand with GIVE.\nEvery region has its own feeder, except Regions 4 and 10.`
+        () => `How to keep them fed\n\n• HOLD GIVE next to a pet: ${HUNGER_FOOD_PER_POINT} food refills 1 point, so ${HUNGER_MAX * HUNGER_FOOD_PER_POINT} food fills a whole bar.\n• Or fill a feeder box: stand next to the wooden box and tap Deposit Food. Pets at ${HUNGER_SEEK_BELOW} hunger or less walk over and eat from it on their own — so you can leave them.\n• A pet at 0 can't walk, so feed it by hand with GIVE.`
     ] },
     { id: 'mini_elephant', icon: '🐘', title: 'Mini-game: Elephant tag', pages: [
         "The elephant wants to play tag! 🐘\n\nWhen it walks up to you, the GIVE button changes to PLAY.\n1. Tap PLAY — the elephant backs away a few steps.\n2. Start moving with the joystick — it chases you!\n3. If it catches you, you win 5 🪙 coins.\nThe game ends after 60 seconds or if you leave Region 2."
@@ -34,7 +34,7 @@ const TUTORIAL_TIPS = [
         "The panda wants bamboo! 🎍\n\nPick Play to start a 30-second round in Region 7: run around collecting the bamboo stalks (new ones keep appearing). Every 5 stalks earns 1 🪙 coin, and the panda naps afterwards. Pick Starve to skip the round — the panda just wanders off for a while."
     ] },
     { id: 'region_4', icon: '🐝', title: 'Region 4 — Beehive', pages: [
-        () => `You unlocked the Hive and your first Bee! 🐝\n\nBees collect honey from flowers and carry it back to the hive. Stand near the hive and tap GIVE to collect the 🍯 honey stored there. Tap Buy Bee for more bees (${BEE_COST}🪙 each, up to ${HIVE_MAX_BEES}). Honey feeds the bears in Region 5 and the sugar gliders.`
+        () => `You unlocked the Hive and your first Bee! 🐝\n\nBees collect honey from flowers and carry it back to the hive. Stand near the hive and tap the button to collect the 🍯 honey stored there.`
     ] },
     { id: 'region_5', icon: '🐻', title: 'Region 5 — Bear Lake', pages: [
         "Meet the bears! 🐻\n\nBears eat 🍯 honey (from your bees) instead of food and water. From Lv.5 they go fishing in the lake on their own and bring back 🐟 fish — sell fish in the Shop's Sell tab for coins."

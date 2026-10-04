@@ -1176,7 +1176,7 @@ function depositFeederFood() {
     const room = FEEDER_CAPACITY - (feederFood[currentRegion] || 0);
     if (room <= 0) { showInfoToast('🍖 The feeder is full!'); return; }
     if (inventory.food < 1) { showInfoToast('🍪 You have no food to deposit.'); return; }
-    const amount = Math.min(FEEDER_DEPOSIT_CHUNK, room, inventory.food);
+    const amount = Math.min(room, inventory.food);
     inventory.food -= amount;
     feederFood[currentRegion] = (feederFood[currentRegion] || 0) + amount;
     saveGameProgress();

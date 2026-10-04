@@ -35,7 +35,6 @@ const HUNGER_FOOD_PER_POINT = 2;
 const HUNGER_SEEK_BELOW = 50;      // a pet at or below this heads for the feeder (if it has food)
 const HUNGER_EAT_RATE = 10;        // points restored per second while eating at the feeder
 const FEEDER_CAPACITY = 500;
-const FEEDER_DEPOSIT_CHUNK = 100;  // food moved per tap of the Deposit button
 const FEEDER_REGIONS = [1, 2, 3, 5, 6, 7, 8, 9];
 // Tutorial tips the player has already been shown (id -> true); the HELP screen lists exactly these.
 const tutorialSeen = {};
