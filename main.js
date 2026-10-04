@@ -247,6 +247,7 @@ function runGameFrame(timestamp) {
         processSpawns(dt);
         player.update(dt);
         checkCollisions();
+        checkTutorialTriggers();   // perk-point / fully-grown-pet tips (tutorial.js)
         updateGardenButtons();   // Buy Plot / Fertilize / Water button (Region 10)
         updateFeederButton();    // Deposit Food button (feeder boxes)
         if (isGardenBoostActive()) {
@@ -375,6 +376,8 @@ function runGameFrame(timestamp) {
 // Ensure your game startup chain initializes your Codex masks tightly at launch:
 loadGameProgress();
 updateUI();
+// Brand-new game: show the welcome guide (saves from before the tutorial existed are skipped in loadGameProgress).
+if (!tutorialSeen.intro) showTutorial('intro');
 if (typeof updateCodexData === 'function') updateCodexData(); // FIXED: Synchronizes canvas masks on load
 
 setInterval(saveGameProgress, 10000);

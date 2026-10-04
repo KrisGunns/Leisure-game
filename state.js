@@ -37,6 +37,8 @@ const HUNGER_EAT_RATE = 10;        // points restored per second while eating at
 const FEEDER_CAPACITY = 500;
 const FEEDER_DEPOSIT_CHUNK = 100;  // food moved per tap of the Deposit button
 const FEEDER_REGIONS = [1, 2, 3, 5, 6, 7, 8, 9];
+// Tutorial tips the player has already been shown (id -> true); the HELP screen lists exactly these.
+const tutorialSeen = {};
 const feederFood = {};             // region -> food stored
 FEEDER_REGIONS.forEach(r => { feederFood[r] = 0; });
 const MAX_EGGS_ON_MAP = 25;   // chicken eggs lying in Region 3 (laying stops while the map is full)
@@ -1140,6 +1142,7 @@ function saveGameProgress() {
             }));
         }
 
+        stateMatrix.tutorialSeen = Object.keys(tutorialSeen).filter(id => tutorialSeen[id]);
         stateMatrix.feeders = {};
         FEEDER_REGIONS.forEach(r => { stateMatrix.feeders[r] = feederFood[r] || 0; });
 
@@ -1465,6 +1468,14 @@ function loadGameProgress() {
                 waters = regionalItems[currentRegion].waters;
                 flowers = regionalItems[currentRegion].flowers;
                 bananas = regionalItems[currentRegion].bananas;
+            }
+        });
+
+        guard('tutorial', () => {
+            if (Array.isArray(stateMatrix.tutorialSeen)) {
+                stateMatrix.tutorialSeen.forEach(id => { if (typeof id === 'string') tutorialSeen[id] = true; });
+            } else if (typeof grandfatherTutorial === 'function') {
+                grandfatherTutorial();   // a save from before the tutorial existed: no new-player intro
             }
         });
 

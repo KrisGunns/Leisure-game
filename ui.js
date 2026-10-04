@@ -94,6 +94,7 @@ let activeSchrodingerCat = null;
 // Alive?" choice; correct guess pays out 10 coins, either way the box resolves and the
 // cat goes back to wandering.
 function showSchrodingerPicker(cat) {
+    if (typeof showTutorial === 'function') showTutorial('mini_cat');
     let picker = document.getElementById('schrodingerPicker');
     if (!picker) {
         picker = document.createElement('div');
@@ -170,6 +171,7 @@ function hideSchrodingerPicker() {
 // Play/Starve choice; Play starts the 30s bamboo-collection minigame (world.js) and
 // puts the panda to sleep for 20s, Starve makes it flee the player (crying) for 30s.
 function showBambooFeverPicker(panda) {
+    if (typeof showTutorial === 'function') showTutorial('mini_panda');
     let picker = document.getElementById('bambooFeverPicker');
     if (!picker) {
         picker = document.createElement('div');
@@ -1596,6 +1598,8 @@ function buyShopUnlockable(u) {
     if (!buyUnlockable(u.id)) return;
     renderShop();
     updateUI();
+    // First time a region is bought, explain it (tutorial.js).
+    if (u.kind === 'region' && typeof showTutorial === 'function') showTutorial('region_' + u.region);
     if (typeof updateCodexData === 'function') updateCodexData();
 }
 
@@ -2047,6 +2051,7 @@ if (btnWipeSave) {
             inventory.soil = 0;
             inventory.seeds = 0;
             FEEDER_REGIONS.forEach(r => { feederFood[r] = 0; });
+            Object.keys(tutorialSeen).forEach(id => { delete tutorialSeen[id]; });
             if (typeof gardenPlots !== 'undefined') {
                 for (let gi = 0; gi < gardenPlots.length; gi++) gardenPlots[gi] = createGardenPlot();
             }

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Just a little leisure</title>
-    <link rel="stylesheet" href="style.css?v=2.3">
+    <link rel="stylesheet" href="style.css?v=2.4">
 </head>
 <body>
     <div id="gameContainer">
@@ -165,6 +165,21 @@
             <button id="statsClose">X</button>
         </div>
         <div id="statsContent"></div>
+    </div>
+
+    <div id="helpOverlay" style="display: none;">
+        <div id="helpHeader">
+            <h2>❓ HELP</h2>
+            <button id="helpClose">X</button>
+        </div>
+        <div id="helpTitle"></div>
+        <div id="helpBodyWrap"><div id="helpBody"></div></div>
+        <div id="helpLockedNote"></div>
+        <div id="helpNav">
+            <button id="helpPrev" class="helpArrow">◀</button>
+            <span id="helpPageNum">0 / 0</span>
+            <button id="helpNext" class="helpArrow">▶</button>
+        </div>
     </div>
 
     <div id="tasksOverlay" style="display: none;">
@@ -432,6 +447,7 @@
                 <button id="openTasksBtn" class="menuBtn">📋 TASKS</button>
                 <button id="openAchievementsBtn" class="menuBtn">🏆 ACHIEVEMENTS</button>
                 <button id="openStatsBtn" class="menuBtn">📊 STATISTICS</button>
+                <button id="openHelpBtn" class="menuBtn">❓ HELP</button>
             </div>
         </div>
     </div>
@@ -440,6 +456,7 @@
     <script src="world.js"></script>
     <script src="input.js"></script>
     <script src="ui.js"></script>
+    <script src="tutorial.js"></script>
     <script src="main.js"></script>
 </body>
 </html>

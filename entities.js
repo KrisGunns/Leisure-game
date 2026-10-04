@@ -3889,6 +3889,7 @@ class Pet {
                 // FIXED: Sets the exact matching sub-state string name 'playing_approach'
                 if (this.type === 'elephant' && currentRegion === 2 && Math.random() < getPerkChance('elephantPlay', this.level)) {
                     this.state = 'playing_approach';
+                    if (typeof showTutorial === 'function') showTutorial('mini_elephant');   // first-time how-to
                     updateUI();
                 }
             }
@@ -4044,6 +4045,7 @@ class Pet {
                             if (typeof currentRegion !== 'undefined' && currentRegion === 1 &&
                                 Math.random() < getPerkChance('catSchrodinger', this.level)) {
                                 this.state = 'schrodinger';
+                                if (typeof showTutorial === 'function') showTutorial('mini_cat');   // first-time how-to
                                 this.schrodingerOutcome = Math.random() < 0.5 ? 'alive' : 'dead';
                                 this.schrodingerVisible = true;
                                 this.schrodingerBlinkTimer = 0.35;

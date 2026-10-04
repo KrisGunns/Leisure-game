@@ -29,6 +29,7 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 | `input.js` | Floating virtual joystick (appears under the touch, see 2026-09-20 (6)), GIVE/PLAY interact button (hold-to-feed with ramping `feedHoldCounter`, pointer-capture for reliability), whistle button (single-tap toggle or multi-pet picker), region selector (+ region-lock check), keyboard controls, `executeContinuousFeed()` | `state.js`, `entities.js`, `world.js` |
 | `ui.js` | `updateUI()`, `renderMiniPet()`, pet Codex overlay, settings/dev panel, pet renaming, bag overlay, bee-purchase button, whistle-picker overlay (`showWhistlePicker()`/`hideWhistlePicker()`), consolidated MENU overlay (`handleOpenMenu()`/`handleCloseMenu()`), **Shop screen** (`renderShop()`, `buyShopItem()`, `sellShopItem()`), **Perk Tree screen** (`renderPerkTree()`, `renderPerkDetail()`) | `state.js`, `entities.js`, `world.js` |
 | `main.js` | `gameLoop()` (render + update loop), startup sequence (`loadGameProgress()`, initial item spawns, `requestAnimationFrame` kickoff) | all of the above (loads last) |
+| `tutorial.js` | Tutorial/Help (2026-10-04 (54)): `TUTORIAL_TIPS` text, `showTutorial()` pop-ups, `checkTutorialTriggers()`, the ❓ HELP screen. Loaded after `ui.js`. |
 
 **Why this order works:** each file's *immediately-executing* top-level code (variable declarations, `new Pet(...)`, event listener registration) only references things defined in earlier-loaded files. Anything referenced "out of order" — like `state.js`'s `gainPlayerXP()` calling `ui.js`'s `updateUI()` — is inside a function body, which isn't actually run until later gameplay, by which point every file has finished loading.
 
@@ -141,6 +142,19 @@ same size."):
   monkey/monkeyBow and glider/gliderBow render at matching heights.
 - Nothing to delete — this is the first real-image art for all 7; only the old
   hand-drawn canvas code (in both entities.js and ui.js) was removed.
+
+---
+
+### 2026-10-04 (54) — Tutorial pop-ups + ❓ HELP screen (NEW FILE: tutorial.js)
+
+- **New file `tutorial.js`** (loaded after `ui.js`, before `main.js` — **add it to the repo/APK**; `index.html` has the new `<script>` tag). Holds `TUTORIAL_TIPS` (all the text, one entry per guide, each with 1+ pages; numbers are read from the game's constants so they can't drift), the pop-up (`showTutorial(id)`), the state-based triggers (`checkTutorialTriggers()`) and the Help screen.
+- **Pop-ups:** a dark overlay with a box (title, "Tip 2 of 5", text) that is closed with **OK**; multi-page guides show one box per page. Opening one lets go of the joystick / GIVE hold. Each guide shows **once** (`tutorialSeen`, saved as `tutorialSeen`).
+- **When they appear:** *Welcome* (6 pages: the idea, controls, taming & levelling, unlocking pets/regions, feeder boxes, menu overview) on a brand-new game; *Perk points* on the first perk point; *Hunger and feeder boxes* (2 pages) when the first pet reaches Lv.30; **mini-games** — Elephant tag (when it walks over to play), Cat's Dead or Alive (when the cat freezes), Bamboo Fever (when the panda asks); a guide on buying **each region 4–10** (Region 9 = 2 pages on the gliders: Take/Drop, feeding, what they do per region, stamina, no drop in Region 10; Region 10 = 4 pages: bonus, getting started, growth costs/timing, withering).
+- **❓ HELP** (new MENU button, bottom): `#helpOverlay` shows every guide already seen, page by page, with **◀ ▶** arrows and "3 / 12". Guides not yet unlocked stay hidden, with a "🔒 N more guides will appear…" note.
+- **Existing saves** (no `tutorialSeen` field): the welcome is skipped and the guides for regions already owned are marked seen (`grandfatherTutorial()`); everything else shows when it first applies. Wipe save clears it, so a fresh game gets the welcome again.
+- **Other files:** `state.js` (`tutorialSeen`, save/load), `ui.js` (region-purchase hook, cat/panda hooks, wipe), `entities.js` (elephant/cat hooks), `main.js` (welcome + trigger check), `index.html`, `style.css?v=2.4`.
+- **Note:** the game keeps running behind a pop-up (the overlay blocks all touches); timers are real-clock so nothing is lost.
+- **Check (Chromium):** new game shows 6 boxes closed one by one with OK; Help opens at 1/6, arrows move to 3/6; buying Region 9 queues 2 boxes and Region 10 queues 4; a Lv30 pet and a perk point trigger their guides; seen guides survive a reload; an old save gets no welcome. No script errors.
 
 ---
 
