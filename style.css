@@ -222,6 +222,26 @@ body, html {
 }
 #plotActionBtn:active { background: #f48fb1; }
 
+/* Feeder box Deposit button: same slot (directly above WHISTLE); feeders never exist in Region 10. */
+#feederBtn {
+    position: absolute;
+    bottom: 175px;
+    right: 20px;
+    left: auto !important;
+    width: 150px;
+    padding: 9px 6px;
+    font-size: 11px;
+    font-weight: bold;
+    text-align: center;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    background: #ffe0a3;
+    border: 2px solid #d4891c;
+    color: #4a2a00;
+    z-index: 100;
+}
+#feederBtn:active { background: #ffd07a; }
+
 #hiveHoneyLabel {
     position: absolute;
     bottom: 225px;         /* Stacks directly above spawnBeeBtn with the same 10px gap pattern */

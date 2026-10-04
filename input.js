@@ -241,6 +241,15 @@ function haltFeedTimers() {
 }
 // Region 10 (flower garden): the Buy Plot / Fertilize / Water button that appears above the whistle
 // button while the player stands at a plot (shown/labelled by updateGardenButtons() in world.js).
+const feederBtnElement = document.getElementById('feederBtn');
+if (feederBtnElement) {
+    const onFeederDeposit = (e) => {
+        if (e) e.preventDefault();
+        depositFeederFood();
+    };
+    feederBtnElement.addEventListener('touchstart', onFeederDeposit, { passive: false });
+    feederBtnElement.addEventListener('mousedown', onFeederDeposit);
+}
 const plotActionBtnElement = document.getElementById('plotActionBtn');
 if (plotActionBtnElement) {
     const onPlotAction = (e) => {
@@ -380,12 +389,13 @@ function feedGliders() {
 
     gliderPets.forEach(g => {
         if (!isPetAvailable(g)) return;
-        if (g.level >= MAX_PET_LEVEL) return;
+        const atMax = g.level >= MAX_PET_LEVEL;
         if (!g.held && g.regionNow !== currentRegion) return;
 
         let dx = (g.x + g.size / 2) - (player.x + player.size / 2);
         let dy = (g.y + g.size / 2) - (player.y + player.size / 2);
         if (Math.sqrt(dx * dx + dy * dy) >= 80) return;
+        if (atMax) { feedHunger(g); return; }    // max level: GIVE refills the hunger bar instead
 
         let req = getLevelRequirement('glider', g.level);
         let totalNeeded = req.treats + req.water;
@@ -435,6 +445,19 @@ function feedGliders() {
     updateUI();
 }
 
+// Feeds a max-level pet's hunger bar by hand (GIVE): HUNGER_FOOD_PER_POINT food per point, at the
+// same hold-to-speed-up rate as levelling. Returns the points restored.
+function feedHunger(pet) {
+    let points = Math.max(1, Math.ceil(HUNGER_MAX * getFeedFraction()));
+    let given = 0;
+    while (points-- > 0 && pet.hunger < HUNGER_MAX && inventory.food >= HUNGER_FOOD_PER_POINT) {
+        inventory.food -= HUNGER_FOOD_PER_POINT;
+        pet.hunger++;
+        given++;
+    }
+    return given;
+}
+
 function executeContinuousFeed() {
     let activePets = petsByRegion[currentRegion];
     if (!Array.isArray(activePets)) return;
@@ -459,6 +482,12 @@ function executeContinuousFeed() {
         let dist = Math.sqrt(dx * dx + dy * dy);
         
         if (dist < 80) {
+            // Max-level pets (except bees) have a hunger bar instead of levelling: GIVE refills it.
+            if (pet.level >= MAX_PET_LEVEL && pet.type !== 'bee') {
+                feedHunger(pet);
+                updateUI();
+                return;
+            }
             let req = getLevelRequirement(pet.type, pet.level);
 
             // Feed speed scales with how much this pet's current level actually needs,

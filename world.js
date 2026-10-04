@@ -1111,6 +1111,80 @@ window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
 // ------------------------------------------------------------------
+// FEEDER BOXES (every region except 4 and 10 — see HUNGER_* / FEEDER_* in state.js)
+// A wooden trough holding food (up to FEEDER_CAPACITY). The player deposits food with the Deposit
+// button (above WHISTLE) when standing next to it; hungry max-level pets walk over and eat from it
+// (Pet.hungerStep in entities.js).
+// ------------------------------------------------------------------
+function getFeederSpot(region) {
+    const W = canvas.width, H = canvas.height;
+    if (region === 9) return { x: W / 2, y: H * 0.40 };   // bedroom: open floor between the bed and the trees
+    return { x: W / 2, y: 150 };
+}
+function hasFeeder(region) { return FEEDER_REGIONS.indexOf(region) !== -1; }
+
+function drawFeeder() {
+    if (!hasFeeder(currentRegion)) return;
+    const c = ctx, sp = getFeederSpot(currentRegion);
+    const food = feederFood[currentRegion] || 0, ratio = Math.min(1, food / FEEDER_CAPACITY);
+    const w = 64, h = 30, x = sp.x - w / 2, y = sp.y - h / 2;
+    c.fillStyle = 'rgba(0,0,0,0.22)';
+    c.beginPath(); c.ellipse(sp.x, y + h + 3, w / 2 + 4, 6, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#6d4526';                       // legs
+    c.fillRect(x + 4, y + h - 4, 6, 9); c.fillRect(x + w - 10, y + h - 4, 6, 9);
+    c.fillStyle = '#8b5a2b';                       // box
+    c.fillRect(x, y, w, h);
+    c.fillStyle = '#4a2f18';                       // hollow
+    c.fillRect(x + 5, y + 5, w - 10, h - 12);
+    if (food > 0) {                                // heap of food
+        c.fillStyle = '#e8a33d';
+        const n = 3 + Math.round(ratio * 9);
+        for (let i = 0; i < n; i++) {
+            c.beginPath();
+            c.arc(x + 11 + (i % 6) * 8.4, y + 15 - Math.floor(i / 6) * (3 + ratio * 4), 4, 0, Math.PI * 2);
+            c.fill();
+        }
+    }
+    c.fillStyle = '#a06a35';                       // front rim
+    c.fillRect(x, y + h - 9, w, 9);
+    c.strokeStyle = '#3e2713'; c.lineWidth = 2;
+    c.strokeRect(x, y, w, h);
+    c.fillStyle = 'rgba(0,0,0,0.6)';               // fill bar above
+    c.fillRect(x, y - 9, w, 5);
+    c.fillStyle = ratio > 0.2 ? '#f1c40f' : '#e74c3c';
+    c.fillRect(x, y - 9, w * ratio, 5);
+    drawPetText(`🍖 ${food}/${FEEDER_CAPACITY}`, sp.x, y - 13, { size: 9 });
+}
+
+function isNearFeeder() {
+    if (!hasFeeder(currentRegion)) return false;
+    const sp = getFeederSpot(currentRegion);
+    return Math.hypot(player.x + player.size / 2 - sp.x, player.y + player.size / 2 - sp.y) < 70;
+}
+
+function updateFeederButton() {
+    const btn = document.getElementById('feederBtn');
+    if (!btn) return;
+    if (!isNearFeeder()) { if (btn.style.display !== 'none') btn.style.display = 'none'; return; }
+    if (btn.style.display !== 'block') btn.style.display = 'block';
+    const label = `Deposit Food (${feederFood[currentRegion] || 0}/${FEEDER_CAPACITY})`;
+    if (btn.textContent !== label) btn.textContent = label;
+}
+
+function depositFeederFood() {
+    if (!isNearFeeder()) return;
+    const room = FEEDER_CAPACITY - (feederFood[currentRegion] || 0);
+    if (room <= 0) { showInfoToast('🍖 The feeder is full!'); return; }
+    if (inventory.food < 1) { showInfoToast('🍪 You have no food to deposit.'); return; }
+    const amount = Math.min(FEEDER_DEPOSIT_CHUNK, room, inventory.food);
+    inventory.food -= amount;
+    feederFood[currentRegion] = (feederFood[currentRegion] || 0) + amount;
+    saveGameProgress();
+    updateUI();
+    updateFeederButton();
+}
+
+// ------------------------------------------------------------------
 // REGION 10 — THE FLOWER GARDEN
 // Twelve plots in a raised bed. Plot 1 comes with the region; the others are bought with gold
 // right at the plot (price = GARDEN_PLOT_PRICE_STEP x the number of plots already owned: 200,
@@ -1118,7 +1192,7 @@ resizeCanvas();
 // hydrangea. Each stage needs watering with water from the bag:
 //   seed  : 1000 water, then 2 min until it becomes a shoot
 //   shoot : 3000 water, then 4 min until it blossoms
-//   bloom : 8000 water the first time, then 3000 every time it dries out. A watering lasts
+//   bloom : 8000 water the first time, then 1000 every time it dries out. A watering lasts
 //           10 min; after that the flower has 1 minute to be watered again or it dies and the
 //           plot goes back to clay.
 // Each fully grown flower in its watered state adds +10% coins to every payout (inventory.coins
@@ -1131,7 +1205,7 @@ const GARDEN_REGION = 10;
 const GARDEN_PLOT_COUNT = 12;
 const GARDEN_PLOT_PRICE_STEP = 200;
 const GARDEN_STAGE_WATER = { 1: 1000, 2: 3000, 3: 8000 };   // water needed to water a plot in that stage
-const GARDEN_REWATER_COST = 3000;                            // every watering after the first bloom watering
+const GARDEN_REWATER_COST = 1000;                            // every watering after the first bloom watering
 const GARDEN_STAGE_SECONDS = { 1: 120, 2: 240, 3: 600 };    // how long a watering lasts (seed -> shoot -> bloom -> thirsty)
 const GARDEN_GRACE_SECONDS = 60;                             // thirsty bloom dies after this long
 const GARDEN_BOOST = 0.10;                                   // +10% coins and +10% bee speed PER watered bloom (stacks)

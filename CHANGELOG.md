@@ -144,6 +144,18 @@ same size."):
 
 ---
 
+### 2026-10-04 (52) — Garden refill 1000 water; max-level pet hunger + feeder boxes
+
+- **Garden:** refill cost per 10 minutes 3000 → **1000** (`GARDEN_REWATER_COST`, world.js). First bloom watering stays 8000.
+- **Hunger (max-level pets only):** a pet at `MAX_PET_LEVEL` (30) has a hunger bar 0–100 that drops **1 point per 3 s** (constants `HUNGER_*` in state.js). It replaces the XP bar over the pet's head (green → orange → red). At **0** the pet stops where it is and does nothing until fed. **2 food = 1 point** (200 food fills the bar). Logic: `Pet.hungerStep()` (entities.js), run at the top of `update()`. **Bees have no hunger** (their region has no feeder); a bird away on an excursion and a glider being carried don't get hungry. Hunger is saved per pet (`hunger`, default 100 for older saves).
+- **Feeding by hand:** GIVE on a max-level pet (or glider, `feedGliders()`) now refills hunger, at the usual hold-to-speed-up rate, 2 food per point (`feedHunger()` in input.js). This is also how a starving pet is revived.
+- **Feeder boxes:** every region **except 4 and 10** (`FEEDER_REGIONS` = 1,2,3,5,6,7,8,9) has a wooden trough (Region 9: on the open floor; others top-centre) with a fill bar and a `🍖 n/500` label. Capacity `FEEDER_CAPACITY` = **500** food. Standing next to it shows a **Deposit Food (n/500)** button (`#feederBtn`) in the usual slot above WHISTLE; each tap moves up to 100 food (`FEEDER_DEPOSIT_CHUNK`) from the bag. Stored food is saved (`feeders`).
+- **Pets use it:** when a max-level pet is at/below 50 hunger (`HUNGER_SEEK_BELOW`), the feeder has food and the pet is just wandering/idling, it walks to the feeder and eats (10 points/s, 2 food each) until full or the feeder runs dry. A starving pet can't walk, so it needs GIVE.
+- Wipe save resets feeders and hunger. `style.css?v=2.3`.
+- **Check:** real Chromium run — a Lv30 dog at 44 hunger walked to the feeder, ate to 73 (feeder 60 → 0), Deposit button showed and moved 100 food, a pet at 0 stayed perfectly still, GIVE restored 5 points for 10 food, hunger survives save/reload; no script errors.
+
+---
+
 ### 2026-10-04 (51) — Garden tweaks: refill water 3000, bonus stacks per flower, shop sales + dev gold not boosted
 
 - **Refill cost:** `GARDEN_REWATER_COST` 5000 → **3000** (world.js). The first bloom watering stays 8000. Shop row/changelog text above that says 5000 now means 3000.

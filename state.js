@@ -20,6 +20,25 @@ const whistleBtn = document.getElementById('whistleBtn');
 // The highest level any pet can reach. Everything that used to hard-code 20 (feeding stops,
 // progress bars, the Codex's "x/20", the dev insta-max, save validation...) reads this instead.
 const MAX_PET_LEVEL = 30;
+
+// ------------------------------------------------------------------
+// HUNGER + FEEDER BOXES. A pet at MAX_PET_LEVEL gets a hunger bar (0-100) that drops 1 point every
+// HUNGER_SECONDS_PER_POINT seconds. At 0 the pet stops dead until it is fed (GIVE, or by walking to
+// the feeder). A point costs HUNGER_FOOD_PER_POINT food (200 food = a full bar). Every region except
+// Region 4 (bees) and Region 10 (garden) has a feeder box holding up to FEEDER_CAPACITY food; the
+// player deposits food into it and hungry pets (below HUNGER_SEEK_BELOW) walk over and eat from it.
+// Bees do not use hunger at all (their region has no feeder).
+// ------------------------------------------------------------------
+const HUNGER_MAX = 100;
+const HUNGER_SECONDS_PER_POINT = 3;
+const HUNGER_FOOD_PER_POINT = 2;
+const HUNGER_SEEK_BELOW = 50;      // a pet at or below this heads for the feeder (if it has food)
+const HUNGER_EAT_RATE = 10;        // points restored per second while eating at the feeder
+const FEEDER_CAPACITY = 500;
+const FEEDER_DEPOSIT_CHUNK = 100;  // food moved per tap of the Deposit button
+const FEEDER_REGIONS = [1, 2, 3, 5, 6, 7, 8, 9];
+const feederFood = {};             // region -> food stored
+FEEDER_REGIONS.forEach(r => { feederFood[r] = 0; });
 const MAX_EGGS_ON_MAP = 25;   // chicken eggs lying in Region 3 (laying stops while the map is full)
 const MAX_NAME_LENGTH = 20;   // pet / character names (inputs have maxlength too; loaded saves are clamped)
 // Loaded-save helpers: a hand-edited or corrupt save can't put NaN, negatives, huge or non-string values into the game.
@@ -1068,7 +1087,8 @@ function saveGameProgress() {
                     foodEaten: pet.foodEaten,
                     waterEaten: pet.waterEaten,
                     honeyCarried: pet.honeyCarried || 0,
-                    fishingTimer: pet.fishingTimer || 0
+                    fishingTimer: pet.fishingTimer || 0,
+                    hunger: pet.hunger
                 }));
         }
 
@@ -1083,7 +1103,8 @@ function saveGameProgress() {
                 label: birdPet.label,
                 level: birdPet.level,
                 foodEaten: birdPet.foodEaten,
-                waterEaten: birdPet.waterEaten
+                waterEaten: birdPet.waterEaten,
+                hunger: birdPet.hunger
             };
         }
 
@@ -1109,11 +1130,15 @@ function saveGameProgress() {
                 honeyEaten: g.honeyEaten,
                 bananaEaten: g.bananaEaten,
                 waterEaten: g.waterEaten,
+                hunger: g.hunger,
                 stamina: g.stamina,
                 region: g.regionNow,
                 held: !!g.held
             }));
         }
+
+        stateMatrix.feeders = {};
+        FEEDER_REGIONS.forEach(r => { stateMatrix.feeders[r] = feederFood[r] || 0; });
 
         // Region 10 garden plots (world.js). Timers are real-clock seconds and only run while the game
         // is open and in the foreground, so a closed app never makes a flower die.
@@ -1319,6 +1344,7 @@ function loadGameProgress() {
                         if (pet.type === 'monkey' && pet.label === 'Coco') pet.label = 'Bow Monkey';
                         pet.foodEaten = cleanSavedNum(savedPet.foodEaten, 0, 1e9, 0);
                         pet.waterEaten = cleanSavedNum(savedPet.waterEaten, 0, 1e9, 0);
+                        pet.hunger = cleanSavedNum(savedPet.hunger, 0, HUNGER_MAX, HUNGER_MAX);
                         pet.honeyCarried = cleanSavedNum(savedPet.honeyCarried, 0, 1e9, 0);
                         if (pet.type === 'bear') pet.fishingTimer = cleanSavedNum(savedPet.fishingTimer, 0, 1e6, 0);
                     });
@@ -1333,6 +1359,7 @@ function loadGameProgress() {
                     birdPet.label = cleanSavedName(stateMatrix.birdData.label, birdPet.label);
                     birdPet.foodEaten = cleanSavedNum(stateMatrix.birdData.foodEaten, 0, 1e9, 0);
                     birdPet.waterEaten = cleanSavedNum(stateMatrix.birdData.waterEaten, 0, 1e9, 0);
+                    birdPet.hunger = cleanSavedNum(stateMatrix.birdData.hunger, 0, HUNGER_MAX, HUNGER_MAX);
                     birdPet.excursionActive = false;
                     birdPet.excursionRegion = null;
                     birdPet.excursionTimer = 0;
@@ -1352,6 +1379,7 @@ function loadGameProgress() {
                             pet.label = cleanSavedName(savedPet.label, pet.label);
                             pet.foodEaten = cleanSavedNum(savedPet.foodEaten, 0, 1e9, 0);
                             pet.waterEaten = cleanSavedNum(savedPet.waterEaten, 0, 1e9, 0);
+                        pet.hunger = cleanSavedNum(savedPet.hunger, 0, HUNGER_MAX, HUNGER_MAX);
                             if (typeof pet.honeyCarried !== 'undefined') pet.honeyCarried = cleanSavedNum(savedPet.honeyCarried, 0, 1e9, 0);
                         }
                     });
@@ -1377,6 +1405,7 @@ function loadGameProgress() {
                     g.honeyEaten = Math.max(0, Math.floor(Number(saved.honeyEaten)) || 0);
                     g.bananaEaten = Math.max(0, Math.floor(Number(saved.bananaEaten)) || 0);
                     g.waterEaten = Math.max(0, Math.floor(Number(saved.waterEaten)) || 0);
+                    g.hunger = cleanSavedNum(saved.hunger, 0, HUNGER_MAX, HUNGER_MAX);
 
                     const maxStamina = getGliderMaxStamina(g.level);
                     let st = Number(saved.stamina);
@@ -1434,6 +1463,13 @@ function loadGameProgress() {
                 flowers = regionalItems[currentRegion].flowers;
                 bananas = regionalItems[currentRegion].bananas;
             }
+        });
+
+        guard('feeders', () => {
+            FEEDER_REGIONS.forEach(r => {
+                const v = stateMatrix.feeders ? stateMatrix.feeders[r] : 0;
+                feederFood[r] = Math.floor(cleanSavedNum(v, 0, FEEDER_CAPACITY, 0));
+            });
         });
 
         guard('garden', () => {

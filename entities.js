@@ -2949,6 +2949,72 @@ class Pet {
         this.staminaDrainTimer = 0;
         this.restTimer = 0;
         this.restTree = -1;
+
+        // Hunger (max-level pets only, see HUNGER_* in state.js): 0-100, -1 every 3 s. hungerSeek is
+        // true while the pet is walking to / eating at its region's feeder box.
+        this.hunger = HUNGER_MAX;
+        this.hungerTimer = 0;
+        this.hungerSeek = false;
+        this.hungerEatAcc = 0;
+    }
+
+    // Hunger layer, run at the top of update(). Returns true when it took over this frame (the pet is
+    // starving and frozen, or walking to / eating at the feeder), so the normal AI must not run.
+    hungerStep(dt) {
+        if (this.type === 'bee' || this.level < MAX_PET_LEVEL || this.held || this.excursionActive) {
+            this.hungerSeek = false;
+            return false;
+        }
+        const region = (this.type === 'glider') ? this.regionNow : this.homeRegion;
+        const hasFeeder = FEEDER_REGIONS.indexOf(region) !== -1;
+        const stored = hasFeeder ? (feederFood[region] || 0) : 0;
+
+        if (!this.hungerSeek) {
+            // Hungry: drains 1 point per HUNGER_SECONDS_PER_POINT. (Not while eating.)
+            if (this.hunger > 0) {
+                this.hungerTimer += dt;
+                while (this.hungerTimer >= HUNGER_SECONDS_PER_POINT && this.hunger > 0) {
+                    this.hungerTimer -= HUNGER_SECONDS_PER_POINT;
+                    this.hunger = Math.max(0, this.hunger - 1);
+                }
+            } else {
+                this.hungerTimer = 0;
+                return true;      // starving: stops dead, doing nothing, until fed
+            }
+            // Calm enough to go and eat? Only from plain wandering/idling so no activity is broken.
+            if (this.hunger <= HUNGER_SEEK_BELOW && stored >= HUNGER_FOOD_PER_POINT &&
+                (this.state === 'wander' || this.state === 'idle')) {
+                this.hungerSeek = true;
+                this.hungerEatAcc = 0;
+            } else {
+                return false;
+            }
+        }
+
+        // Walking to the feeder, then eating from it.
+        const spot = hasFeeder ? getFeederSpot(region) : null;
+        const finish = () => {
+            this.hungerSeek = false;
+            this.state = (this.type === 'glider') ? 'idle' : 'wander';
+            this.stateTimer = 0.5;
+            this.pickNewWanderTarget();
+        };
+        if (!spot || (stored < HUNGER_FOOD_PER_POINT && this.hunger < HUNGER_MAX && this.hungerEatAcc === 0)) { finish(); return false; }
+        const dx = spot.x - (this.x + this.size / 2), dy = spot.y - (this.y + this.size / 2);
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > 26) {
+            this.x += (dx / dist) * this.effectiveSpeed * dt;
+            this.y += (dy / dist) * this.effectiveSpeed * dt;
+            return true;
+        }
+        this.hungerEatAcc += dt * HUNGER_EAT_RATE;
+        while (this.hungerEatAcc >= 1 && this.hunger < HUNGER_MAX && feederFood[region] >= HUNGER_FOOD_PER_POINT) {
+            this.hungerEatAcc -= 1;
+            this.hunger++;
+            feederFood[region] -= HUNGER_FOOD_PER_POINT;
+        }
+        if (this.hunger >= HUNGER_MAX || feederFood[region] < HUNGER_FOOD_PER_POINT) { finish(); }
+        return true;
     }
 
     // Movement speed actually used by the AI in update(). `this.speed` stays the pet's raw
@@ -3187,6 +3253,9 @@ class Pet {
         // A pet sold in the shop that hasn't been bought yet isn't in the world — no AI, no
         // foraging, nothing (see isPetAvailable() in state.js and the shopId tags in world.js).
         if (!isPetAvailable(this)) return;
+
+        // Max-level hunger / feeder box (see hungerStep above).
+        if (this.hungerStep(dt)) return;
 
         // Character perk bonuses — from whichever perks the player has unlocked in the
         // Perk Tree; see getCharacterBonuses() in state.js (also the single source of
@@ -4414,6 +4483,22 @@ class Pet {
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
             ctx.lineWidth = 1;
             ctx.strokeRect(barX, barY, barWidth, barHeight);
+        }
+
+        // Hunger bar for max-level pets (they no longer show an XP bar): green -> orange -> red,
+        // drawn in the same spot the XP bar uses. Bees don't have hunger.
+        if (this.level >= MAX_PET_LEVEL && this.type !== 'bee') {
+            let hRatio = Math.min(1, Math.max(0, this.hunger / HUNGER_MAX));
+            let hW = this.size + 8, hH = 4;
+            let hX = this.x + (this.size / 2) - (hW / 2);
+            let hY = this.y - 10;
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+            ctx.fillRect(hX, hY, hW, hH);
+            ctx.fillStyle = hRatio > 0.5 ? '#2ecc71' : (hRatio > 0.2 ? '#f39c12' : '#e74c3c');
+            ctx.fillRect(hX, hY, hW * hRatio, hH);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(hX, hY, hW, hH);
         }
 
         // Sugar glider stamina bar (+ number) under the model: teal while healthy, red when

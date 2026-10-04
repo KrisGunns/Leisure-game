@@ -2028,6 +2028,7 @@ if (btnWipeSave) {
             inventory.bananas = 0;
             inventory.soil = 0;
             inventory.seeds = 0;
+            FEEDER_REGIONS.forEach(r => { feederFood[r] = 0; });
             if (typeof gardenPlots !== 'undefined') {
                 for (let gi = 0; gi < gardenPlots.length; gi++) gardenPlots[gi] = createGardenPlot();
             }
@@ -2044,6 +2045,8 @@ if (btnWipeSave) {
                         pet.level = (pet.type === 'bee') ? 1 : 1; // Resets all levels to baseline
                         pet.foodEaten = 0;
                         pet.waterEaten = 0;
+                        pet.hunger = HUNGER_MAX;
+                        pet.hungerSeek = false;
                         pet.state = 'wander';
                         pet.pickNewWanderTarget();
                     });

@@ -248,10 +248,13 @@ function runGameFrame(timestamp) {
         player.update(dt);
         checkCollisions();
         updateGardenButtons();   // Buy Plot / Fertilize / Water button (Region 10)
+        updateFeederButton();    // Deposit Food button (feeder boxes)
         if (isGardenBoostActive()) {
             const gb = Math.round(countWateredBlooms() * GARDEN_BOOST * 100);
             drawPetText(`🌸 Garden bonus: +${gb}% coins · bees +${gb}% faster`, canvas.width / 2, 64, { size: 10, color: '#ffd1e8' });
         }
+
+        drawFeeder();   // feeder box (every region except 4 and 10)
 
         // --- MAP LOOT ELEMENT DISPLAY DRAWS ---
         if (currentRegion === 4) {
