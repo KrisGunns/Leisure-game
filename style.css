@@ -201,6 +201,27 @@ body, html {
                      top of them — was 100000 before, way above every overlay. */
 }
 
+/* Region 10 (flower garden) action button: Buy Plot / Fertilize / Water. Same slot as #spawnBeeBtn
+   (directly above the whistle button) — the two never show in the same region. */
+#plotActionBtn {
+    position: absolute;
+    bottom: 175px;
+    right: 20px;
+    left: auto !important;
+    width: 124px;
+    padding: 9px 6px;
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    background: #f8bbd9;
+    border: 2px solid #e75b9b;
+    color: #4a0f2a;
+    z-index: 100;
+}
+#plotActionBtn:active { background: #f48fb1; }
+
 #hiveHoneyLabel {
     position: absolute;
     bottom: 225px;         /* Stacks directly above spawnBeeBtn with the same 10px gap pattern */

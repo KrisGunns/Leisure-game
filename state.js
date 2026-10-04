@@ -250,6 +250,14 @@ const frameInterval = 1000 / 60;
 // (a decrease) never lowers it. Loading a save or wiping sets the values with tracking paused (see
 // lifetimeTrackingPaused), so a load never counts as "earning".
 let lifetimeTrackingPaused = false;
+// While true, the Region 10 coin bonus is skipped (see addCoinsUnboosted below).
+let coinBoostSuspended = false;
+// Adds coins WITHOUT the Region 10 garden bonus (shop sales, the dev +500 gold button). Still counts
+// toward lifetime coins like any other income.
+function addCoinsUnboosted(n) {
+    coinBoostSuspended = true;
+    try { inventory.coins += n; } finally { coinBoostSuspended = false; }
+}
 const inventory = {
     food: 0,
     water: 0,
@@ -258,10 +266,24 @@ const inventory = {
     _coins: 0,
     eggs: 0,
     bananas: 0,
+    soil: 0,        // 🪴 Region 10: soil CHARGES left (a bag from the shop adds 3; fertilizing a plot uses 1)
+    seeds: 0,       // 🌱 Region 10: flower seeds (one is planted when a plot is fertilized)
+    _coinCarry: 0,  // fractional part of the Flower Garden coin bonus, so a +10% on small payouts isn't lost
     _diamonds: 0,   // 💎 earned from achievements (see ANIMAL_TAMER_TIERS)
     get coins() { return this._coins; },
     set coins(v) {
-        const gain = v - this._coins;
+        let gain = v - this._coins;
+        // Region 10 bonus: +10% PER watered, fully grown hydrangea on every coin PAYOUT (a positive
+        // change). Spending (negative change), loading a save (lifetimeTrackingPaused) and anything
+        // wrapped in addCoinsUnboosted() (shop sales, the dev gold button) are never boosted. The extra counts toward lifetime coins too.
+        if (gain > 0 && !lifetimeTrackingPaused && !coinBoostSuspended && typeof getGardenCoinBoost === 'function') {
+            const m = getGardenCoinBoost();
+            if (m > 1) {
+                this._coinCarry += gain * (m - 1);
+                const extra = Math.floor(this._coinCarry + 1e-9);
+                if (extra > 0) { this._coinCarry -= extra; v += extra; gain += extra; }
+            }
+        }
         if (gain > 0 && !lifetimeTrackingPaused) gameStats.lifetimeCoins += gain;
         this._coins = v;
     },
@@ -511,6 +533,13 @@ const SELL_ITEMS = [
     { key: 'fish', icon: '🐟', name: 'Fish', price: 2 }
 ];
 
+// Consumables for the Region 10 flower garden, sold on the Buy tab. Unlike SHOP_ITEMS these are not
+// timed buffs: buying adds `gives` units to `inventory[key]`. A bag of soil is 3 charges.
+const SHOP_SUPPLIES = [
+    { key: 'soil',  icon: '🪴', name: 'Bag of Soil',   cost: 200, gives: 3, desc: '3 uses — each use turns one garden plot in Region 10 from hard clay into soil.' },
+    { key: 'seeds', icon: '🌱', name: 'Flower Seed',   cost: 300, gives: 1, desc: 'One hydrangea seed. Planted when you fertilize a plot in Region 10.' }
+];
+
 function isShopBuffActive(id) { return shopBuffs[id] > 0; }
 
 // ------------------------------------------------------------------
@@ -544,7 +573,9 @@ const UNLOCKABLES = [
     { id: 'pet_bowMonkey',   kind: 'pet',    region: 8, icon: '🙈', name: 'Bow Monkey',   cost: 150, desc: 'Joins Region 8 (green bow). Arrives wild (Lv1).' },
 
     { id: 'region_9',        kind: 'region', region: 9, icon: '🛏️', name: 'Region 9 — Bedroom',    cost: 500, desc: 'Unlocks Region 9 and comes with the Sugar Glider, already tamed at Lv1.' },
-    { id: 'pet_missGlider',  kind: 'pet',    region: 9, icon: '🎀', name: 'Miss Glider',  cost: 350, desc: 'A second sugar glider with a red bow, already tamed at Lv1.' }
+    { id: 'pet_missGlider',  kind: 'pet',    region: 9, icon: '🎀', name: 'Miss Glider',  cost: 350, desc: 'A second sugar glider with a red bow, already tamed at Lv1.' },
+
+    { id: 'region_10',       kind: 'region', region: 10, icon: '🌸', name: 'Region 10 — Flower Garden', cost: 1000, desc: 'Unlocks Region 10 with your first garden plot. Grow hydrangeas (soil + seeds from the Buy tab, plus lots of water) for +10% coins and +10% bee speed per watered flower (stacks). Gliders cannot be dropped here.' }
 ];
 
 // Which unlockables the player owns: id -> true. Empty at the start of a new game.
@@ -1014,7 +1045,9 @@ function saveGameProgress() {
                 coins: inventory.coins,
                 eggs: inventory.eggs,
                 bananas: inventory.bananas,
-                diamonds: inventory.diamonds
+                diamonds: inventory.diamonds,
+                soil: inventory.soil,
+                seeds: inventory.seeds
             },
             currentRegion: currentRegion,
             // The hive's own stored (uncollected) honey pool — separate from
@@ -1082,6 +1115,15 @@ function saveGameProgress() {
             }));
         }
 
+        // Region 10 garden plots (world.js). Timers are real-clock seconds and only run while the game
+        // is open and in the foreground, so a closed app never makes a flower die.
+        if (typeof gardenPlots !== 'undefined' && Array.isArray(gardenPlots)) {
+            stateMatrix.gardenData = gardenPlots.map(p => ({
+                owned: !!p.owned, soil: !!p.soil, stage: p.stage, watered: !!p.watered,
+                timer: p.timer, grace: p.grace, matured: !!p.matured
+            }));
+        }
+
         stateMatrix.achievements = {};
         ACHIEVEMENT_DEFS.forEach(d => { stateMatrix.achievements[d.id] = { claimed: achievements[d.id].claimed }; });
         stateMatrix.playSeconds = gameStats.playSeconds;
@@ -1134,6 +1176,8 @@ function loadGameProgress() {
                 inventory.eggs = invNum(stateMatrix.inventory.eggs);
                 inventory.bananas = invNum(stateMatrix.inventory.bananas);
                 inventory.diamonds = Math.max(0, Math.floor(Number(stateMatrix.inventory.diamonds)) || 0);   // older saves have none
+                inventory.soil = invNum(stateMatrix.inventory.soil);     // older saves have none -> 0
+                inventory.seeds = invNum(stateMatrix.inventory.seeds);
             }
             } finally {
                 lifetimeTrackingPaused = false;
@@ -1390,6 +1434,28 @@ function loadGameProgress() {
                 flowers = regionalItems[currentRegion].flowers;
                 bananas = regionalItems[currentRegion].bananas;
             }
+        });
+
+        guard('garden', () => {
+            if (!Array.isArray(stateMatrix.gardenData) || typeof gardenPlots === 'undefined') return;
+            gardenPlots.forEach((p, i) => {
+                const sv = stateMatrix.gardenData[i];
+                if (!sv || typeof sv !== 'object') return;
+                p.owned = !!sv.owned;
+                p.stage = Math.min(3, Math.max(0, Math.floor(Number(sv.stage)) || 0));
+                p.soil = !!sv.soil && p.stage >= 0;
+                if (p.stage >= 1) p.soil = true;                       // a planted plot always has soil
+                p.watered = p.stage >= 1 && !!sv.watered;
+                p.timer = p.watered ? cleanSavedNum(sv.timer, 0, 100000, 0) : 0;
+                p.matured = p.stage === 3 && !!sv.matured;
+                const g = Number(sv.grace);
+                if (p.stage === 3 && p.matured && !p.watered) {
+                    p.grace = (sv.grace !== null && sv.grace !== undefined && isFinite(g)) ? Math.min(GARDEN_GRACE_SECONDS, Math.max(1, g)) : GARDEN_GRACE_SECONDS;
+                } else {
+                    p.grace = null;
+                }
+                p.warned = false;
+            });
         });
 
         if (failedSections.length) {

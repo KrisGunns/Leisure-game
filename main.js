@@ -53,6 +53,8 @@ function runGameFrame(timestamp) {
         tickShopBuffs();
         // Sugar-glider stamina timers use the same wall-clock approach (see world.js).
         tickGliderClock();
+        // Region 10 flower-garden timers (growth, thirst, withering) run on that same real clock.
+        tickGarden();
         beginPetText(); // pet labels are queued while drawing and flushed onto the crisp overlay below
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -230,6 +232,11 @@ function runGameFrame(timestamp) {
             // Bedroom: wooden floor, back wall with a window, bed, desk, rug and two small
             // artificial trees with an opening (world.js — the layout is shared with the gliders).
             drawBedroomBackground();
+        } else if (currentRegion === 10) {
+            // Flower garden: lawn, hedge, meadow flowers and the raised bed with the 12 plots
+            // (world.js). Plots are part of the ground, so they are drawn here, under the pets.
+            drawGardenBackground();
+            drawGardenPlots();
         }
 
         ctx.strokeStyle = '#ffffff';
@@ -240,6 +247,11 @@ function runGameFrame(timestamp) {
         processSpawns(dt);
         player.update(dt);
         checkCollisions();
+        updateGardenButtons();   // Buy Plot / Fertilize / Water button (Region 10)
+        if (isGardenBoostActive()) {
+            const gb = Math.round(countWateredBlooms() * GARDEN_BOOST * 100);
+            drawPetText(`🌸 Garden bonus: +${gb}% coins · bees +${gb}% faster`, canvas.width / 2, 64, { size: 10, color: '#ffd1e8' });
+        }
 
         // --- MAP LOOT ELEMENT DISPLAY DRAWS ---
         if (currentRegion === 4) {
@@ -275,7 +287,7 @@ function runGameFrame(timestamp) {
         }
 
         // --- AUTOMATED PET STATE PHYSICS & DRAWS ---
-        for (let r = 1; r <= 9; r++) {
+        for (let r = 1; r <= 10; r++) {
             if (!isRegionUnlocked(r)) continue;
 
             let activePets = petsByRegion[r];
@@ -295,6 +307,8 @@ function runGameFrame(timestamp) {
                     // Lv10+ gliders dropped here all apply to whatever pets are in this
                     // region right now.
                     pet._regionSpeedMult = getRegionSpeedBoost(r) * getBirdVisitSpeedBoost(r) * getGliderSpeedBoost(r);
+                    // Region 10 flower garden: bees move 10% faster while a bloom is watered.
+                    if (pet.type === 'bee') pet._regionSpeedMult *= getGardenBeeBoost();
                     pet.update(dt, rFood, rWater, rFlower);
                     
                     if (r === currentRegion) {
@@ -422,7 +436,15 @@ if (regionSelector && !regionSelector.querySelector('option[value="9"]')) {
     regionSelector.appendChild(bedroomOption);
 }
 
-// The saved game is loaded before the Region 6-9 options above exist, so a save made while
+// Same approach for Region 10 (Flower Garden).
+if (regionSelector && !regionSelector.querySelector('option[value="10"]')) {
+    let gardenOption = document.createElement('option');
+    gardenOption.value = '10';
+    gardenOption.textContent = 'Region 10';
+    regionSelector.appendChild(gardenOption);
+}
+
+// The saved game is loaded before the Region 6-10 options above exist, so a save made while
 // standing in one of them left the dropdown showing "Region 1" after a reload even though the
 // game resumed in that region. Sync it now that every option is present.
 if (regionSelector && typeof currentRegion !== 'undefined') {

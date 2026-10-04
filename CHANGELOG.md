@@ -38,7 +38,7 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 
 ## Current Features
 
-**Pet max level is 30 (see 2026-09-20 (7)); the older "Lv20" perk notes below describe the first tier of each perk.** **Regions:** 9 total, selected via a dropdown. **Regions 4–9 (and Cat / Bow Elephant / Bird / Bow Bear / Mud Pig / Bow Monkey / Miss Glider) are bought with gold in Shop → Unlockables — see 2026-09-20 (2); the per-region "locked behind…" notes below describe the OLD level-based rules and are superseded.**
+**Pet max level is 30 (see 2026-09-20 (7)); the older "Lv20" perk notes below describe the first tier of each perk.** **Regions:** 10 total, selected via a dropdown (Region 10 = Flower Garden, see 2026-10-04 (50)). **Regions 4–9 (and Cat / Bow Elephant / Bird / Bow Bear / Mud Pig / Bow Monkey / Miss Glider) are bought with gold in Shop → Unlockables — see 2026-09-20 (2); the per-region "locked behind…" notes below describe the OLD level-based rules and are superseded.**
 - Regions 1–3: starter pets (dog + cat, two elephants, squirrel + chicken + bird), food/water item spawns.
 - Region 3 also spawns collectible eggs (from chickens reaching level 20).
 - Region 4: bee hive — locked until every pet in Regions 1–3 is level 2+. Bees forage flowers, carry honey back to the hive, and cost 10 coins to spawn (max 3 bees).
@@ -47,6 +47,7 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 - Region 7: **Panda habitat** — locked behind the "jungle tier" condition: pets in Regions 1-3 must be Level 10+, **and** pets in Regions 4-6 must be Level 5+ (changed from the original "every pet in Regions 1-6 at Lv10+" — see 2026-09-17 (1)). Single source of truth is `isJungleTierUnlocked()` in `world.js` (renamed from `isRegion7Unlocked()` when Region 8 was added — see 2026-09-19 (1) — since it now gates two regions, not one). The player-facing locked-region alerts (`input.js`) deliberately describe only the *requirement*, never the region's identity/theme, so unlocking it stays a surprise.
 - Region 8: **Monkey jungle** — locked behind the same `isJungleTierUnlocked()` condition as Region 7 (by design, per spec — see 2026-09-19 (1)). Jungle background: trees with hanging vines, brown color palette distinct from Region 7's bamboo forest. 2 brown monkeys forage a new resource, **bananas**, which only spawn in this region. See "Monkey specifics" below.
 - Region 9: **Bedroom** — same `isJungleTierUnlocked()` condition as 7 and 8. Home of the two **sugar gliders** (`Sugar Glider`, `Miss Glider`, tamed at Lv1, carried around with TAKE/DROP, stamina-based abilities per region — see 2026-09-20 (1)). Not in `petsByRegion` — they live in `gliderPets`.
+- Region 10: **Flower Garden** — bought in Shop → Unlockables for 1000🪙 (`region_10`). No pets, no item spawns. Twelve square plots in a raised bed, grown with soil + seeds + lots of water for hydrangeas; a watered, fully grown hydrangea gives +10% coins and +10% bee speed. Gliders can't be dropped here. Code: the `REGION 10` block in `world.js` (`gardenPlots`, `tickGarden()`, draw functions, action button), save field `gardenData`. See 2026-10-04 (50).
 
 **New resource — bananas:** Region 8 only. Same manual-pickup pattern as food/water (1:1 XP with amount collected, same `manualGather` character bonus), own dedicated item pool/respawn queue (mirrors how Region 4 gets flowers instead of food/water), shown in the bag overlay.
 
@@ -140,6 +141,43 @@ same size."):
   monkey/monkeyBow and glider/gliderBow render at matching heights.
 - Nothing to delete — this is the first real-image art for all 7; only the old
   hand-drawn canvas code (in both entities.js and ui.js) was removed.
+
+---
+
+### 2026-10-04 (51) — Garden tweaks: refill water 3000, bonus stacks per flower, shop sales + dev gold not boosted
+
+- **Refill cost:** `GARDEN_REWATER_COST` 5000 → **3000** (world.js). The first bloom watering stays 8000. Shop row/changelog text above that says 5000 now means 3000.
+- **Bonus stacks:** each fully grown flower in its watered state adds **+10% coins** and **+10% bee speed and forage speed** (`countWateredBlooms()`; `GARDEN_BOOST = 0.10` per flower). 12 watered flowers = +120%. The on-screen line shows the current total (e.g. "+30%").
+- **Not boosted:** coins from **selling in the shop** and from the **dev +500 gold button** now go through `addCoinsUnboosted()` (state.js). Everything else that pays coins (pets, mini-games, tasks…) is still boosted. Both still count toward lifetime coins.
+- **Check:** re-ran the vm test (refill 3000, 1 flower 100 -> 110 coins, 3 flowers 100 -> 130, sell 10 fish = exactly 20 coins, spending unboosted, save/load).
+
+---
+
+### 2026-10-04 (50) — NEW Region 10: Flower Garden (hydrangeas), soil + seeds in the Buy tab, plot buying, watering loop, +10% coin/bee bonus
+
+**Shop:**
+- **Unlockables:** `Region 10 — Flower Garden`, 1000🪙 (`UNLOCKABLES` in `state.js`; the Unlockables tab loop now runs to Region 10).
+- **Buy tab:** new `SHOP_SUPPLIES` (state.js) — consumables, not timed buffs: **Bag of Soil** 200🪙 = **3 uses** (`inventory.soil` counts charges), **Flower Seed** 300🪙 = 1 (`inventory.seeds`). Rows show how many you have. `buyShopSupply()` in `ui.js`.
+- **Bag:** two new rows (Soil (uses), Flower Seeds), shown once Region 10 is owned or you hold some. Both saved in `inventory`.
+
+**Region 10 (world.js, `REGION 10` block):**
+- **Background:** lawn with mown stripes, a hedge dotted with blossoms along the top, meadow flowers scattered around (deterministic, no flicker), stepping stones, and a raised wooden bed holding the plots.
+- **12 plots** (3 x 4, sized from the canvas). Plot 1 is free with the region; the others are bought at the plot for `200 x plots-already-owned` (200, 400, 600 ... — any order). Locked plots show a 🔒.
+- **Action button** `#plotActionBtn` (index.html / style.css), same slot as the Buy Bee button (directly above WHISTLE), shown only while standing at a plot: **Buy Plot (N🪙)** → **Fertilize** → **Water (N💧)**. A pink ring marks the plot you're at and a label above it shows its status and timer.
+- **Fertilize** uses **1 soil charge AND 1 seed** (the seed is planted at the same time — the brief didn't say where the seed is used). The plot turns from hard clay to dark soil with a seed.
+- **Growth loop** (constants at the top of the block, all easy to retune): seed — water **1000**, 2 min → shoot — water **3000**, 4 min → hydrangea — water **8000** the first time, lasts **10 min** (watered) → thirsty: **5000** water to refill, and it **dies after 1 minute** unwatered, which sends the plot back to hard clay (the plot itself stays yours). Water comes from the normal 💧 water in the HUD. Not enough water: toast saying how much is needed.
+- **No death before the first bloom watering:** a seed / shoot / brand-new bloom waits for water indefinitely. Death only applies to a bloom that has already been watered once.
+- **Models:** seed in soil, a shoot with two leaves, and a **hydrangea mophead** (rings of four-petal florets, broad leaves, four colour variants blue / violet / pink / sky). Watered = vivid, gently swaying; thirsty = pale and drooping. Timer bar under each plot (blue = time left watered / growing, red = time left before it withers) and a bouncing 💧 over any plot that needs water.
+- **Notification box:** `showGardenToast()` (ui.js, its own element, 4.5s): "Your flowers need water!" whenever any plot starts needing water, and a warning when a flower has 30s left, plus a message when one withers. Shown from any region.
+- **Bonuses** (superseded by 2026-10-04 (51) — now stacking): while **at least one** fully grown flower is in its watered state — **+10% coins from every payout** (the `inventory.coins` setter adds it to any positive change, so it covers every source, with a fractional carry so small payouts aren't lost; spending and loading a save are never boosted; the bonus coins also count toward lifetime coins) and **+10% bee movement speed** (`_regionSpeedMult` in main.js) **and +10% bee forage speed** (`getGardenBeeBoost()` in entities.js). It does **not** stack per flower. A small line at the top of the screen shows when it's active.
+- **Gliders can't be dropped in Region 10** (`dropGlider()` blocks it with a toast; the glider stays in your arms).
+- **Timers use the real clock** (`gliderRealDt`, clamped per frame), so they only advance while the game is open in the foreground — a closed or backgrounded app never kills a flower.
+
+**Save / load:** new top-level `gardenData` (12 entries: owned, soil, stage, watered, timer, grace, matured) and `inventory.soil` / `inventory.seeds`. Older saves have none and load as a fresh garden; every field is validated. Wipe save resets the garden and supplies.
+
+**Other:** `regionalItems[10]` / `petsByRegion[10]` exist (empty), the per-region update loops and the homeRegion tagging run to 10, option 10 is added to the dropdown from `main.js`, `style.css?v=2.2`. `ALL_REGIONS` (bird excursions) is deliberately unchanged — the bird has no effect in the garden.
+
+**Verification:** `node --check` on all scripts; a vm logic test (39 checks: prices 1000/200/400, soil+seed use, water costs 1000/3000/8000/5000, stage timing at 119.75s vs 120s, no early death, death after exactly 60s, rewater inside the grace survives, boost on/off, 100 -> 110 coins, spending not boosted, save/load incl. mid-grace, old save loads); and the real page in Chromium at phone size (Fertilize took 1 soil + 1 seed and the button changed to Water 1000, no script errors).
 
 ---
 

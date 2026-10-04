@@ -521,6 +521,12 @@ function updateUI() {
     setBagRowVisible(bagHoney, inventory.honey > 0 || isRegionOwned(4));    // honey: Region 4 (bees)
     setBagRowVisible(bagFish, inventory.fish > 0 || isRegionOwned(5));      // fish: Region 5 (bears)
     setBagRowVisible(bagBananas, inventory.bananas > 0 || isRegionOwned(8)); // bananas: Region 8 (monkeys)
+    // Region 10 (flower garden) supplies, bought in the shop's Buy tab.
+    const bagSoilEl = document.getElementById('bagSoil'), bagSeedsEl = document.getElementById('bagSeeds');
+    if (bagSoilEl) bagSoilEl.textContent = inventory.soil;
+    if (bagSeedsEl) bagSeedsEl.textContent = inventory.seeds;
+    setBagRowVisible(bagSoilEl, inventory.soil > 0 || isRegionOwned(10));
+    setBagRowVisible(bagSeedsEl, inventory.seeds > 0 || isRegionOwned(10));
 
     // Keeps the Achievements / Statistics screens live while they're open (cheap no-ops otherwise).
     if (typeof refreshAchievementScreens === 'function') refreshAchievementScreens();
@@ -1526,7 +1532,7 @@ function getShopSignature() {
     // rebuilt every second.
     // Which unlockables are owned is part of the signature so the Unlockables tab flips
     // to "Owned" as soon as something is bought.
-    return [shopTab, inventory.coins, inventory.diamonds, inventory.eggs, inventory.fish,
+    return [shopTab, inventory.coins, inventory.diamonds, inventory.eggs, inventory.fish, inventory.soil, inventory.seeds,
             isShopBuffActive('cake'), isShopBuffActive('wisdomPotion'),
             Object.keys(unlockedIds).sort().join(',')].join('|');
 }
@@ -1554,13 +1560,22 @@ function buyShopItem(item) {
     updateUI();
 }
 
+function buyShopSupply(item) {
+    if (inventory.coins < item.cost) return;
+    inventory.coins -= item.cost;
+    inventory[item.key] = (inventory[item.key] || 0) + item.gives;
+    saveGameProgress();
+    renderShop();
+    updateUI();
+}
+
 // `amount` may be Infinity for "sell all" — clamped to what's actually owned.
 function sellShopItem(item, amount) {
     let owned = inventory[item.key] || 0;
     let count = Math.min(amount, owned);
     if (count <= 0) return;
     inventory[item.key] -= count;
-    inventory.coins += count * item.price;
+    addCoinsUnboosted(count * item.price);   // selling is never boosted by the Region 10 garden bonus
     saveGameProgress();
     renderShop();
     updateUI();
@@ -1648,12 +1663,20 @@ function renderShop() {
             let desc = `${item.desc} Lasts ${Math.round(item.duration / 60)} minutes.`;
             shopContent.appendChild(makeShopRow(item.icon, item.name, desc, meta, [btn], active ? item.id : null));
         });
+        // Garden supplies (Region 10): consumables that go into the Bag, buyable any time.
+        SHOP_SUPPLIES.forEach(item => {
+            let shortBy = item.cost - inventory.coins;
+            let have = inventory[item.key] || 0;
+            let meta = (shortBy > 0 ? `🪙 ${item.cost} (need ${shortBy} more)` : `🪙 ${item.cost}`) + ` · you have ${have}`;
+            let btn = makeShopButton('Buy', '', shortBy > 0, () => buyShopSupply(item));
+            shopContent.appendChild(makeShopRow(item.icon, item.name, item.desc, meta, [btn], null));
+        });
     } else if (shopTab === 'unlockables') {
         // Grouped by region. Regions 1-3 are open from the start, so they only get a plain
         // "Region N" heading (no "starts with ..." blurb — the player can just see the pet
         // rows below it) and the pets sold for them; Regions 4-9 are themselves for sale,
         // followed by any extra pet sold for that region.
-        for (let r = 1; r <= 9; r++) {
+        for (let r = 1; r <= 10; r++) {
             if (r <= 3) {
                 let heading = document.createElement('div');
                 heading.className = 'shopSectionHeading';
@@ -1968,7 +1991,7 @@ if (btnAddWater) {
 
 if (btnAddGold) {
     btnAddGold.addEventListener('click', () => {
-        inventory.coins += 500;
+        addCoinsUnboosted(500);   // dev gold is never boosted by the Region 10 garden bonus
         updateUI();
     });
 }
@@ -2003,6 +2026,11 @@ if (btnWipeSave) {
             inventory.coins = 0; 
             inventory.eggs = 0;
             inventory.bananas = 0;
+            inventory.soil = 0;
+            inventory.seeds = 0;
+            if (typeof gardenPlots !== 'undefined') {
+                for (let gi = 0; gi < gardenPlots.length; gi++) gardenPlots[gi] = createGardenPlot();
+            }
             gameStats.lifetimeCoins = 0;      // lifetime totals (Statistics) restart too
             gameStats.lifetimeDiamonds = 0;
             shopBuffs.cake = 0;
@@ -2284,6 +2312,29 @@ function showInfoToast(msg) {
     toast.style.display = 'block';
     clearTimeout(toast._hideTimeout);
     toast._hideTimeout = setTimeout(() => { toast.style.display = 'none'; }, 3200);
+}
+
+// Region 10: the "water your flowers" notification box. Shown for a few seconds from anywhere
+// (tickGarden() in world.js calls it when a plot starts needing water or is about to wither).
+// A separate element from showInfoToast so a garden reminder never overwrites — or is
+// overwritten by — an ordinary message.
+function showGardenToast(msg) {
+    let toast = document.getElementById('gardenToast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'gardenToast';
+        toast.style.cssText = `
+            position: fixed; top: 112px; left: 50%; transform: translateX(-50%);
+            background: rgba(40,10,30,0.92); color: #ffe3f1; font-family: monospace;
+            padding: 9px 14px; border-radius: 8px; z-index: 10001; font-size: 13px;
+            border: 2px solid #ff7eb6; max-width: 88vw; text-align: center; pointer-events: none;
+        `;
+        document.body.appendChild(toast);
+    }
+    toast.textContent = String(msg);
+    toast.style.display = 'block';
+    clearTimeout(toast._hideTimeout);
+    toast._hideTimeout = setTimeout(() => { toast.style.display = 'none'; }, 4500);
 }
 
 // In-page replacements for confirm() / prompt(), which some WebView/APK wrappers don't support

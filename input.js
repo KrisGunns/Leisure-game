@@ -239,6 +239,18 @@ function haltFeedTimers() {
     feedTurboTimeout = null;
     feedHoldCounter = 0;
 }
+// Region 10 (flower garden): the Buy Plot / Fertilize / Water button that appears above the whistle
+// button while the player stands at a plot (shown/labelled by updateGardenButtons() in world.js).
+const plotActionBtnElement = document.getElementById('plotActionBtn');
+if (plotActionBtnElement) {
+    const onPlotAction = (e) => {
+        if (e) e.preventDefault();
+        handleGardenAction();
+    };
+    plotActionBtnElement.addEventListener('touchstart', onPlotAction, { passive: false });
+    plotActionBtnElement.addEventListener('mousedown', onPlotAction);
+}
+
 // INPUT HANDLER REGION
 if (whistleBtn) {
     whistleBtn.addEventListener('click', () => {
@@ -281,7 +293,7 @@ if (regionSelector) {
     regionSelector.addEventListener('change', (e) => {
         let selectedRegion = parseInt(e.target.value);
 
-        // Regions 4-9 have to be bought in the shop (Menu > Shop > Unlockables).
+        // Regions 4-10 have to be bought in the shop (Menu > Shop > Unlockables).
         if (!isRegionUnlocked(selectedRegion)) {
             const regionUnlockable = getUnlockable('region_' + selectedRegion);
             const price = regionUnlockable ? ` for ${regionUnlockable.cost} 🪙` : '';

@@ -3262,7 +3262,7 @@ class Pet {
 
             if (this.state === 'forage') {
                 // Cake buff: the time spent gathering at a flower ticks down faster.
-                this.stateTimer -= dt * getPetForageMultiplier();
+                this.stateTimer -= dt * getPetForageMultiplier() * getGardenBeeBoost();   // + Region 10 garden bonus
                 if (this.stateTimer <= 0) {
                     let idx = activeFlowers.indexOf(this.targetFlower);
                     if (idx > -1) {

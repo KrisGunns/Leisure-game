@@ -19,7 +19,10 @@ const regionalItems = {
     // Region 9 (Bedroom) has no spawnable resources at all — the entry only exists so the
     // per-region lookups (checkCollisions(), the region switcher, the render loop) work
     // for it exactly like every other region.
-    9: { foods: [], waters: [], flowers: [], bananas: [] }
+    9: { foods: [], waters: [], flowers: [], bananas: [] },
+    // Region 10 (Flower Garden) has no spawnable resources either — its plots live in `gardenPlots`
+    // (below). The entry just keeps the per-region lookups working.
+    10: { foods: [], waters: [], flowers: [], bananas: [] }
 };
 
 // Regions whose food/water item pools get topped up by processSpawns() — Region 4 gets
@@ -501,7 +504,8 @@ const petsByRegion = {
     8: [ createMonkey('Monkey', 150, 200), createMonkey('Bow Monkey', 280, 200, { bowColor: '#2ecc71' }) ],
     // Region 9's pets are the two sugar gliders, but they are deliberately NOT stored here —
     // see `gliderPets` below. The (empty) array just keeps the region-indexed lookups uniform.
-    9: []
+    9: [],
+    10: []   // Region 10 (Flower Garden) has no pets
 };
 
 // The two sugar gliders, in their own list rather than in petsByRegion. They get carried
@@ -528,7 +532,7 @@ const birdPet = petsByRegion[3][2];
 // only happen/show while the player is actually looking at that pet's region — e.g.
 // coin popups below — for the pets that don't already track this themselves (the
 // bird already has `homeRegion`, left untouched since it's the same value anyway).
-for (let r = 1; r <= 9; r++) {
+for (let r = 1; r <= 10; r++) {
     if (Array.isArray(petsByRegion[r])) {
         petsByRegion[r].forEach(pet => { if (!pet.homeRegion) pet.homeRegion = r; });
     }
@@ -587,7 +591,7 @@ function drawCoinPopups() {
 }
 
 // Whether a given region is currently accessible to the player at all. Regions 1-3 are always
-// open; Regions 4-9 are unlocked by buying them in the shop's Unlockables tab (UNLOCKABLES /
+// open; Regions 4-10 are unlocked by buying them in the shop's Unlockables tab (UNLOCKABLES /
 // unlockedIds in state.js) — pet levels no longer have anything to do with it. Single source of
 // truth used by main.js (render/update gating), input.js (region-select gate), ui.js (Codex
 // lock display) and entities.js (the bird's excursion target picker).
@@ -696,6 +700,11 @@ function takeGlider(g) {
 function dropGlider() {
     const g = getHeldGlider();
     if (!g) return;
+    // Region 10 (the flower garden) is off limits: the glider stays in the player's arms.
+    if (currentRegion === GARDEN_REGION) {
+        showInfoToast("🌸 Gliders can't be dropped in the flower garden — they'd trample the flowers!");
+        return;
+    }
     const pad = 24;
     g.held = false;
     g.regionNow = currentRegion;
@@ -1100,6 +1109,439 @@ function resizeCanvas() {
 }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
+
+// ------------------------------------------------------------------
+// REGION 10 — THE FLOWER GARDEN
+// Twelve plots in a raised bed. Plot 1 comes with the region; the others are bought with gold
+// right at the plot (price = GARDEN_PLOT_PRICE_STEP x the number of plots already owned: 200,
+// 400, 600 ...). A plot goes: clay -> (Fertilize: 1 soil charge + 1 seed) -> seed -> shoot ->
+// hydrangea. Each stage needs watering with water from the bag:
+//   seed  : 1000 water, then 2 min until it becomes a shoot
+//   shoot : 3000 water, then 4 min until it blossoms
+//   bloom : 8000 water the first time, then 3000 every time it dries out. A watering lasts
+//           10 min; after that the flower has 1 minute to be watered again or it dies and the
+//           plot goes back to clay.
+// Each fully grown flower in its watered state adds +10% coins to every payout (inventory.coins
+// setter, state.js; not shop sales or the dev gold button) and +10% bee movement + foraging speed.
+// The bonuses stack: 12 watered flowers = +120%.
+// All timers run on the real clock (gliderRealDt, clamped per frame), so they only advance
+// while the game is open and in the foreground.
+// ------------------------------------------------------------------
+const GARDEN_REGION = 10;
+const GARDEN_PLOT_COUNT = 12;
+const GARDEN_PLOT_PRICE_STEP = 200;
+const GARDEN_STAGE_WATER = { 1: 1000, 2: 3000, 3: 8000 };   // water needed to water a plot in that stage
+const GARDEN_REWATER_COST = 3000;                            // every watering after the first bloom watering
+const GARDEN_STAGE_SECONDS = { 1: 120, 2: 240, 3: 600 };    // how long a watering lasts (seed -> shoot -> bloom -> thirsty)
+const GARDEN_GRACE_SECONDS = 60;                             // thirsty bloom dies after this long
+const GARDEN_BOOST = 0.10;                                   // +10% coins and +10% bee speed PER watered bloom (stacks)
+
+function createGardenPlot() {
+    return { owned: false, soil: false, stage: 0, watered: false, timer: 0, grace: null, matured: false, warned: false };
+}
+const gardenPlots = [];
+for (let i = 0; i < GARDEN_PLOT_COUNT; i++) gardenPlots.push(createGardenPlot());
+
+function isGardenPlotOwned(i) {
+    return i === 0 ? isRegionOwned(GARDEN_REGION) : !!gardenPlots[i].owned;
+}
+function countOwnedGardenPlots() {
+    let n = 0;
+    for (let i = 0; i < GARDEN_PLOT_COUNT; i++) if (isGardenPlotOwned(i)) n++;
+    return n;
+}
+function getNextGardenPlotPrice() {
+    return GARDEN_PLOT_PRICE_STEP * Math.max(1, countOwnedGardenPlots());
+}
+function getGardenWaterCost(p) {
+    if (p.stage === 3 && p.matured) return GARDEN_REWATER_COST;
+    return GARDEN_STAGE_WATER[p.stage] || 0;
+}
+function gardenPlotNeedsWater(p) { return p.stage >= 1 && !p.watered; }
+
+// How many fully grown flowers are in their watered state right now. Each adds GARDEN_BOOST.
+function countWateredBlooms() {
+    if (!isRegionOwned(GARDEN_REGION)) return 0;
+    let n = 0;
+    for (let i = 0; i < GARDEN_PLOT_COUNT; i++) {
+        const p = gardenPlots[i];
+        if (p.stage === 3 && p.watered && isGardenPlotOwned(i)) n++;
+    }
+    return n;
+}
+function isGardenBoostActive() { return countWateredBlooms() > 0; }
+function getGardenCoinBoost() { return 1 + GARDEN_BOOST * countWateredBlooms(); }
+function getGardenBeeBoost() { return 1 + GARDEN_BOOST * countWateredBlooms(); }
+
+function gardenNotify(msg) {
+    if (typeof showGardenToast === 'function') showGardenToast(msg);
+}
+
+// Ticked once per frame from main.js (after tickGliderClock, which provides gliderRealDt).
+function tickGarden() {
+    if (!isRegionOwned(GARDEN_REGION)) return;
+    const dt = gliderRealDt;
+    if (!(dt > 0)) return;
+    let needsWater = false, died = false, dying = false;
+    for (let i = 0; i < GARDEN_PLOT_COUNT; i++) {
+        const p = gardenPlots[i];
+        if (p.stage < 1) continue;
+        if (p.watered) {
+            p.timer -= dt;
+            if (p.timer <= 0) {
+                p.watered = false;
+                p.timer = 0;
+                if (p.stage < 3) p.stage++;                      // seed -> shoot, shoot -> bloom
+                else { p.grace = GARDEN_GRACE_SECONDS; p.warned = false; }   // bloom dried out
+                needsWater = true;
+            }
+        } else if (p.stage === 3 && p.matured && p.grace !== null) {
+            p.grace -= dt;
+            if (p.grace <= 0) {                                  // withered: the plot goes back to hard clay
+                gardenPlots[i] = createGardenPlot();
+                gardenPlots[i].owned = p.owned;                  // the plot itself stays yours
+                died = true;
+            } else if (p.grace <= GARDEN_GRACE_SECONDS / 2 && !p.warned) {
+                p.warned = true;
+                dying = true;
+            }
+        }
+    }
+    if (died) { gardenNotify('🥀 A hydrangea withered away — its plot is back to hard clay.'); saveGameProgress(); }
+    else if (needsWater || dying) {
+        gardenNotify(dying && !needsWater ? '⚠️ A flower is about to wither — water your flowers in Region 10!' : '💧 Your flowers need water! Water them in Region 10.');
+        saveGameProgress();
+    }
+}
+
+function buyGardenPlot(i) {
+    const p = gardenPlots[i];
+    if (!p || isGardenPlotOwned(i)) return false;
+    const price = getNextGardenPlotPrice();
+    if (inventory.coins < price) { showInfoToast(`🪙 A new plot costs ${price} coins. (You have: ${inventory.coins})`); return false; }
+    inventory.coins -= price;
+    p.owned = true;
+    saveGameProgress();
+    updateUI();
+    return true;
+}
+function fertilizeGardenPlot(i) {
+    const p = gardenPlots[i];
+    if (!p || !isGardenPlotOwned(i) || p.stage !== 0) return false;
+    if (inventory.soil < 1) { showInfoToast('🪴 You need soil! Buy a Bag of Soil in the Shop (Menu → Shop → Buy).'); return false; }
+    if (inventory.seeds < 1) { showInfoToast('🌱 You need a flower seed! Buy one in the Shop (Menu → Shop → Buy).'); return false; }
+    inventory.soil -= 1;
+    inventory.seeds -= 1;
+    p.soil = true;
+    p.stage = 1;
+    p.watered = false;
+    p.timer = 0;
+    p.grace = null;
+    p.matured = false;
+    saveGameProgress();
+    updateUI();
+    return true;
+}
+function waterGardenPlot(i) {
+    const p = gardenPlots[i];
+    if (!p || !isGardenPlotOwned(i) || !gardenPlotNeedsWater(p)) return false;
+    const cost = getGardenWaterCost(p);
+    if (inventory.water < cost) { showInfoToast(`💧 Not enough water! This needs ${cost} (you have ${inventory.water}).`); return false; }
+    inventory.water -= cost;
+    p.watered = true;
+    p.timer = GARDEN_STAGE_SECONDS[p.stage];
+    if (p.stage === 3) { p.matured = true; p.grace = null; p.warned = false; }
+    saveGameProgress();
+    updateUI();
+    return true;
+}
+
+// Which plot the player is standing at (nearest within reach), or -1. Region 10 only.
+function getActiveGardenPlot() {
+    if (currentRegion !== GARDEN_REGION) return -1;
+    const L = getGardenLayout();
+    const px = player.x + player.size / 2, py = player.y + player.size / 2;
+    let best = -1, bestD = Infinity;
+    for (let i = 0; i < L.plots.length; i++) {
+        const r = L.plots[i];
+        const reach = 18;
+        if (px < r.x - reach || px > r.x + r.s + reach || py < r.y - reach || py > r.y + r.s + reach) continue;
+        const d = Math.hypot(px - (r.x + r.s / 2), py - (r.y + r.s / 2));
+        if (d < bestD) { bestD = d; best = i; }
+    }
+    return best;
+}
+
+// What the action button should offer for plot i: { kind, label } or null.
+function getGardenPlotAction(i) {
+    const p = gardenPlots[i];
+    if (!p) return null;
+    if (!isGardenPlotOwned(i)) return { kind: 'buy', label: `Buy Plot (${getNextGardenPlotPrice()}🪙)` };
+    if (p.stage === 0) return { kind: 'fertilize', label: 'Fertilize' };
+    if (gardenPlotNeedsWater(p)) return { kind: 'water', label: `Water (${getGardenWaterCost(p)}💧)` };
+    return null;
+}
+
+function formatGardenTime(sec) {
+    sec = Math.max(0, Math.ceil(sec));
+    return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
+}
+function getGardenPlotStatus(i) {
+    const p = gardenPlots[i];
+    if (!isGardenPlotOwned(i)) return 'Locked plot';
+    if (p.stage === 0) return 'Hard clay';
+    const name = p.stage === 1 ? 'Seed' : (p.stage === 2 ? 'Shoot' : 'Hydrangea');
+    if (p.watered) return `${name} · ${p.stage === 3 ? 'watered' : 'growing'} ${formatGardenTime(p.timer)}`;
+    if (p.stage === 3 && p.matured && p.grace !== null) return `${name} · thirsty! ${formatGardenTime(p.grace)}`;
+    return `${name} · needs water`;
+}
+
+// Layout: a 3 x 4 grid of square plots inside a raised bed. Sized from the canvas so it fits any
+// phone; the bottom is kept clear for the action buttons stacked above the whistle button.
+let gardenLayoutCache = null;
+function getGardenLayout() {
+    const W = canvas.width, H = canvas.height;
+    if (gardenLayoutCache && gardenLayoutCache.W === W && gardenLayoutCache.H === H) return gardenLayoutCache;
+    const cols = 3, rows = 4;
+    const bedX = 34, bedY = 78;
+    const bedW = W - 68;
+    const bedH = Math.max(220, H - bedY - 230);
+    const cellW = (bedW - 16) / cols, cellH = (bedH - 16) / rows;
+    const s = Math.max(34, Math.min(74, cellW - 14, cellH - 16));
+    const plots = [];
+    for (let i = 0; i < GARDEN_PLOT_COUNT; i++) {
+        const c = i % cols, r = Math.floor(i / cols);
+        plots.push({ x: bedX + 8 + c * cellW + (cellW - s) / 2, y: bedY + 8 + r * cellH + (cellH - s) / 2, s: s });
+    }
+    gardenLayoutCache = { W: W, H: H, bed: { x: bedX, y: bedY, w: bedW, h: bedH }, plots: plots, s: s };
+    return gardenLayoutCache;
+}
+
+// ---- drawing ----
+function gardenHash(a, b) {                   // deterministic scatter so the meadow never flickers
+    let h = (a * 374761393 + b * 668265263) | 0;
+    h = (h ^ (h >>> 13)) * 1274126177 | 0;
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+const GARDEN_MEADOW_COLORS = ['#ff8fb1', '#ffffff', '#ffd54f', '#b39ddb', '#ff7043', '#81d4fa'];
+
+function drawGardenFlowerSmall(c, x, y, r, col) {
+    c.fillStyle = col;
+    for (let k = 0; k < 5; k++) {
+        const a = k / 5 * Math.PI * 2;
+        c.beginPath(); c.arc(x + Math.cos(a) * r, y + Math.sin(a) * r, r * 0.8, 0, Math.PI * 2); c.fill();
+    }
+    c.fillStyle = '#f9a825';
+    c.beginPath(); c.arc(x, y, r * 0.55, 0, Math.PI * 2); c.fill();
+}
+
+function drawGardenBackground() {
+    const c = ctx, L = getGardenLayout(), W = L.W, H = L.H;
+    // Lawn with mown stripes and grass tufts
+    c.fillStyle = '#7ccb6e';
+    c.fillRect(0, 0, W, H);
+    c.fillStyle = '#73c166';
+    for (let y = 0; y < H; y += 56) c.fillRect(0, y, W, 28);
+    c.fillStyle = '#5fae55';
+    for (let x = 20; x < W; x += 52) {
+        for (let y = 24; y < H; y += 52) {
+            const j = gardenHash(x, y);
+            c.fillRect(x + j * 16, y + j * 12, 2, 7);
+            c.fillRect(x + j * 16 + 5, y + j * 12 + 2, 2, 5);
+        }
+    }
+    // Hedge along the top, dotted with blossoms
+    c.fillStyle = '#2e7d3a';
+    c.fillRect(0, 0, W, 34);
+    c.fillStyle = '#3a944a';
+    for (let x = 0; x < W + 20; x += 22) { c.beginPath(); c.arc(x, 30, 17, 0, Math.PI * 2); c.fill(); }
+    for (let x = 6; x < W; x += 19) {
+        const j = gardenHash(x, 7);
+        c.fillStyle = GARDEN_MEADOW_COLORS[Math.floor(j * GARDEN_MEADOW_COLORS.length)];
+        c.beginPath(); c.arc(x + j * 8, 10 + j * 18, 2.6, 0, Math.PI * 2); c.fill();
+    }
+    // Meadow flowers scattered around (kept off the raised bed)
+    const bed = L.bed;
+    for (let x = 30; x < W - 10; x += 46) {
+        for (let y = 50; y < H - 10; y += 46) {
+            const jx = gardenHash(x, y) * 30 - 15, jy = gardenHash(y, x) * 30 - 15;
+            const fx = x + jx, fy = y + jy;
+            if (fx > bed.x - 12 && fx < bed.x + bed.w + 12 && fy > bed.y - 12 && fy < bed.y + bed.h + 12) continue;
+            if (gardenHash(x + 3, y + 9) < 0.45) continue;
+            drawGardenFlowerSmall(c, fx, fy, 3, GARDEN_MEADOW_COLORS[Math.floor(gardenHash(x, y + 1) * GARDEN_MEADOW_COLORS.length)]);
+        }
+    }
+    // Stepping stones leading to the bed
+    c.fillStyle = '#b8bcc2';
+    const sx = W / 2, sy0 = bed.y + bed.h + 14;
+    for (let k = 0, y = sy0; y < H - 20; k++, y += 34) {
+        c.beginPath(); c.ellipse(sx + (k % 2 ? 12 : -12), y, 17, 11, 0, 0, Math.PI * 2); c.fill();
+    }
+    c.fillStyle = 'rgba(255,255,255,0.35)';
+    for (let k = 0, y = sy0; y < H - 20; k++, y += 34) {
+        c.beginPath(); c.ellipse(sx + (k % 2 ? 12 : -12) - 4, y - 3, 8, 4, 0, 0, Math.PI * 2); c.fill();
+    }
+    // Raised wooden bed with dark earth between the plots
+    c.fillStyle = 'rgba(0,0,0,0.2)';
+    c.fillRect(bed.x + 4, bed.y + 5, bed.w, bed.h);
+    c.fillStyle = '#7b5230';
+    c.fillRect(bed.x - 6, bed.y - 6, bed.w + 12, bed.h + 12);
+    c.fillStyle = '#9a6a3f';
+    c.fillRect(bed.x - 6, bed.y - 6, bed.w + 12, 5);
+    c.fillStyle = '#5e4129';
+    c.fillRect(bed.x, bed.y, bed.w, bed.h);
+    c.fillStyle = 'rgba(0,0,0,0.12)';
+    for (let x = bed.x + 6; x < bed.x + bed.w - 6; x += 17) c.fillRect(x, bed.y + 3, 3, bed.h - 6);
+}
+
+function gardenRoundRect(c, x, y, w, h, r) {
+    if (typeof bedroomRoundRect === 'function') bedroomRoundRect(c, x, y, w, h, r);
+    else { c.beginPath(); c.rect(x, y, w, h); }
+}
+
+// A hydrangea: round "mophead" of many small four-petal florets on a stem with broad leaves.
+const GARDEN_HYDRANGEA_COLORS = [ ['#5b7fe0', '#8fb0ff'], ['#9b6fd6', '#c9a6f2'], ['#e87fae', '#f7bdd5'], ['#6fa8e8', '#b6d6ff'] ];
+function drawHydrangea(c, cx, baseY, s, pal, state, seed, t) {
+    // state: 'watered' (vivid, swaying) or 'thirsty' (pale, drooping)
+    const thirsty = state === 'thirsty';
+    const sway = thirsty ? 0 : Math.sin(t * 1.6 + seed) * s * 0.025;
+    const droop = thirsty ? s * 0.1 : 0;
+    const headR = s * 0.3;
+    const headX = cx + sway, headY = baseY - s * 0.5 + droop;
+    // stem
+    c.strokeStyle = thirsty ? '#8a9a52' : '#3f8f3a';
+    c.lineWidth = Math.max(2, s * 0.06);
+    c.beginPath(); c.moveTo(cx, baseY); c.quadraticCurveTo(cx + sway * 0.4, baseY - s * 0.25, headX, headY + headR * 0.5); c.stroke();
+    // broad leaves
+    c.fillStyle = thirsty ? '#9aa060' : '#4caf50';
+    c.beginPath(); c.ellipse(cx - s * 0.2, baseY - s * 0.2 + droop * 0.6, s * 0.2, s * 0.1, thirsty ? 0.7 : -0.5, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(cx + s * 0.2, baseY - s * 0.22 + droop * 0.6, s * 0.2, s * 0.1, thirsty ? -0.7 : 0.5, 0, Math.PI * 2); c.fill();
+    c.fillStyle = thirsty ? '#858a50' : '#388e3c';
+    c.fillRect(cx - s * 0.02, baseY - s * 0.2, s * 0.04, s * 0.02);
+    // floret dome: rings of four-petal florets
+    const c1 = thirsty ? '#a79aa8' : pal[0], c2 = thirsty ? '#c4b8c2' : pal[1];
+    const rings = [[0, 1], [headR * 0.55, 6], [headR * 0.95, 11]];
+    const pr = Math.max(1.6, s * 0.05);
+    rings.forEach(([rad, n], ri) => {
+        for (let k = 0; k < n; k++) {
+            const a = (k / n) * Math.PI * 2 + ri * 0.5;
+            const fx = headX + Math.cos(a) * rad, fy = headY + Math.sin(a) * rad * 0.85;
+            c.fillStyle = (k + ri) % 2 ? c1 : c2;
+            for (let q = 0; q < 4; q++) {
+                const qa = q * Math.PI / 2 + Math.PI / 4;
+                c.beginPath(); c.arc(fx + Math.cos(qa) * pr * 0.9, fy + Math.sin(qa) * pr * 0.9, pr, 0, Math.PI * 2); c.fill();
+            }
+            c.fillStyle = thirsty ? '#ddd2c0' : '#fff6c9';
+            c.beginPath(); c.arc(fx, fy, pr * 0.35, 0, Math.PI * 2); c.fill();
+        }
+    });
+}
+
+function drawGardenPlots() {
+    const c = ctx, L = getGardenLayout(), t = performance.now() / 1000;
+    const active = getActiveGardenPlot();
+    for (let i = 0; i < L.plots.length; i++) {
+        const r = L.plots[i], p = gardenPlots[i], s = r.s;
+        const owned = isGardenPlotOwned(i);
+        const cx = r.x + s / 2, baseY = r.y + s * 0.82;
+        // ground of the plot
+        if (owned && p.stage >= 1) {
+            c.fillStyle = '#3b2616';                                     // soil
+            gardenRoundRect(c, r.x, r.y, s, s, 6); c.fill();
+            c.fillStyle = '#4e3220';
+            for (let k = 0; k < 9; k++) c.fillRect(r.x + 5 + gardenHash(i, k) * (s - 12), r.y + 5 + gardenHash(k, i) * (s - 12), 3, 2);
+            c.fillStyle = '#2a1a0f';
+            for (let k = 0; k < 6; k++) c.fillRect(r.x + 5 + gardenHash(i + 5, k) * (s - 12), r.y + 5 + gardenHash(k, i + 5) * (s - 12), 2, 2);
+            if (p.watered) { c.fillStyle = 'rgba(20,10,5,0.35)'; gardenRoundRect(c, r.x, r.y, s, s, 6); c.fill(); }   // wet, darker soil
+        } else {
+            c.fillStyle = owned ? '#c8a272' : '#a98d68';                 // hard clay
+            gardenRoundRect(c, r.x, r.y, s, s, 6); c.fill();
+            c.strokeStyle = owned ? '#9c7a4e' : '#80684a';
+            c.lineWidth = 1.5;
+            c.beginPath();
+            c.moveTo(r.x + s * 0.2, r.y + s * 0.1); c.lineTo(r.x + s * 0.35, r.y + s * 0.4); c.lineTo(r.x + s * 0.28, r.y + s * 0.65);
+            c.moveTo(r.x + s * 0.35, r.y + s * 0.4); c.lineTo(r.x + s * 0.7, r.y + s * 0.5); c.lineTo(r.x + s * 0.85, r.y + s * 0.8);
+            c.moveTo(r.x + s * 0.7, r.y + s * 0.5); c.lineTo(r.x + s * 0.62, r.y + s * 0.15);
+            c.stroke();
+        }
+        c.strokeStyle = owned ? '#5a3e22' : '#4a3a28';
+        c.lineWidth = 3;
+        gardenRoundRect(c, r.x, r.y, s, s, 6); c.stroke();
+
+        if (!owned) {                                                      // locked plot
+            c.fillStyle = 'rgba(0,0,0,0.38)';
+            gardenRoundRect(c, r.x, r.y, s, s, 6); c.fill();
+            c.font = Math.round(s * 0.42) + 'px monospace';
+            c.textAlign = 'center';
+            c.fillStyle = '#fff';
+            c.fillText('🔒', cx, r.y + s * 0.62);
+            c.textAlign = 'left';
+        } else if (p.stage === 1) {                                        // seed
+            c.fillStyle = '#6b4a2b';
+            c.beginPath(); c.ellipse(cx, r.y + s * 0.6, s * 0.2, s * 0.1, 0, 0, Math.PI * 2); c.fill();
+            c.fillStyle = '#d9c9a0';
+            c.beginPath(); c.ellipse(cx, r.y + s * 0.55, s * 0.07, s * 0.1, 0.4, 0, Math.PI * 2); c.fill();
+        } else if (p.stage === 2) {                                        // shoot
+            c.strokeStyle = '#4caf50'; c.lineWidth = Math.max(2, s * 0.06);
+            c.beginPath(); c.moveTo(cx, r.y + s * 0.75); c.lineTo(cx, r.y + s * 0.4); c.stroke();
+            c.fillStyle = '#66bb6a';
+            c.beginPath(); c.ellipse(cx - s * 0.13, r.y + s * 0.42, s * 0.14, s * 0.07, -0.6, 0, Math.PI * 2); c.fill();
+            c.beginPath(); c.ellipse(cx + s * 0.13, r.y + s * 0.38, s * 0.14, s * 0.07, 0.6, 0, Math.PI * 2); c.fill();
+        } else if (p.stage === 3) {                                        // hydrangea
+            drawHydrangea(c, cx, baseY, s, GARDEN_HYDRANGEA_COLORS[i % GARDEN_HYDRANGEA_COLORS.length], p.watered ? 'watered' : 'thirsty', i, t);
+            if (p.watered) {                                               // little sparkle
+                c.fillStyle = 'rgba(180,225,255,0.9)';
+                const sp = (t * 0.8 + i * 0.37) % 1;
+                c.beginPath(); c.arc(cx + Math.sin(i * 3.1) * s * 0.3, r.y + s * 0.3 - sp * s * 0.2, 2, 0, Math.PI * 2); c.fill();
+            }
+        }
+
+        // timer bar under the plot: blue = time left watered, red = time left before it withers
+        if (owned && p.stage >= 1) {
+            let frac = 0, col = '#4fc3f7';
+            if (p.watered) frac = p.timer / GARDEN_STAGE_SECONDS[p.stage];
+            else if (p.stage === 3 && p.matured && p.grace !== null) { frac = p.grace / GARDEN_GRACE_SECONDS; col = '#e53935'; }
+            c.fillStyle = 'rgba(0,0,0,0.55)'; c.fillRect(r.x, r.y + s + 3, s, 5);
+            c.fillStyle = col; c.fillRect(r.x, r.y + s + 3, s * Math.max(0, Math.min(1, frac)), 5);
+            if (gardenPlotNeedsWater(p)) {                                 // bouncing water-drop: this one needs watering
+                c.font = Math.round(s * 0.3) + 'px monospace';
+                c.textAlign = 'center';
+                c.fillText('💧', cx, r.y - 3 - Math.abs(Math.sin(t * 3 + i)) * 4);
+                c.textAlign = 'left';
+            }
+        }
+        if (i === active) {                                                // highlight the plot you are at
+            c.strokeStyle = '#fff176'; c.lineWidth = 3;
+            gardenRoundRect(c, r.x - 3, r.y - 3, s + 6, s + 6, 8); c.stroke();
+        }
+    }
+    if (active >= 0) {
+        const r = L.plots[active];
+        drawPetText(getGardenPlotStatus(active), r.x + r.s / 2, r.y - 14, { size: 10, color: '#fff176' });
+    }
+}
+
+// ---- the action button (index.html #plotActionBtn), shown above the whistle button while the
+// player stands at a plot that has something to offer: Buy Plot / Fertilize / Water ----
+function updateGardenButtons() {
+    const btn = document.getElementById('plotActionBtn');
+    if (!btn) return;
+    const i = getActiveGardenPlot();
+    const act = i >= 0 ? getGardenPlotAction(i) : null;
+    if (!act) { if (btn.style.display !== 'none') btn.style.display = 'none'; return; }
+    if (btn.style.display !== 'block') btn.style.display = 'block';
+    if (btn.textContent !== act.label) btn.textContent = act.label;
+}
+
+function handleGardenAction() {
+    const i = getActiveGardenPlot();
+    const act = i >= 0 ? getGardenPlotAction(i) : null;
+    if (!act) return;
+    if (act.kind === 'buy') buyGardenPlot(i);
+    else if (act.kind === 'fertilize') fertilizeGardenPlot(i);
+    else if (act.kind === 'water') waterGardenPlot(i);
+    updateGardenButtons();
+}
 
 function checkCollisions() {
     let currentRItems = regionalItems[currentRegion];

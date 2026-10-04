@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Just a little leisure</title>
-    <link rel="stylesheet" href="style.css?v=2.1">
+    <link rel="stylesheet" href="style.css?v=2.2">
 </head>
 <body>
     <div id="gameContainer">
@@ -54,6 +54,9 @@
     <button id="spawnBeeBtn" class="utilBtn" style="display: none; background: #fbbf24; border-color: #f59e0b; color: #000;">🐝 Buy Bee (30🪙)</button>
     <button id="hiveHoneyLabel" class="utilBtn" style="display: none; background: #fff3cd; border-color: #f59e0b; color: #7a5c00; text-align: center; cursor: pointer;"></button>
     
+    <!-- Region 10 (flower garden): Buy Plot / Fertilize / Water. Shown by world.js while the player stands at a plot. -->
+    <button id="plotActionBtn" class="utilBtn" style="display: none;"></button>
+
     <button id="whistleBtn" class="utilBtn">WHISTLE</button>
 
         <!-- Repositioned & Cleaned Inventory Storage Overlay Sheet -->
@@ -68,6 +71,8 @@
             <div class="bagItemRow"><span>🍯 Wild Honey:</span><strong id="bagHoney">0</strong></div>
             <div class="bagItemRow"><span>🐟 Fish:</span><strong id="bagFish">0</strong></div>
             <div class="bagItemRow"><span>🍌 Bananas:</span><strong id="bagBananas">0</strong></div>
+            <div class="bagItemRow"><span>🪴 Soil (uses):</span><strong id="bagSoil">0</strong></div>
+            <div class="bagItemRow"><span>🌱 Flower Seeds:</span><strong id="bagSeeds">0</strong></div>
             <div class="bagItemRow"><span>💎 Diamonds:</span><strong id="bagDiamonds">0</strong></div>
         </div>
     </div>
