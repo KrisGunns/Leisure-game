@@ -10,7 +10,7 @@
 //   • Sign-in/sign-up uses the Firebase Authentication REST API (email + password).
 //   • The save (the exact JSON text already kept in localStorage under SAVE_KEY) is stored as one
 //     Firestore document at  saves/{uid}  via the Firestore REST API.
-//   • While signed in the game uploads the save automatically (about once a minute when it changed,
+//   • While signed in the game uploads the save automatically (about every 5 minutes when it changed,
 //     and whenever the app is hidden). Sync now / Download cloud save buttons are also provided.
 //   • Signing in on a device that already has a different local save asks which one to keep —
 //     nothing is overwritten without a choice.
@@ -24,7 +24,7 @@ const FIREBASE_API_KEY = 'AIzaSyANK_0f3ry_Sz70NNJyZAN_FvJtw-hjtoo';      // Fire
 const FIREBASE_PROJECT_ID = 'jall-a6adf';   // Firebase console -> Project settings -> General -> Project ID
 
 const ACCOUNT_KEY = 'just_a_little_leisure_account_v1';
-const CLOUD_AUTOSAVE_MS = 60 * 1000;
+const CLOUD_AUTOSAVE_MS = 5 * 60 * 1000;   // every 5 minutes keeps a big player base inside the free Firestore write quota
 
 function cloudConfigured() { return !!(FIREBASE_API_KEY && FIREBASE_PROJECT_ID); }
 
@@ -308,7 +308,7 @@ function openAccountScreen() {
 
     if (account) {
         acctText(card, 'Signed in as\n' + account.email, '#fff');
-        acctText(card, 'Last cloud save: ' + formatWhen(account.lastSyncAt) + '\nYour progress uploads automatically about once a minute.');
+        acctText(card, 'Last cloud save: ' + formatWhen(account.lastSyncAt) + '\nYour progress uploads automatically about every 5 minutes.');
         card.appendChild(acctButton('☁️ Sync now (upload this device)', '#27ae60', () => run(async () => {
             saveGameProgress();
             await cloudWrite(readLocalSaveRaw());
