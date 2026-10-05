@@ -20,8 +20,8 @@
 // filled in, the Account screen says cloud saving is not set up yet and the game plays as before.
 // ============================================================================
 
-const FIREBASE_API_KEY = '';      // Firebase console -> Project settings -> General -> Web API Key
-const FIREBASE_PROJECT_ID = '';   // Firebase console -> Project settings -> General -> Project ID
+const FIREBASE_API_KEY = 'AIzaSyANK_0f3ry_Sz70NNJyZAN_FvJtw-hjtoo';      // Firebase console -> Project settings -> General -> Web API Key
+const FIREBASE_PROJECT_ID = 'jall-a6adf';   // Firebase console -> Project settings -> General -> Project ID
 
 const ACCOUNT_KEY = 'just_a_little_leisure_account_v1';
 const CLOUD_AUTOSAVE_MS = 60 * 1000;
