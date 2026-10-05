@@ -146,6 +146,14 @@ same size."):
 
 ---
 
+### 2026-10-04 (58) — Bug fixes: shop scroll, bear whistle, task lock, starving mini-games, task list
+- **Shop keeps its scroll position:** `renderShop()` (ui.js) remembers `shopContent.scrollTop` (same tab only) and restores it after rebuilding, so buying an unlockable far down the list no longer jumps back to the top.
+- **Bear can't be whistled while fishing:** `isPetBusy()` (state.js) now also counts `fishing_travel` and `fishing`; the bear can be whistled again once it's back to wandering.
+- **Tasks stay locked until Regions 1-9 are owned:** `addTaskProgress()` now ignores progress while `areTasksUnlocked()` is false (before, only the screen was locked, so Easter could complete and pay diamonds in the background). The "New task" toast is also suppressed while locked. Diamonds already paid out before this fix are not taken back.
+- **Starving pets no longer break mini-games:** `Pet.hungerStep()` (entities.js) only freezes a 0-hunger pet that is in a plain state (`HUNGER_FREEZE_STATES` in state.js: wander / idle / whistled / forage / travel). Mini-games and special actions (elephant tag, cat Schrödinger box, bamboo, vines, digging, mud, fishing...) keep running, so the elephant's PLAY button no longer sticks and the boxed cat's flicker no longer freezes upside down; the pet freezes once it's back to wandering and can then be fed with GIVE.
+- **Tasks list:** a completed task is removed from the list — its slot now only reads "New task in 2h 59m". The countdown no longer shows seconds (hours + minutes, rounded up), and the list re-renders once a minute instead of every second.
+- **Check:** Chromium — locked progress ignored, bear fishing busy, 0-hunger elephant (playing) and cat (box) keep running while a wandering one freezes, shop scroll held at 400 after a purchase, completed-task card shows only the countdown; no script errors.
+
 ### 2026-10-04 (57) — ⚙️ Settings menu: ☁️ Account (cloud save) + 🛠️ Developer (NEW FILE: account.js)
 - The gear now opens a **Settings** menu with two buttons: **☁️ Account** and **🛠️ Developer**. Developer is the old dev console, still behind the code word (`openDeveloperPanel()` in ui.js; the gear's handler just calls `openSettingsMenu()`).
 - **Account:** email + password **Create Account / Sign In / Forgot password**, then **Sync now**, **Load cloud save**, **Sign out**. Uses the Firebase Auth + Firestore **REST** APIs with plain `fetch` (no SDK, works in the APK). The save is the same JSON text as localStorage `SAVE_KEY`, stored at Firestore `saves/{uid}`. While signed in it auto-uploads ~every 5 minutes when changed (was 60 s; changed to stay inside the free Firestore write quota) and when the app is hidden. Signing in where a different local save exists asks which to keep (nothing is overwritten silently); loading the cloud save sets `saveDisabled`, writes it, and reloads. Session is kept in `just_a_little_leisure_account_v1`.

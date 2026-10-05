@@ -2979,7 +2979,13 @@ class Pet {
                 }
             } else {
                 this.hungerTimer = 0;
-                return true;      // starving: stops dead, doing nothing, until fed
+                // Starving: stops dead, doing nothing, until fed. Only a pet that is just roaming about
+                // freezes — one in the middle of a mini-game / special action (elephant tag, cat's
+                // Schrödinger box, bamboo, vines, digging, mud, fishing...) must keep running so the
+                // PLAY button, the box's flicker and the payout don't get stuck; it freezes as soon as
+                // that finishes and it's back to wandering.
+                if (HUNGER_FREEZE_STATES.indexOf(this.state) === -1) return false;
+                return true;
             }
             // Calm enough to go and eat? Only from plain wandering/idling so no activity is broken.
             if (this.hunger <= HUNGER_SEEK_BELOW && stored >= HUNGER_FOOD_PER_POINT &&

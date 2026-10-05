@@ -33,6 +33,9 @@ const HUNGER_MAX = 100;
 const HUNGER_SECONDS_PER_POINT = 3;
 const HUNGER_FOOD_PER_POINT = 2;
 const HUNGER_SEEK_BELOW = 50;      // a pet at or below this heads for the feeder (if it has food)
+// A pet at 0 hunger only freezes while it is in one of these plain states (see Pet.hungerStep in entities.js);
+// mini-games and other special actions are left to finish.
+const HUNGER_FREEZE_STATES = ['wander', 'idle', 'whistled', 'forage', 'travel'];
 const HUNGER_EAT_RATE = 10;        // points restored per second while eating at the feeder
 const FEEDER_CAPACITY = 500;
 const FEEDER_REGIONS = [1, 2, 3, 5, 6, 7, 8, 9];
@@ -44,12 +47,12 @@ const MAX_EGGS_ON_MAP = 25;   // chicken eggs lying in Region 3 (laying stops wh
 const MAX_NAME_LENGTH = 20;   // pet / character names (inputs have maxlength too; loaded saves are clamped)
 // Loaded-save helpers: a hand-edited or corrupt save can't put NaN, negatives, huge or non-string values into the game.
 // Pets in the middle of a mini-game / special action (dog digging, pig mud-play, monkey swinging,
-// cat in the Schrödinger box, panda Bamboo Fever or Starve, elephant tag) can't be whistled — it would
+// cat in the Schrödinger box, panda Bamboo Fever or Starve, elephant tag, bear walking to / at the lake) can't be whistled — it would
 // throw away the coin payout / penalty / box. See the whistle button in input.js.
 function isPetBusy(pet) {
     const st = pet && pet.state;
     if (typeof st !== 'string') return false;
-    return ['digging', 'mud_play', 'swinging', 'schrodinger', 'bamboo_wait', 'full', 'abandoned'].indexOf(st) !== -1 ||
+    return ['digging', 'mud_play', 'swinging', 'schrodinger', 'bamboo_wait', 'fishing_travel', 'fishing', 'full', 'abandoned'].indexOf(st) !== -1 ||
         st.indexOf('playing') === 0;
 }
 function cleanSavedName(v, fallback) {
@@ -977,6 +980,7 @@ resetTaskSlots();
 
 // Adds progress to the ACTIVE task with this id (if any); completing it pays it out.
 function addTaskProgress(id, amount) {
+    if (typeof areTasksUnlocked === 'function' && !areTasksUnlocked()) return;   // Tasks stay locked (and earn nothing) until Regions 1-9 are all unlocked
     const slot = taskState.slots.find(s => s.id === id && s.readyAt === 0);
     if (!slot) return;
     const def = getTaskDef(id);
@@ -998,7 +1002,7 @@ function tickTasks() {
             slot.id = pickNewTaskId(slot.id);
             slot.progress = 0;
             slot.readyAt = 0;
-            showAchievementToast(`📋 New task: ${getTaskDef(slot.id).name}`);
+            if (typeof areTasksUnlocked !== 'function' || areTasksUnlocked()) showAchievementToast(`📋 New task: ${getTaskDef(slot.id).name}`);
             saveGameProgress();
         }
     });

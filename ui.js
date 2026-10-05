@@ -1526,6 +1526,7 @@ const shopTabUnlockables = document.getElementById('shopTabUnlockables');
 
 let shopTab = 'buy';
 let shopRenderedSignature = '';
+let shopRenderedTab = null;
 
 // Everything the shop currently displays, flattened to a string. updateUI() runs every
 // frame, so it must NOT rebuild the shop's DOM unconditionally — replacing a button
@@ -1667,6 +1668,10 @@ function renderShop() {
     if (shopTabSell) shopTabSell.classList.toggle('shopTabActive', shopTab === 'sell');
     if (shopTabUnlockables) shopTabUnlockables.classList.toggle('shopTabActive', shopTab === 'unlockables');
 
+    // Rebuilding the list would jump it back to the top; remember where it was (same tab only) and
+    // put it back afterwards so buying something far down doesn't lose the player's place.
+    const keepScroll = (shopRenderedTab === shopTab) ? shopContent.scrollTop : 0;
+    shopRenderedTab = shopTab;
     while (shopContent.firstChild) shopContent.removeChild(shopContent.firstChild);
 
     if (shopTab === 'buy') {
@@ -1746,6 +1751,7 @@ function renderShop() {
     }
 
     shopRenderedSignature = getShopSignature();
+    shopContent.scrollTop = keepScroll;
 }
 
 const handleOpenShop = (e) => {
@@ -2560,19 +2566,18 @@ const trackedTaskBox = document.getElementById('trackedTaskBox');
 let tasksSignature = '';
 let trackedBoxText = null;
 
-// 10725000 ms -> "2h 58m 45s" (always hours, minutes and seconds)
+// 10725000 ms -> "2h 59m" (hours and minutes only, rounded up so it never shows 0h 0m while waiting)
 function formatTaskCountdown(ms) {
-    const total = Math.max(0, Math.ceil(ms / 1000));
-    const h = Math.floor(total / 3600);
-    const m = Math.floor((total % 3600) / 60);
-    const s = total % 60;
-    return `${h}h ${m}m ${s}s`;
+    const totalMin = Math.max(0, Math.ceil(ms / 60000));
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    return `${h}h ${m}m`;
 }
 
 function renderTasksScreen(force) {
     if (!tasksList) return;
     const now = Date.now();
-    const sig = taskState.slots.map(s => [s.id, s.progress, s.readyAt > 0 ? Math.ceil((s.readyAt - now) / 1000) : 0].join(':')).join('|') + '#' + taskState.tracked;
+    const sig = taskState.slots.map(s => [s.id, s.progress, s.readyAt > 0 ? Math.ceil((s.readyAt - now) / 60000) : 0].join(':')).join('|') + '#' + taskState.tracked;
     if (!force && sig === tasksSignature) return;
     tasksSignature = sig;
 
@@ -2580,9 +2585,8 @@ function renderTasksScreen(force) {
     taskState.slots.forEach(slot => {
         const def = getTaskDef(slot.id);
         if (slot.readyAt > 0) {
+            // A finished task is gone from the list: its slot just shows when the next one arrives.
             html += `<div class="achCard taskCard taskDone">
-            <div class="taskTop"><div class="achCardTitle">✅ ${escapeHtml(def.name)}</div></div>
-            <div class="achCardDesc">Completed · +${def.reward} 💎 collected</div>
             <div class="taskCountdown">New task in <strong>${formatTaskCountdown(slot.readyAt - now)}</strong></div>
         </div>`;
         } else {
