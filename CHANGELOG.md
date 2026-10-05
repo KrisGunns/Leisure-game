@@ -29,6 +29,7 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 | `input.js` | Floating virtual joystick (appears under the touch, see 2026-09-20 (6)), GIVE/PLAY interact button (hold-to-feed with ramping `feedHoldCounter`, pointer-capture for reliability), whistle button (single-tap toggle or multi-pet picker), region selector (+ region-lock check), keyboard controls, `executeContinuousFeed()` | `state.js`, `entities.js`, `world.js` |
 | `ui.js` | `updateUI()`, `renderMiniPet()`, pet Codex overlay, settings/dev panel, pet renaming, bag overlay, bee-purchase button, whistle-picker overlay (`showWhistlePicker()`/`hideWhistlePicker()`), consolidated MENU overlay (`handleOpenMenu()`/`handleCloseMenu()`), **Shop screen** (`renderShop()`, `buyShopItem()`, `sellShopItem()`), **Perk Tree screen** (`renderPerkTree()`, `renderPerkDetail()`) | `state.js`, `entities.js`, `world.js` |
 | `main.js` | `gameLoop()` (render + update loop), startup sequence (`loadGameProgress()`, initial item spawns, `requestAnimationFrame` kickoff) | all of the above (loads last) |
+| `account.js` | Settings menu (⚙️) + ☁️ Account: email/password sign-in and cloud save (2026-10-04 (57)). Loaded after `tutorial.js`. |
 | `tutorial.js` | Tutorial/Help (2026-10-04 (54)): `TUTORIAL_TIPS` text, `showTutorial()` pop-ups, `checkTutorialTriggers()`, the ❓ HELP screen. Loaded after `ui.js`. |
 
 **Why this order works:** each file's *immediately-executing* top-level code (variable declarations, `new Pet(...)`, event listener registration) only references things defined in earlier-loaded files. Anything referenced "out of order" — like `state.js`'s `gainPlayerXP()` calling `ui.js`'s `updateUI()` — is inside a function body, which isn't actually run until later gameplay, by which point every file has finished loading.
@@ -144,6 +145,14 @@ same size."):
   hand-drawn canvas code (in both entities.js and ui.js) was removed.
 
 ---
+
+### 2026-10-04 (57) — ⚙️ Settings menu: ☁️ Account (cloud save) + 🛠️ Developer (NEW FILE: account.js)
+- The gear now opens a **Settings** menu with two buttons: **☁️ Account** and **🛠️ Developer**. Developer is the old dev console, still behind the code word (`openDeveloperPanel()` in ui.js; the gear's handler just calls `openSettingsMenu()`).
+- **Account:** email + password **Create Account / Sign In / Forgot password**, then **Sync now**, **Load cloud save**, **Sign out**. Uses the Firebase Auth + Firestore **REST** APIs with plain `fetch` (no SDK, works in the APK). The save is the same JSON text as localStorage `SAVE_KEY`, stored at Firestore `saves/{uid}`. While signed in it auto-uploads ~every 60 s when changed and when the app is hidden. Signing in where a different local save exists asks which to keep (nothing is overwritten silently); loading the cloud save sets `saveDisabled`, writes it, and reloads. Session is kept in `just_a_little_leisure_account_v1`.
+- **Needs one-time setup** or the Account screen says cloud saving isn't set up: in `account.js` fill `FIREBASE_API_KEY` and `FIREBASE_PROJECT_ID` (Firebase console → Authentication → enable Email/Password; Firestore → create database; rules: `match /saves/{uid} { allow read, write: if request.auth != null && request.auth.uid == uid; }`).
+- Google sign-in is NOT included (Google blocks it inside Android WebViews without a native plugin).
+- `showGameDialog` message now honours line breaks. Dev "Wipe Save" resets the local save only; a signed-in device will then upload the fresh game to the cloud.
+- **Check:** Chromium with a mocked backend — menu, unconfigured message, create account → uploaded save, signed-in view, Developer code-word prompt; no script errors.
 
 ### 2026-10-04 (56) — Pet card: one perk line per level
 - `getPetPerkDescriptions()` (ui.js) now merges every perk granted at the same level into a single `Lv.N:` entry (yield bump + chance/minigame perks joined as sentences; still driven by the same tables, so numbers can't drift). The bird's five separate Lv.20 visit-effect lines are compiled into one "While visiting: Regions … ; Region 4 – … " entry, and the glider's five Lv.1 "Dropped in Region…" lines into one. Checked in Chromium for all 12 pet types: no duplicate levels, no errors.

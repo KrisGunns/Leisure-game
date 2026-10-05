@@ -1974,13 +1974,19 @@ const settingsBtn = document.getElementById('settingsBtn');
 const devPanel = document.getElementById('devPanel');
 const closeDev = document.getElementById('closeDev');
 
-const handleSettings = (e) => {
-    if (e) e.preventDefault();
+// The gear opens the Settings menu (account.js): ☁️ Account and 🛠️ Developer. The Developer button
+// calls this, which keeps the original code-word gate in front of the dev console.
+function openDeveloperPanel() {
     showGameDialog({ message: 'Enter developer authorization code word:', input: true }, (pass) => {
         if (pass === "dev") {
             if (devPanel) devPanel.style.display = "flex";
         }
     });
+}
+
+const handleSettings = (e) => {
+    if (e) e.preventDefault();
+    openSettingsMenu();
 };
 
 if (settingsBtn) {
@@ -2378,7 +2384,7 @@ function showGameDialog(opts, onOk) {
     box.style.cssText = 'background:#2c3e50; color:#fff; font-family:monospace; padding:16px; border-radius:10px; border:2px solid #ecf0f1; width:80vw; max-width:320px; text-align:center;';
     const msg = document.createElement('div');
     msg.textContent = opts.message;
-    msg.style.cssText = 'font-size:13px; margin-bottom:12px; line-height:1.4;';
+    msg.style.cssText = 'font-size:13px; margin-bottom:12px; line-height:1.4; white-space:pre-line;';
     box.appendChild(msg);
     let input = null;
     if (opts.input) {
