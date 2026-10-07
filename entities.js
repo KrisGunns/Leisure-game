@@ -3031,8 +3031,11 @@ class Pet {
     // reconstruction) pick the buff up automatically.
     // Also multiplied by the squirrel's regional speed boost when one is running in the region this
     // pet is in (`_regionSpeedMult`, stamped by main.js every frame; 1 when there is none).
+    // Max-level pets (not bees, which have no hunger) that are well fed — hunger bar at 50 or more — also
+    // move 10% faster (WELL_FED_* in state.js).
     get effectiveSpeed() {
-        return this.speed * getPetSpeedMultiplier() * (this._regionSpeedMult || 1);
+        const wellFed = (this.type !== 'bee' && this.level >= MAX_PET_LEVEL && this.hunger >= WELL_FED_MIN_HUNGER) ? WELL_FED_SPEED_MULT : 1;
+        return this.speed * getPetSpeedMultiplier() * (this._regionSpeedMult || 1) * wellFed;
     }
 
     pickNewWanderTarget() {

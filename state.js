@@ -36,6 +36,8 @@ const HUNGER_SEEK_BELOW = 50;      // a pet at or below this heads for the feede
 // A pet at 0 hunger only freezes while it is in one of these plain states (see Pet.hungerStep in entities.js);
 // mini-games and other special actions are left to finish.
 const HUNGER_FREEZE_STATES = ['wander', 'idle', 'whistled', 'forage', 'travel'];
+const WELL_FED_MIN_HUNGER = 50;    // "well fed" = a max-level pet whose hunger bar is at least this
+const WELL_FED_SPEED_MULT = 1.10;  // ...moves 10% faster
 const HUNGER_EAT_RATE = 10;        // points restored per second while eating at the feeder
 const FEEDER_CAPACITY = 500;
 const FEEDER_REGIONS = [1, 2, 3, 5, 6, 7, 8, 9];
@@ -289,7 +291,7 @@ const inventory = {
     _coins: 0,
     eggs: 0,
     bananas: 0,
-    soil: 0,        // 🪴 Region 10: soil CHARGES left (a bag from the shop adds 3; fertilizing a plot uses 1)
+    soil: 0,        // 🪴 Region 10: soil CHARGES left (a bag from the shop adds 1; fertilizing a plot uses 1)
     seeds: 0,       // 🌱 Region 10: flower seeds (one is planted when a plot is fertilized)
     _coinCarry: 0,  // fractional part of the Flower Garden coin bonus, so a +10% on small payouts isn't lost
     _diamonds: 0,   // 💎 earned from achievements (see ANIMAL_TAMER_TIERS)
@@ -557,9 +559,9 @@ const SELL_ITEMS = [
 ];
 
 // Consumables for the Region 10 flower garden, sold on the Buy tab. Unlike SHOP_ITEMS these are not
-// timed buffs: buying adds `gives` units to `inventory[key]`. A bag of soil is 3 charges.
+// timed buffs: buying adds `gives` units to `inventory[key]`. A bag of soil is 1 charge.
 const SHOP_SUPPLIES = [
-    { key: 'soil',  icon: '🪴', name: 'Bag of Soil',   cost: 200, gives: 3, desc: '3 uses — each use turns one garden plot in Region 10 from hard clay into soil.' },
+    { key: 'soil',  icon: '🪴', name: 'Bag of Soil',   cost: 200, gives: 1, desc: '1 use — each use turns one garden plot in Region 10 from hard clay into soil.' },
     { key: 'seeds', icon: '🌱', name: 'Flower Seed',   cost: 300, gives: 1, desc: 'One hydrangea seed. Planted when you fertilize a plot in Region 10.' }
 ];
 

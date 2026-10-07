@@ -378,6 +378,11 @@ function getPetPerkDescriptions(type) {
         }
     }
 
+    // Every pet that has a hunger bar (all but bees) gets this at the top level.
+    if (type !== 'bee') {
+        perks.push({ level: MAX_PET_LEVEL, text: `Well fed (hunger ${WELL_FED_MIN_HUNGER}+): moves ${Math.round((WELL_FED_SPEED_MULT - 1) * 100)}% faster` });
+    }
+
     // One line per level: every perk granted at the same level is compiled into a single entry
     // (clauses joined into sentences) so the pet card shows exactly one "Lv.N:" row per milestone.
     perks.sort((a, b) => a.level - b.level);

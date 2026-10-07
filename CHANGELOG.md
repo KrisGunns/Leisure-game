@@ -146,6 +146,11 @@ same size."):
 
 ---
 
+### 2026-10-06 (59) — Soil bag = 1 use, well-fed max-level speed boost, pet-bonus spreadsheet
+- **Bag of Soil** now gives **1** use (was 3): `SHOP_SUPPLIES` (state.js), its shop description, the inventory comment, and the Region 10 tutorial text ("1 use per bag"). Price (200🪙) unchanged.
+- **Well-fed speed boost:** a max-level pet (not bees — no hunger) whose hunger bar is **50 or more** moves **10% faster**. `WELL_FED_MIN_HUNGER = 50` and `WELL_FED_SPEED_MULT = 1.10` (state.js) are applied in `Pet.effectiveSpeed` (entities.js), so it stacks with the Cake buff, squirrel boost etc. It changes movement speed only (not foraging/fishing timers). Each pet's Level Perks list shows it at the top level ("Well fed (hunger 50+): moves 10% faster").
+- **Pet_Bonuses_Per_Level.xlsx** (deliverable, not part of the game): every pet's yield and bonuses per milestone level (1-30), generated from the game code, with a "How to use" sheet for adding levels 31-50.
+
 ### 2026-10-04 (58) — Bug fixes: shop scroll, bear whistle, task lock, starving mini-games, task list
 - **Shop keeps its scroll position:** `renderShop()` (ui.js) remembers `shopContent.scrollTop` (same tab only) and restores it after rebuilding, so buying an unlockable far down the list no longer jumps back to the top.
 - **Bear can't be whistled while fishing:** `isPetBusy()` (state.js) now also counts `fishing_travel` and `fishing`; the bear can be whistled again once it's back to wandering.
