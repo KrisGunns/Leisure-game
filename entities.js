@@ -3587,7 +3587,7 @@ class Pet {
                 // Lv25+ (DOG_DIG_BONUS_COIN_LEVEL, state.js): the dig awards DOG_DIG_BONUS_COIN_AMOUNT
                 // coins instead of 1.
                 let dogCoinsBase = (this.level >= DOG_DIG_BONUS_COIN_LEVEL) ? DOG_DIG_BONUS_COIN_AMOUNT : 1;
-                dogCoinsBase = getPlayCoinPayout(dogCoinsBase, this.level, 0);   // Lv30: 25% chance to double
+                if (Math.random() < getPerkChance('dogDoubleCoin', this.level)) dogCoinsBase *= 2;   // Lv30+: 10-20% chance to double
                 let dogCoinsEarned = roundStochastic(dogCoinsBase * coinBonus);
                 inventory.coins += dogCoinsEarned;
                 if (typeof spawnCoinPopup === 'function') spawnCoinPopup(this.homeRegion, this.x + this.size / 2, this.y, dogCoinsEarned);
@@ -3855,7 +3855,7 @@ class Pet {
                     this.y += (dy / dist) * (this.effectiveSpeed * 1.6) * dt;
                 } else {
                     // Caught you! Award coins and reset
-                    let elephantCoinsEarned = roundStochastic(5 * coinBonus);   // Riches applies
+                    let elephantCoinsEarned = roundStochastic(getElephantPlayCoins(this.level) * coinBonus);   // Riches applies
                     inventory.coins += elephantCoinsEarned;
                     addTaskProgress('playfulGiants', 1);   // "Playful Giants" task
                     if (typeof spawnCoinPopup === 'function') spawnCoinPopup(this.homeRegion, this.x + this.size / 2, this.y, elephantCoinsEarned);
@@ -3973,11 +3973,12 @@ class Pet {
                             // that: once an egg has been laid, the NEXT forage gets +10% egg chance
                             // (20% total), and every further egg in a row raises the bonus another 10%
                             // (up to +60%). A forage that lays no egg resets the bonus to 0.
-                            const chickenChain = (this.level >= CHAIN_EGG_MIN_LEVEL) ? this.chainEggBonus : 0;
+                            const chainTier = getChainEgg(this.level);
+                            const chickenChain = chainTier ? this.chainEggBonus : 0;
                             const laysEgg = getPerkChance('chickenEgg', this.level) > 0 &&
                                             Math.random() < getPerkChance('chickenEgg', this.level) + chickenChain;
-                            if (this.level >= CHAIN_EGG_MIN_LEVEL) {
-                                this.chainEggBonus = laysEgg ? Math.min(CHAIN_EGG_MAX, this.chainEggBonus + CHAIN_EGG_STEP) : 0;
+                            if (chainTier) {
+                                this.chainEggBonus = laysEgg ? Math.min(chainTier.max, this.chainEggBonus + chainTier.step) : 0;
                             }
                             if (laysEgg) {
                                 // The egg goes into the chicken's OWN region (Region 3), not whichever

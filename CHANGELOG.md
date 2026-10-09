@@ -146,10 +146,19 @@ same size."):
 
 ---
 
+### 2026-10-08 (60) — Max pet level 30 → 50 + new Dog / Cat / Chicken / Elephant bonuses (from the amended spreadsheet)
+- **`MAX_PET_LEVEL` = 50** (state.js). Hunger bar, feeder boxes, "Well fed" speed boost, the Codex "Level n/50" and the dev Insta-tame all follow it; the feeder tutorial text now reads the constant. Saves clamp to 50. Pets that were Lv30 now keep levelling (they lose the hunger bar until they reach 50 again).
+- **Dog:** yield Lv30 8/8 (was 9/9), then 9 @35, 10 @40, 11 @45, 12 @50. Dig chance 10% @20 → 15% @30 → 20% @40 → 25% @50. NEW table `PERK_CHANCES.dogDoubleCoin`: double-coin dig 10% @30, 15% @40, 20% @50 (the dog no longer uses the shared 25% `PLAY_COIN_PERK_*` constant; the pig still does).
+- **Cat:** yield 8 @35, 9 @40, 10 @45, 10 @50. Double-forage now 10% @20, 12% @30, 15% @40 (was 10% @15, 12% @25). Schrödinger now 3% @25, 4% @35, 5% @45, 6% @50 (was 3% @20, 4% @30).
+- **Chicken:** yield rebalanced (nerfed): 2/1 @5, 2/2 @10, 3/2 @15, 3/3 @20, 4/3 @25, 5/5 @30, 6/5 @35, 6/6 @40, 7/6 @45, 8/7 @50. Egg chance 10% @20, 15% @35, 20% @45. Chain egg is now tiered (`CHAIN_EGG_TIERS` + `getChainEgg()`): +10% step / max +60% @30, +11% / +70% @40, +12% / +80% @50.
+- **Elephant:** yield Lv30 7/12 (was 8/13), then 8/13 @35, 8/13 @40, 9/14 @45, 10/15 @50. "Catch me" chance 10% @20 → 12% @30. Catch-me payout 5 coins → 6 @45 (`ELEPHANT_PLAY_COIN_TIERS` + `getElephantPlayCoins()`).
+- **Not yet amended (still their Lv30 values for Lv31-50):** Squirrel, Pig, Sparrow, Panda, Bee, Bear, Monkey, Sugar Glider. Their yields/perks stay flat after Lv30 until their 31-50 rows are supplied.
+- **Check:** all four pets compared against the spreadsheet for every level 1-50 (yields) and every milestone (perks) — matched; Chromium run with Lv40/50 pets, no script errors.
+
 ### 2026-10-06 (59) — Soil bag = 1 use, well-fed max-level speed boost, pet-bonus spreadsheet
 - **Bag of Soil** now gives **1** use (was 3): `SHOP_SUPPLIES` (state.js), its shop description, the inventory comment, and the Region 10 tutorial text ("1 use per bag"). Price (200🪙) unchanged.
 - **Well-fed speed boost:** a max-level pet (not bees — no hunger) whose hunger bar is **50 or more** moves **10% faster**. `WELL_FED_MIN_HUNGER = 50` and `WELL_FED_SPEED_MULT = 1.10` (state.js) are applied in `Pet.effectiveSpeed` (entities.js), so it stacks with the Cake buff, squirrel boost etc. It changes movement speed only (not foraging/fishing timers). Each pet's Level Perks list shows it at the top level ("Well fed (hunger 50+): moves 10% faster").
-- **Pet_Bonuses_Per_Level.xlsx** (deliverable, not part of the game): every pet's yield and bonuses per milestone level (1-30), generated from the game code, with a "How to use" sheet for adding levels 31-50.
+- **Pet_Bonuses_Per_Level.xlsx** (deliverable, not part of the game): every pet's yield and bonuses per milestone level (1-30), generated from the game code, with a "How to use" sheet for adding levels 31-50. 2026-10-07: added a "Base EXP" sheet (Level-1 food/water/honey/bananas/flowers each pet needs, plus a level calculator using `getLevelRequirement()`'s `INT(base × L^1.2)` curve).
 
 ### 2026-10-04 (58) — Bug fixes: shop scroll, bear whistle, task lock, starving mini-games, task list
 - **Shop keeps its scroll position:** `renderShop()` (ui.js) remembers `shopContent.scrollTop` (same tab only) and restores it after rebuilding, so buying an unlockable far down the list no longer jumps back to the top.

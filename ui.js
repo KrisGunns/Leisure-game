@@ -314,17 +314,21 @@ function getPetPerkDescriptions(type) {
         // PERK_CHANCES.dogDig / DOG_DIG_BONUS_COIN_LEVEL / DOG_DIG_BONUS_COIN_AMOUNT
         // (state.js) — same "can't disagree with what actually happens" guarantee as addChance.
         const digTiers = PERK_CHANCES.dogDig || [];
-        const [digLvl1, digChance1] = digTiers[0] || [20, 0];
-        const [digLvl2, digChance2] = digTiers[1] || [30, 0];
-        perks.push({ level: digLvl1, text: `${Math.round(digChance1 * 100)}% chance per forage to dig for a bonus coin` });
+        digTiers.forEach((tier, i) => {
+            perks.push({ level: tier[0], text: i === 0 ? `${Math.round(tier[1] * 100)}% chance per forage to dig for a bonus coin` : `Digging chance increases to ${Math.round(tier[1] * 100)}%` });
+        });
         perks.push({ level: DOG_DIG_BONUS_COIN_LEVEL, text: `Digging now awards ${DOG_DIG_BONUS_COIN_AMOUNT} coins instead of 1` });
-        perks.push({ level: digLvl2, text: `Digging chance doubles to ${Math.round(digChance2 * 100)}%` });
-        perks.push({ level: PLAY_COIN_PERK_LEVEL, text: `${Math.round(PLAY_COIN_PERK_DOUBLE_CHANCE * 100)}% chance for a dig to pay double coins` });
+        (PERK_CHANCES.dogDoubleCoin || []).forEach((tier, i) => {
+            perks.push({ level: tier[0], text: i === 0 ? `${Math.round(tier[1] * 100)}% chance for a dig to pay double coins` : `Chance for a dig to pay double coins increases to ${Math.round(tier[1] * 100)}%` });
+        });
     } else if (type === 'chicken') {
         addChance('chickenEgg', c => `${c} chance per forage to lay a collectible egg`, c => `Egg chance increases to ${c}`);
-        perks.push({ level: CHAIN_EGG_MIN_LEVEL, text: `Chain egg: after laying an egg, the next forage gets +${Math.round(CHAIN_EGG_STEP * 100)}% egg chance, growing another +${Math.round(CHAIN_EGG_STEP * 100)}% with each egg in a row (up to +${Math.round(CHAIN_EGG_MAX * 100)}%). A forage with no egg resets it` });
+        CHAIN_EGG_TIERS.forEach(t => {
+            perks.push({ level: t[0], text: `Chain egg: after laying an egg, the next forage gets +${Math.round(t[1] * 100)}% egg chance, growing another +${Math.round(t[1] * 100)}% with each egg in a row (up to +${Math.round(t[2] * 100)}%). A forage with no egg resets it` });
+        });
     } else if (type === 'elephant') {
-        addChance('elephantPlay', c => `${c} chance to start a "catch me" play minigame (+5 coins)`, c => `Play chance increases to ${c}`);
+        addChance('elephantPlay', c => `${c} chance to start a "catch me" play minigame (+${ELEPHANT_PLAY_COIN_TIERS[0][1]} coins)`, c => `Play chance increases to ${c}`);
+        ELEPHANT_PLAY_COIN_TIERS.forEach((t, i) => { if (i > 0) perks.push({ level: t[0], text: `"catch me" rewards +${t[1]} coins` }); });
     } else if (type === 'squirrel') {
         addChance('squirrelBoost', c => `${c} chance per forage to make every pet in this region ${Math.round((SQUIRREL_BOOST_MULT - 1) * 100)}% faster for ${SQUIRREL_BOOST_SECONDS}s`, c => `Speed-boost chance increases to ${c}`);
     } else if (type === 'pig') {

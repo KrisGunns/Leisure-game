@@ -19,7 +19,7 @@ const whistleBtn = document.getElementById('whistleBtn');
 
 // The highest level any pet can reach. Everything that used to hard-code 20 (feeding stops,
 // progress bars, the Codex's "x/20", the dev insta-max, save validation...) reads this instead.
-const MAX_PET_LEVEL = 30;
+const MAX_PET_LEVEL = 50;
 
 // ------------------------------------------------------------------
 // HUNGER + FEEDER BOXES. A pet at MAX_PET_LEVEL gets a hunger bar (0-100) that drops 1 point every
@@ -117,15 +117,15 @@ function getLevelRequirement(type, currentLevel) {
 // non-numeric perks (dog digging, chicken egg-laying, pig mud-play, etc.) stay as their own
 // `if (this.level >= X)` checks in Pet.update() since they're more than a food/water number.
 const FORAGE_TIERS = {
-    dog:      [ [1, 1, 1], [5, 2, 2], [10, 3, 3], [15, 4, 4], [20, 6, 6], [25, 7, 7], [30, 9, 9] ],
-    cat:      [ [1, 1, 1], [5, 2, 2], [10, 3, 3], [15, 4, 4], [20, 5, 5], [25, 6, 6], [30, 7, 7] ],
+    dog:      [ [1, 1, 1], [5, 2, 2], [10, 3, 3], [15, 4, 4], [20, 6, 6], [25, 7, 7], [30, 8, 8], [35, 9, 9], [40, 10, 10], [45, 11, 11], [50, 12, 12] ],
+    cat:      [ [1, 1, 1], [5, 2, 2], [10, 3, 3], [15, 4, 4], [20, 5, 5], [25, 6, 6], [30, 7, 7], [35, 8, 8], [40, 9, 9], [45, 10, 10], [50, 10, 10] ],
     bird:     [ [1, 1, 1], [5, 2, 1], [10, 2, 2], [15, 3, 2], [20, 4, 3], [25, 5, 4], [30, 7, 6] ],
     panda:    [ [1, 3, 2], [5, 4, 3], [10, 5, 4], [15, 6, 5], [20, 8, 6], [25, 9, 8], [30, 10, 9] ],
     pig:      [ [1, 2, 2], [5, 3, 2], [10, 4, 3], [15, 5, 4], [20, 7, 6], [25, 7, 7], [30, 8, 9] ],
     // Both elephants share this row (the tiers are per type). Water is always the bigger number.
-    elephant: [ [1, 1, 2], [5, 2, 4], [10, 3, 5], [15, 3, 6], [20, 5, 9], [25, 6, 10], [30, 8, 13] ],
+    elephant: [ [1, 1, 2], [5, 2, 4], [10, 3, 5], [15, 3, 6], [20, 5, 9], [25, 6, 10], [30, 7, 12], [35, 8, 13], [40, 8, 13], [45, 9, 14], [50, 10, 15] ],
     squirrel: [ [1, 1, 0], [5, 3, 1], [10, 5, 2], [15, 7, 2], [20, 9, 3], [25, 11, 3], [30, 13, 4] ],
-    chicken:  [ [1, 1, 1], [5, 2, 1], [10, 3, 2], [15, 4, 2], [20, 5, 3], [25, 6, 3], [30, 8, 5] ],
+    chicken:  [ [1, 1, 1], [5, 2, 1], [10, 2, 2], [15, 3, 2], [20, 3, 3], [25, 4, 3], [30, 5, 5], [35, 6, 5], [40, 6, 6], [45, 7, 6], [50, 8, 7] ],
     // Single-resource forager (bananas only, Region 8 never spawns water) -- the water
     // slot is always 0 and unused, kept only for shape consistency with getForageYield().
     monkey:   [ [1, 1, 0], [5, 2, 0], [10, 3, 0], [15, 4, 0], [20, 6, 0], [25, 7, 0], [30, 9, 0] ],
@@ -139,12 +139,13 @@ const FORAGE_TIERS = {
 // qualifies for" lookup as FORAGE_TIERS (see getPerkChance). The code that rolls a perk and the
 // Pet Detail text that describes it both read this, so a number can't drift between them.
 const PERK_CHANCES = {
-    dogDig:         [ [20, 0.10], [30, 0.20] ],   // dog: dig for a bonus coin (Lv30 chance doubles the Lv20 one)
-    catDouble:      [ [15, 0.10], [25, 0.12] ],   // cat: double the food/water gained
-    catSchrodinger: [ [20, 0.03], [30, 0.04] ],   // cat: enter Schrodinger's box
-    elephantPlay:   [ [20, 0.10] ],               // elephants: "catch me" minigame
+    dogDig:         [ [20, 0.10], [30, 0.15], [40, 0.20], [50, 0.25] ],   // dog: dig for a bonus coin
+    dogDoubleCoin:  [ [30, 0.10], [40, 0.15], [50, 0.20] ],               // dog: chance a dig pays double coins
+    catDouble:      [ [20, 0.10], [30, 0.12], [40, 0.15] ],               // cat: double the food/water gained
+    catSchrodinger: [ [25, 0.03], [35, 0.04], [45, 0.05], [50, 0.06] ],   // cat: enter Schrodinger's box
+    elephantPlay:   [ [20, 0.10], [30, 0.12] ],                           // elephants: "catch me" minigame
     squirrelBoost:  [ [20, 0.10], [30, 0.15] ],   // squirrel: speed boost for the whole region
-    chickenEgg:     [ [20, 0.10] ],               // chicken: base chance to lay an egg (chain eggs add to this at Lv30)
+    chickenEgg:     [ [20, 0.10], [35, 0.15], [45, 0.20] ],   // chicken: base chance to lay an egg (chain eggs add to this from Lv30)
     birdFly:        [ [20, 0.05], [30, 0.08] ],   // bird: fly off to another region
     pigMud:         [ [20, 0.05], [30, 0.08] ],   // pig: play in the mud
     pandaFever:     [ [20, 0.05], [30, 0.08] ],   // panda: Bamboo Fever
@@ -183,11 +184,18 @@ const SQUIRREL_BOOST_MULT = 1.5;
 const DOG_DIG_BONUS_COIN_LEVEL = 25;
 const DOG_DIG_BONUS_COIN_AMOUNT = 2;
 
-// Lv30 coin perk shared by the dog's dig and the pig's mud play: both pay 2 coins (the dog from
-// Lv25, the pig always), and from PLAY_COIN_PERK_LEVEL on there is a PLAY_COIN_PERK_DOUBLE_CHANCE
-// chance the payout is doubled (2 -> 4). Below the level, the caller's own base double chance
-// applies (dog: none, pig: 5%). Read by the dog's dig payout and the pig's mud-play payout
-// (entities.js) and by both pets' Pet Detail descriptions (ui.js), so the numbers can't drift.
+// Elephant "catch me" game payout: [minLevel, coins] (highest tier the level reaches).
+const ELEPHANT_PLAY_COIN_TIERS = [ [1, 5], [45, 6] ];
+function getElephantPlayCoins(level) {
+    let coins = ELEPHANT_PLAY_COIN_TIERS[0][1];
+    for (let i = 0; i < ELEPHANT_PLAY_COIN_TIERS.length; i++) if (level >= ELEPHANT_PLAY_COIN_TIERS[i][0]) coins = ELEPHANT_PLAY_COIN_TIERS[i][1];
+    return coins;
+}
+
+// Lv30 coin perk used by the pig's mud play (and, until the Lv50 rebalance, the dog's dig): from
+// PLAY_COIN_PERK_LEVEL on there is a PLAY_COIN_PERK_DOUBLE_CHANCE chance the payout is doubled.
+// Below the level, the caller's own base double chance applies (pig: 5%). The DOG now has its own
+// PERK_CHANCES.dogDoubleCoin table (10% at Lv30 up to 20% at Lv50) instead of this constant.
 const PLAY_COIN_PERK_LEVEL = 30;
 const PLAY_COIN_PERK_DOUBLE_CHANCE = 0.25;
 
@@ -199,12 +207,17 @@ function getPlayCoinPayout(baseCoins, level, baseDoubleChance) {
     return coins;
 }
 
-// Chicken "chain egg" (Lv30): after a forage lays an egg, the NEXT forage gets this much extra
-// egg chance on top of the base; every further egg in a row adds it again, up to the cap. A
-// forage that lays no egg resets it. See the chicken branch of Pet.update().
-const CHAIN_EGG_STEP = 0.10;
-const CHAIN_EGG_MAX = 0.60;
-const CHAIN_EGG_MIN_LEVEL = 30;
+// Chicken "chain egg": after a forage lays an egg, the NEXT forage gets `step` extra egg chance on
+// top of the base; every further egg in a row adds it again, up to `max`. A forage that lays no
+// egg resets it. Tiers: [minLevel, step, max] (highest tier the level reaches). See the chicken
+// branch of Pet.update() and the chicken's perk list in ui.js.
+const CHAIN_EGG_TIERS = [ [30, 0.10, 0.60], [40, 0.11, 0.70], [50, 0.12, 0.80] ];
+const CHAIN_EGG_MIN_LEVEL = CHAIN_EGG_TIERS[0][0];
+function getChainEgg(level) {
+    let best = null;
+    for (let i = 0; i < CHAIN_EGG_TIERS.length; i++) if (level >= CHAIN_EGG_TIERS[i][0]) best = CHAIN_EGG_TIERS[i];
+    return best ? { step: best[1], max: best[2] } : null;
+}
 
 // Bee tiers: [minLevel, honeyCapacity, secondsToForageAFlower].
 const BEE_TIERS = [ [1, 1, 5.0], [5, 2, 4.5], [10, 3, 4.0], [15, 4, 4.0], [20, 5, 3.5], [25, 6, 3.5], [30, 7, 3.0] ];
