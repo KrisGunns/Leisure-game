@@ -54,7 +54,7 @@ const MAX_NAME_LENGTH = 20;   // pet / character names (inputs have maxlength to
 function isPetBusy(pet) {
     const st = pet && pet.state;
     if (typeof st !== 'string') return false;
-    return ['digging', 'mud_play', 'swinging', 'schrodinger', 'bamboo_wait', 'fishing_travel', 'fishing', 'full', 'abandoned'].indexOf(st) !== -1 ||
+    return ['digging', 'mud_play', 'swinging', 'schrodinger', 'bamboo_wait', 'fishing_travel', 'fishing', 'egg_run', 'full', 'abandoned'].indexOf(st) !== -1 ||
         st.indexOf('playing') === 0;
 }
 function cleanSavedName(v, fallback) {
@@ -119,20 +119,20 @@ function getLevelRequirement(type, currentLevel) {
 const FORAGE_TIERS = {
     dog:      [ [1, 1, 1], [5, 2, 2], [10, 3, 3], [15, 4, 4], [20, 6, 6], [25, 7, 7], [30, 8, 8], [35, 9, 9], [40, 10, 10], [45, 11, 11], [50, 12, 12] ],
     cat:      [ [1, 1, 1], [5, 2, 2], [10, 3, 3], [15, 4, 4], [20, 5, 5], [25, 6, 6], [30, 7, 7], [35, 8, 8], [40, 9, 9], [45, 10, 10], [50, 10, 10] ],
-    bird:     [ [1, 1, 1], [5, 2, 1], [10, 2, 2], [15, 3, 2], [20, 4, 3], [25, 5, 4], [30, 7, 6] ],
-    panda:    [ [1, 3, 2], [5, 4, 3], [10, 5, 4], [15, 6, 5], [20, 8, 6], [25, 9, 8], [30, 10, 9] ],
-    pig:      [ [1, 2, 2], [5, 3, 2], [10, 4, 3], [15, 5, 4], [20, 7, 6], [25, 7, 7], [30, 8, 9] ],
+    bird:     [ [1, 1, 1], [5, 2, 1], [10, 2, 2], [15, 3, 2], [20, 4, 3], [25, 5, 4], [30, 7, 6], [35, 8, 7], [40, 9, 8], [45, 10, 9], [50, 11, 10] ],
+    panda:    [ [1, 3, 2], [5, 4, 3], [10, 5, 4], [15, 6, 5], [20, 8, 6], [25, 9, 8], [30, 10, 9], [35, 11, 10], [40, 12, 11], [45, 13, 12], [50, 15, 14] ],
+    pig:      [ [1, 2, 2], [5, 3, 2], [10, 3, 3], [15, 4, 3], [20, 6, 5], [25, 6, 6], [30, 7, 6], [35, 7, 7], [40, 9, 9], [45, 10, 9], [50, 11, 10] ],
     // Both elephants share this row (the tiers are per type). Water is always the bigger number.
     elephant: [ [1, 1, 2], [5, 2, 4], [10, 3, 5], [15, 3, 6], [20, 5, 9], [25, 6, 10], [30, 7, 12], [35, 8, 13], [40, 8, 13], [45, 9, 14], [50, 10, 15] ],
-    squirrel: [ [1, 1, 0], [5, 3, 1], [10, 5, 2], [15, 7, 2], [20, 9, 3], [25, 11, 3], [30, 13, 4] ],
+    squirrel: [ [1, 1, 1], [5, 2, 1], [10, 4, 2], [15, 5, 2], [20, 7, 3], [25, 8, 3], [30, 10, 4], [35, 11, 4], [40, 13, 5], [45, 14, 5], [50, 17, 7] ],
     chicken:  [ [1, 1, 1], [5, 2, 1], [10, 2, 2], [15, 3, 2], [20, 3, 3], [25, 4, 3], [30, 5, 5], [35, 6, 5], [40, 6, 6], [45, 7, 6], [50, 8, 7] ],
     // Single-resource forager (bananas only, Region 8 never spawns water) -- the water
     // slot is always 0 and unused, kept only for shape consistency with getForageYield().
-    monkey:   [ [1, 1, 0], [5, 2, 0], [10, 3, 0], [15, 4, 0], [20, 6, 0], [25, 7, 0], [30, 9, 0] ],
+    monkey:   [ [1, 1, 0], [5, 2, 0], [10, 3, 0], [15, 4, 0], [20, 6, 0], [25, 7, 0], [30, 9, 0], [35, 10, 0], [40, 11, 0], [45, 12, 0], [50, 14, 0] ],
     // Sugar gliders (Region 9): food and water are always equal. Only used while a glider is
     // dropped in a food/water region (1, 2, 3, 6, 7) with stamina left -- see
     // GLIDER_FORAGE_REGIONS in world.js.
-    glider:   [ [1, 2, 2], [5, 3, 3], [10, 4, 4], [15, 5, 5], [20, 7, 7], [25, 8, 8], [30, 10, 10] ]
+    glider:   [ [1, 2, 2], [5, 3, 3], [10, 4, 4], [15, 5, 5], [20, 7, 7], [25, 8, 8], [30, 10, 10], [35, 11, 11], [40, 13, 13], [45, 14, 14], [50, 16, 16] ]
 };
 
 // Special-perk chances, by pet perk and level: [minLevel, chance]. Same "highest tier the level
@@ -144,15 +144,18 @@ const PERK_CHANCES = {
     catDouble:      [ [20, 0.10], [30, 0.12], [40, 0.15] ],               // cat: double the food/water gained
     catSchrodinger: [ [25, 0.03], [35, 0.04], [45, 0.05], [50, 0.06] ],   // cat: enter Schrodinger's box
     elephantPlay:   [ [20, 0.10], [30, 0.12] ],                           // elephants: "catch me" minigame
-    squirrelBoost:  [ [20, 0.10], [30, 0.15] ],   // squirrel: speed boost for the whole region
+    squirrelBoost:  [ [20, 0.10], [30, 0.15], [40, 0.20], [50, 0.25] ],
+    squirrelEgg:    [ [45, 0.05] ],   // squirrel: run over and collect the closest egg in the region   // squirrel: speed boost for the whole region
     chickenEgg:     [ [20, 0.10], [35, 0.15], [45, 0.20] ],   // chicken: base chance to lay an egg (chain eggs add to this from Lv30)
-    birdFly:        [ [20, 0.05], [30, 0.08] ],   // bird: fly off to another region
-    pigMud:         [ [20, 0.05], [30, 0.08] ],   // pig: play in the mud
-    pandaFever:     [ [20, 0.05], [30, 0.08] ],   // panda: Bamboo Fever
-    monkeySwing:    [ [20, 0.05], [30, 0.08] ],   // monkey: swing on the vines
-    beeDoubleHoney: [ [20, 0.10], [30, 0.12] ],   // bee: double honey when dropping off
-    beeDoubleExp:   [ [20, 0.20] ],               // bee: double flower exp
-    bearDoubleFish: [ [20, 0.10], [30, 0.15] ]    // bear: double catch
+    birdFly:        [ [20, 0.05], [30, 0.08], [40, 0.10], [50, 0.15] ],   // bird: fly off to another region
+    pigMud:         [ [20, 0.05], [30, 0.08], [40, 0.10], [50, 0.15] ],
+    pigDoubleCoin:  [ [30, 0.25], [50, 0.30] ],   // pig: chance the mud-play coin payout doubles   // pig: play in the mud
+    pandaFever:     [ [20, 0.05], [30, 0.08], [40, 0.10], [50, 0.12] ],   // panda: Bamboo Fever
+    monkeySwing:    [ [20, 0.05], [30, 0.08], [40, 0.10], [50, 0.15] ],   // monkey: swing on the vines
+    beeDoubleHoney: [ [20, 0.10], [30, 0.12], [40, 0.15], [50, 0.20] ],   // bee: double honey when dropping off
+    beeDoubleExp:   [ [20, 0.20], [30, 0.25], [40, 0.30] ],   // bee: double flower exp (replaced by triple at Lv50)
+    beeTripleExp:   [ [50, 0.20] ],               // bee: triple flower exp (Lv50, replaces double)
+    bearDoubleFish: [ [20, 0.10], [30, 0.15], [40, 0.20] ]    // bear: double catch
 };
 
 // The chance for one of the perks above at `level` (0 below its first tier).
@@ -220,7 +223,7 @@ function getChainEgg(level) {
 }
 
 // Bee tiers: [minLevel, honeyCapacity, secondsToForageAFlower].
-const BEE_TIERS = [ [1, 1, 5.0], [5, 2, 4.5], [10, 3, 4.0], [15, 4, 4.0], [20, 5, 3.5], [25, 6, 3.5], [30, 7, 3.0] ];
+const BEE_TIERS = [ [1, 1, 5.0], [5, 2, 4.5], [10, 4, 4.0], [15, 5, 4.0], [20, 7, 3.5], [25, 8, 3.5], [30, 10, 3.0], [35, 11, 3.0], [40, 13, 2.5], [45, 14, 2.5], [50, 16, 2.5] ];
 function getBeeTier(level) {
     let best = BEE_TIERS[0];
     for (let i = 0; i < BEE_TIERS.length; i++) {
@@ -231,7 +234,7 @@ function getBeeTier(level) {
 
 // Bear tiers: [minLevel, fishPerCycle] (before the double-catch chance / Fishy Business perk).
 // Bears don't fish at all below Lv5.
-const BEAR_FISH_TIERS = [ [5, 1], [10, 2], [20, 3], [25, 3], [30, 3] ];
+const BEAR_FISH_TIERS = [ [5, 1], [10, 2], [20, 4], [30, 6], [40, 8], [50, 10] ];
 function getBearFishPerCycle(level) {
     let fish = 0;
     for (let i = 0; i < BEAR_FISH_TIERS.length; i++) {
@@ -242,12 +245,23 @@ function getBearFishPerCycle(level) {
 
 // How long the bear actively fishes once it reaches the lake (the 'fishing' state) — fixed,
 // doesn't change by level.
-const BEAR_FISHING_ACTION_SECONDS = 20;
+const BEAR_FISHING_TIERS = [ [1, 20], [25, 15], [40, 13], [50, 10] ]; // [minLevel, seconds]
+function getBearFishingSeconds(level) {
+    let s = BEAR_FISHING_TIERS[0][1];
+    for (let i = 0; i < BEAR_FISHING_TIERS.length; i++) {
+        if (level >= BEAR_FISHING_TIERS[i][0]) s = BEAR_FISHING_TIERS[i][1];
+    }
+    return s;
+}
+const BEAR_FISHING_ACTION_SECONDS = 20; // base (Lv1-24); use getBearFishingSeconds(level)
+
+// Monkey vine-swing duration (seconds) before the coin payout.
+const MONKEY_SWING_SECONDS = 10;
 
 // How long the bear waits between fishing trips: a random range of [base, base+spread]
 // seconds that gets shorter at Lv10 and Lv15. Read by setNextFishingCooldown() (entities.js)
 // and the bear's Pet Detail description (ui.js) so the numbers can't drift apart.
-const BEAR_WAIT_TIERS = [ [1, 70, 20], [10, 60, 25], [15, 50, 30] ]; // [minLevel, base, spread]
+const BEAR_WAIT_TIERS = [ [1, 70, 20], [10, 60, 25], [15, 50, 30], [35, 40, 35], [45, 30, 40], [50, 30, 30] ]; // [minLevel, base, spread]
 function getBearWaitRange(level) {
     let range = BEAR_WAIT_TIERS[0];
     for (let i = 0; i < BEAR_WAIT_TIERS.length; i++) {
@@ -258,7 +272,7 @@ function getBearWaitRange(level) {
 
 // Sugar glider max stamina by level: [minLevel, maxStamina]. Same lookup idea as
 // FORAGE_TIERS — add/edit a row to retune, order doesn't matter.
-const GLIDER_STAMINA_TIERS = [ [1, 40], [5, 45], [10, 50], [15, 55], [20, 70], [25, 75], [30, 85] ];
+const GLIDER_STAMINA_TIERS = [ [1, 40], [5, 45], [10, 50], [15, 55], [20, 65], [25, 70], [30, 80], [35, 85], [40, 95], [45, 100], [50, 115] ];
 
 function getGliderMaxStamina(level) {
     let best = GLIDER_STAMINA_TIERS[0];

@@ -331,9 +331,10 @@ function getPetPerkDescriptions(type) {
         ELEPHANT_PLAY_COIN_TIERS.forEach((t, i) => { if (i > 0) perks.push({ level: t[0], text: `"catch me" rewards +${t[1]} coins` }); });
     } else if (type === 'squirrel') {
         addChance('squirrelBoost', c => `${c} chance per forage to make every pet in this region ${Math.round((SQUIRREL_BOOST_MULT - 1) * 100)}% faster for ${SQUIRREL_BOOST_SECONDS}s`, c => `Speed-boost chance increases to ${c}`);
+        addChance('squirrelEgg', c => `${c} chance per forage to run over and collect the closest egg that is currently in the region`, c => `Egg-run chance increases to ${c}`);
     } else if (type === 'pig') {
         addChance('pigMud', c => `${c} chance per forage to play in mud +2 coins (only while standing in the mud patch)`, c => `Mud-play chance increases to ${c}`);
-        perks.push({ level: PLAY_COIN_PERK_LEVEL, text: `Mud-play coin payout has a ${Math.round(PLAY_COIN_PERK_DOUBLE_CHANCE * 100)}% chance to double` });
+        addChance('pigDoubleCoin', c => `Mud-play coin payout has a ${c} chance to double`, c => `Mud-play coin payout has a ${c} chance to double`);
     } else if (type === 'cat') {
         addChance('catDouble', c => `${c} chance per forage to double the food/water gained`, c => `Double-forage chance increases to ${c}`);
         addChance('catSchrodinger', c => `${c} chance per forage to enter Schr\u00F6dinger's state`, c => `Schr\u00F6dinger's state chance increases to ${c}`);
@@ -353,12 +354,17 @@ function getPetPerkDescriptions(type) {
         });
         addChance('beeDoubleHoney', c => `${c} chance of double honey`, c => `Double-honey chance increases to ${c}`);
         addChance('beeDoubleExp', c => `${c} chance for a flower to give double exp`, c => `Double-exp chance increases to ${c}`);
+        addChance('beeTripleExp', c => `${c} chance for a flower to give triple exp (replaces double exp)`, c => `Triple-exp chance increases to ${c}`);
     } else if (type === 'bear') {
-        perks.push({ level: 5, text: `Starts fishing at the lake: catches ${getBearFishPerCycle(5)} fish per cycle, then waits ${getBearWaitRange(5).base}-${getBearWaitRange(5).base + getBearWaitRange(5).spread}s before the next trip (fishing itself takes ${BEAR_FISHING_ACTION_SECONDS}s)` });
-        perks.push({ level: 10, text: `Wait between trips shortens to ${getBearWaitRange(10).base}-${getBearWaitRange(10).base + getBearWaitRange(10).spread}s, and catch increases to ${getBearFishPerCycle(10)} fish per cycle` });
-        perks.push({ level: 15, text: `Wait between trips shortens further, to ${getBearWaitRange(15).base}-${getBearWaitRange(15).base + getBearWaitRange(15).spread}s` });
-        perks.push({ level: 20, text: `Catch is ${getBearFishPerCycle(20)} fish per cycle` });
-        perks.push({ level: 25, text: `Catch is ${getBearFishPerCycle(25)} fish per cycle` });
+        const bw = l => { const r = getBearWaitRange(l); return `${r.base}-${r.base + r.spread}s`; };
+        perks.push({ level: 5, text: `Starts fishing at the lake: catches ${getBearFishPerCycle(5)} fish per cycle, then waits ${bw(5)} before the next trip (fishing itself takes ${getBearFishingSeconds(5)}s)` });
+        let lastFish = getBearFishPerCycle(5), lastWait = bw(5);
+        for (let l = 6; l <= MAX_PET_LEVEL; l++) {
+            const f = getBearFishPerCycle(l), w = bw(l);
+            if (w !== lastWait) { perks.push({ level: l, text: `Wait between trips shortens to ${w}` }); lastWait = w; }
+            if (f !== lastFish) { perks.push({ level: l, text: `Catch increases to ${f} fish per cycle` }); lastFish = f; }
+        }
+        BEAR_FISHING_TIERS.forEach((t, i) => { if (i > 0) perks.push({ level: t[0], text: `Fishing reduces to ${t[1]}s` }); });
         addChance('bearDoubleFish', c => `${c} chance of a double catch`, c => `Double-catch chance increases to ${c}`);
     } else if (type === 'monkey') {
         if (typeof FORAGE_TIERS !== 'undefined' && FORAGE_TIERS.monkey) {
@@ -368,7 +374,7 @@ function getPetPerkDescriptions(type) {
                 perks.push({ level: lvl, text: `Forage yield increases to +${bananas} banana${bananas === 1 ? '' : 's'} per forage` });
             });
         }
-        addChance('monkeySwing', c => `${c} chance per forage to swing on the vines for 20s, then +5 coins`, c => `Vine-swing chance increases to ${c}`);
+        addChance('monkeySwing', c => `${c} chance per forage to swing on the vines for ${MONKEY_SWING_SECONDS}s, then +5 coins`, c => `Vine-swing chance increases to ${c}`);
     } else if (type === 'glider') {
         // What it does depends on the region it's dropped in — all of it needs stamina above 0.
         perks.push({ level: 1, text: "Needs stamina above 0. Depends on where it's dropped: Regions 1, 2, 3, 6, 7 \u2013 forages food & water (1 stamina per object); Region 4 \u2013 bees produce +50% honey (1 stamina per 2s); Region 5 \u2013 bears fish 25% faster (1 stamina per 2s); Region 8 \u2013 monkeys forage +50% more (1 stamina per 2s); Region 9 \u2013 rests in a tree to recharge (+1 stamina per 2s)" });

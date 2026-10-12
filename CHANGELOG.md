@@ -146,6 +146,21 @@ same size."):
 
 ---
 
+### 2026-10-11 (61) — Amended Lv1-50 bonuses for Squirrel, Pig, Sparrow, Panda, Bee, Bear, Monkey, Sugar Glider
+
+**Changed, at the user's request** ("I amended all the level and perk bonuses up to level 50. Recheck all the other levels too"). Source: the user's `Pet_Bonuses_Per_Level.xlsx`. Every pet, Lv1-50, was re-dumped from the game and diffed against the sheet by script.
+
+- **Forage yields (state.js `FORAGE_TIERS`)** extended to Lv50 / amended: Squirrel (1/1, 2/1, 4/2, 5/2, 7/3, 8/3, 10/4, 11/4, 13/5, 14/5, 17/7), Pig, Sparrow, Panda, Monkey (bananas), Sugar Glider.
+- **Perk chances (`PERK_CHANCES`)**: squirrelBoost 10/15/20/25%; birdFly, pigMud, monkeySwing 5/8/10/15%; pandaFever 5/8/10/12%; beeDoubleHoney 10/12/15/20%; beeDoubleExp 20/25/30%; bearDoubleFish 10/15/20%. New: `pigDoubleCoin` (25% @30, 30% @50 — replaces the old flat 5%/25% play-coin rule), `beeTripleExp` (20% @50, replaces double exp), `squirrelEgg` (5% @45).
+- **Bee (`BEE_TIERS`)**: honey per trip follows the sheet's yield column (1,2,4,5,7,8,10,11,13,14,16); flower time 5.0/4.5/4.0/3.5/3.0/2.5s. Lv50: 20% triple exp instead of double (entities.js bee branch).
+- **Bear**: fish per cycle 1/2/4/6/8/10 (`BEAR_FISH_TIERS`); fishing time Lv1 20s, Lv25 15s, Lv40 13s, Lv50 10s (`BEAR_FISHING_TIERS`, `getBearFishingSeconds`); wait between trips 70-90, 60-85, 50-80, 40-75 (Lv35), 30-70 (Lv45), 30-60 (Lv50).
+- **Monkey**: vine swing now 10s (`MONKEY_SWING_SECONDS`, was 20s).
+- **Sugar Glider**: max stamina 40/45/50/55/65/70/80/85/95/100/115; the +25% speed aura now starts at **Lv15** (was Lv10) (`GLIDER_SPEED_BOOST_MIN_LEVEL`, world.js).
+- **Squirrel egg run (new, Lv45+)**: 5% per forage to run to the closest egg lying in its region (new `egg_run` state, entities.js; not whistle-able — added to `isPetBusy`). Collecting counts like the player's pickup: +1 egg, Easter task progress, +1 player XP. If the player grabs the egg first, the squirrel just resumes wandering.
+- **ui.js** perk list rewritten to read the tables (bear text is now generated from the tiers).
+- **Notes:** the sheet's bee "Honey capacity" text is stale vs its yield column — yield column used. Panda/Monkey/Glider Lv50 sheet rows omit the well-fed line; the game still gives it to every non-bee pet at Lv50.
+- **Check:** all 12 pets Lv1-50 compared to the sheet by script (only the known bee text conflict differs); Chromium run with Lv50 pets in every region, no errors; squirrel egg run verified.
+
 ### 2026-10-08 (60) — Max pet level 30 → 50 + new Dog / Cat / Chicken / Elephant bonuses (from the amended spreadsheet)
 - **`MAX_PET_LEVEL` = 50** (state.js). Hunger bar, feeder boxes, "Well fed" speed boost, the Codex "Level n/50" and the dev Insta-tame all follow it; the feeder tutorial text now reads the constant. Saves clamp to 50. Pets that were Lv30 now keep levelling (they lose the hunger bar until they reach 50 again).
 - **Dog:** yield Lv30 8/8 (was 9/9), then 9 @35, 10 @40, 11 @45, 12 @50. Dig chance 10% @20 → 15% @30 → 20% @40 → 25% @50. NEW table `PERK_CHANCES.dogDoubleCoin`: double-coin dig 10% @30, 15% @40, 20% @50 (the dog no longer uses the shared 25% `PLAY_COIN_PERK_*` constant; the pig still does).

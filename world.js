@@ -637,7 +637,7 @@ function getGliderBuff(region) {
 // whether it's foraging, draining stamina for its usual buff, or resting at home in Region 9.
 // Folds into the same _regionSpeedMult the squirrel's and bird's boosts use (main.js's
 // per-frame stamping loop), so it's one multiplication, not a separate system.
-const GLIDER_SPEED_BOOST_MIN_LEVEL = 10;
+const GLIDER_SPEED_BOOST_MIN_LEVEL = 15;
 const GLIDER_SPEED_BOOST_PER_GLIDER = 0.25;
 function getGliderSpeedBoost(region) {
     let n = 0;

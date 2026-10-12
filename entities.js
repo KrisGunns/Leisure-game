@@ -3353,7 +3353,11 @@ class Pet {
                     this.targetFlower = null;
                     this.honeyCarried++;
                     // Lv30: a chance for a flower to count double toward the next level.
-                    this.foodEaten += (Math.random() < getPerkChance('beeDoubleExp', this.level)) ? 2 : 1;
+                    // Lv50 swaps double for a 20% chance of TRIPLE exp.
+                    let expRoll = Math.random();
+                    let tripleChance = getPerkChance('beeTripleExp', this.level);
+                    this.foodEaten += tripleChance > 0 ? (expRoll < tripleChance ? 3 : 1)
+                                                       : (expRoll < getPerkChance('beeDoubleExp', this.level) ? 2 : 1);
 
                     let reqFlowers = getLevelRequirement('bee', this.level);
                     if (this.level < MAX_PET_LEVEL && this.foodEaten >= reqFlowers) {
@@ -3436,7 +3440,7 @@ class Pet {
                     this.y += (dy / dist) * (this.effectiveSpeed * 1.2) * dt;
                 } else {
                     this.state = 'fishing';
-                    this.fishingActionTimer = BEAR_FISHING_ACTION_SECONDS;
+                    this.fishingActionTimer = getBearFishingSeconds(this.level);
                 }
                 return;
             }
@@ -3755,7 +3759,7 @@ class Pet {
             if (this.stateTimer <= 0 && this.mudParticles.length === 0) {
                 // 2 coins for the mud-play session, 5% chance to double to 4.
                 let mudCoins = 2;
-                mudCoins = getPlayCoinPayout(mudCoins, this.level, 0.05);   // Lv30: 25% double (else 5%)
+                if (Math.random() < getPerkChance('pigDoubleCoin', this.level)) mudCoins *= 2;   // Lv30: 25% double, Lv50: 30%
                 let pigCoinsEarned = roundStochastic(mudCoins * coinBonus);
                 inventory.coins += pigCoinsEarned;
                 if (typeof spawnCoinPopup === 'function') spawnCoinPopup(this.homeRegion, this.x + this.size / 2, this.y, pigCoinsEarned);
@@ -3770,6 +3774,36 @@ class Pet {
                 // --- MONKEY VINE-SWINGING STATE: Lv20 perk, 20s timer, swings from
         // vine to vine around the region (drawn hanging/mid-swing in draw() below),
         // pays out 5 coins once it's done. ---
+        if (this.state === 'egg_run') {
+            let eggList = (regionalItems[this.homeRegion || 3] || {}).eggs || [];
+            let egg = this.targetEgg;
+            let ei = egg ? eggList.indexOf(egg) : -1;
+            if (ei === -1) {   // the player got there first (or it vanished)
+                this.targetEgg = null;
+                this.state = 'wander';
+                this.pickNewWanderTarget();
+                return;
+            }
+            let dx = egg.x - (this.x + this.size / 2);
+            let dy = egg.y - (this.y + this.size / 2);
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist > 8) {
+                this.x += (dx / dist) * (this.effectiveSpeed * 1.6) * dt;
+                this.y += (dy / dist) * (this.effectiveSpeed * 1.6) * dt;
+            } else {
+                eggList.splice(ei, 1);
+                inventory.eggs += 1;
+                addTaskProgress('easter', 1);
+                gainPlayerXP(1);
+                this.targetEgg = null;
+                updateUI();
+                saveGameProgress();
+                this.state = 'wander';
+                this.pickNewWanderTarget();
+            }
+            return;
+        }
+
         if (this.state === 'swinging') {
             this.stateTimer -= dt;
             if (this.stateTimer <= 0) {
@@ -3785,7 +3819,7 @@ class Pet {
 
             // Swings from spot to spot (a new "vine") at a boosted speed — arriving
             // immediately picks the next one, with no idle pause in between, for a
-            // continuous swinging motion for the whole 20s.
+            // continuous swinging motion for the whole swing (MONKEY_SWING_SECONDS).
             let dx = this.targetX - this.x;
             let dy = this.targetY - this.y;
             let dist = Math.sqrt(dx * dx + dy * dy);
@@ -3964,6 +3998,19 @@ class Pet {
                             if (Math.random() < getPerkChance('squirrelBoost', this.level)) {
                                 startRegionSpeedBoost(this.homeRegion || 3);
                             }
+
+                            // Lv45+: a chance per forage to run over and collect the closest egg
+                            // currently lying in the region (counts like the player picking it up).
+                            if (Math.random() < getPerkChance('squirrelEgg', this.level)) {
+                                let eggList = (regionalItems[this.homeRegion || 3] || {}).eggs;
+                                if (eggList && eggList.length > 0) {
+                                    let cx = this.x + this.size / 2, cy = this.y + this.size / 2, best = null, bd = Infinity;
+                                    eggList.forEach(e => { let d = (e.x - cx) * (e.x - cx) + (e.y - cy) * (e.y - cy); if (d < bd) { bd = d; best = e; } });
+                                    this.targetEgg = best;
+                                    this.state = 'egg_run';
+                                    return;
+                                }
+                            }
                             } else if (this.type === 'chicken') {
                             let y = getForageYield('chicken', this.level);
                             if (targetItem.type === 'food') inventory.food += roundStochastic(y.food * petFoodWaterBonus);
@@ -4034,7 +4081,7 @@ class Pet {
                             // runs out, below).
                             if (Math.random() < getPerkChance('monkeySwing', this.level)) {
                                 this.state = 'swinging';
-                                this.stateTimer = 20.0;
+                                this.stateTimer = MONKEY_SWING_SECONDS;
                                 this.pickNewWanderTarget(); // first vine to swing to
                                 return;
                             }
