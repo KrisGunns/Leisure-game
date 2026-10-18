@@ -602,6 +602,24 @@ function countHiveBees() {
     return Array.isArray(petsByRegion[4]) ? petsByRegion[4].filter(p => p.type === 'bee').length : 0;
 }
 
+// Region 4: is the player close enough to the hive (same 65px as the Buy Bee button) for the main
+// button to collect honey? Only true while the hive actually holds some.
+function hiveHoneyInReach() {
+    if (currentRegion !== 4 || typeof region4Hive === 'undefined' || !region4Hive || !(region4Hive.honey > 0)) return false;
+    const dx = (player.x + player.size / 2) - region4Hive.x;
+    const dy = (player.y + player.size / 2) - region4Hive.y;
+    return Math.sqrt(dx * dx + dy * dy) < 65;
+}
+// Moves the hive's stored honey into the bag (the GIVE / COLLECT button; hold = no-op once empty).
+function collectHiveHoney() {
+    if (!hiveHoneyInReach()) return false;
+    inventory.honey += region4Hive.honey;
+    region4Hive.honey = 0;
+    updateUI();
+    saveGameProgress();
+    return true;
+}
+
 function isRegionUnlocked(r) {
     return isRegionOwned(r);
 }
@@ -1760,7 +1778,7 @@ function checkCollisions() {
             // input.js for the actual collection.
             if (hiveHoneyLabel) {
                 hiveHoneyLabel.style.display = 'block';
-                hiveHoneyLabel.textContent = `🍯 Hive: ${region4Hive.honey} (Tap to collect)`;
+                hiveHoneyLabel.textContent = `🍯 Hive: ${region4Hive.honey}` + (region4Hive.honey > 0 ? ' — press COLLECT' : '');
             }
         } else {
             spawnBeeBtn.style.display = 'none';

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Just a little leisure</title>
-    <link rel="stylesheet" href="style.css?v=2.4">
+    <link rel="stylesheet" href="style.css?v=2.6">
 </head>
 <body>
     <div id="gameContainer">
@@ -28,14 +28,9 @@
         </div>
     </div>
 
+    <!-- Settings (⚙️) takes the old region-dropdown slot. Regions are picked from the bottom bar's REGIONS window. -->
     <div>
-        🗺️ <select id="regionSelector">
-            <option value="1">Region 1</option>
-            <option value="2">Region 2</option>
-            <option value="3">Region 3</option>
-            <option value="4">Region 4</option>
-            <option value="5">Region 5</option>
-        </select>
+        <button id="settingsBtn" title="Settings">⚙️</button>
     </div>
 </div>
 
@@ -45,10 +40,8 @@
          drawn onto so they stay sharp (see the CRISP PET TEXT note in world.js). Ignores touches. -->
     <canvas id="labelCanvas"></canvas>
 
-    <button id="openMenuBtn" class="utilBtn">☰ MENU</button>
     <!-- The task the player chose to TRACK (MENU -> TASKS): name + progress, e.g. "Easter 3/8". Hidden when none. -->
     <div id="trackedTaskBox" style="display: none;"></div>
-    <button id="settingsBtn" class="utilBtn">⚙️</button>
     
     <!-- FIXED: Removed inline positioning coordinates so it maps cleanly to your right-side style.css parameters! -->
     <button id="spawnBeeBtn" class="utilBtn" style="display: none; background: #fbbf24; border-color: #f59e0b; color: #000;">🐝 Buy Bee (30🪙)</button>
@@ -59,7 +52,6 @@
     <button id="feederBtn" class="utilBtn" style="display: none;"></button>
     <button id="plotActionBtn" class="utilBtn" style="display: none;"></button>
 
-    <button id="whistleBtn" class="utilBtn">WHISTLE</button>
 
         <!-- Repositioned & Cleaned Inventory Storage Overlay Sheet -->
     <div id="bagOverlay" class="modalOverlay" style="display: none;">
@@ -420,10 +412,17 @@
                 <div id="joystickHandle"></div>
             </div>
 
-            <div id="interactBtn">GIVE</div>
-            <!-- Only shown while the main button above is TAKE / DROP (a sugar glider in reach or
-                 in hand): carries the normal GIVE / PLAY action so feeding still works. -->
-            <div id="giveAuxBtn" style="display: none;">GIVE</div>
+        </div>
+
+        <!-- BOTTOM BAR: every always-on game button lives here, mirroring the top bar.
+             MENU | REGIONS | GIVE (also PLAY / COLLECT honey / TAKE / DROP) | WHISTLE. The blue GIVE button
+             only appears next to the main one while it is busy being TAKE / DROP for a sugar glider. -->
+        <div id="bottomBar">
+            <button id="openMenuBtn" class="barBtn">☰<span>MENU</span></button>
+            <button id="openRegionsBtn" class="barBtn">REGIONS</button>
+            <div id="interactBtn" class="barBtn">GIVE</div>
+            <div id="giveAuxBtn" class="barBtn" style="display: none;">GIVE</div>
+            <button id="whistleBtn" class="barBtn">WHISTLE</button>
         </div>
 
         <!-- Consolidated MENU overlay: opened from the single MENU button (where the
@@ -433,6 +432,16 @@
              Reuses the existing PETS/BAG/CHAR buttons (same ids), so opening any of
              them still opens that screen exactly as before, layered on top of this
              menu — closing that screen returns to the menu underneath. -->
+        <!-- REGIONS window (bottom bar -> REGIONS): light-blue screen like the MENU, one wide card per region
+             with a little art preview; locked regions are black with a lock. Cards are built by ui.js. -->
+        <div id="regionsOverlay" style="display: none;">
+            <div id="regionsHeader">
+                <h2>🗺️ REGIONS</h2>
+                <button id="regionsClose">X</button>
+            </div>
+            <div id="regionsList"></div>
+        </div>
+
         <div id="menuOverlay" style="display: none;">
             <div id="menuHeader">
                 <h2>☰ MENU</h2>

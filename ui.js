@@ -576,7 +576,7 @@ function updateUI() {
             });
         }
 
-        const giveLabel = (activeSchrodingerCat || elephantPlaying) ? 'PLAY' : 'GIVE';
+        const giveLabel = (activeSchrodingerCat || elephantPlaying) ? 'PLAY' : ((typeof hiveHoneyInReach === 'function' && hiveHoneyInReach()) ? 'COLLECT' : 'GIVE');
 
         // Sugar gliders (Region 9): when one is within reach the main button becomes TAKE, and
         // while the player is carrying one it becomes DROP (see getGliderButtonMode() in
@@ -2320,21 +2320,7 @@ if (spawnBeeBtn) {
     spawnBeeBtn.addEventListener('mousedown', handlePurchaseBee);
 }
 
-const hiveHoneyLabel = document.getElementById('hiveHoneyLabel');
-if (hiveHoneyLabel) {
-    const handleCollectHiveHoney = (e) => {
-        if (e) e.preventDefault();
-        if (typeof region4Hive === 'undefined' || !region4Hive || region4Hive.honey <= 0) return;
-
-        inventory.honey += region4Hive.honey;
-        region4Hive.honey = 0;
-        updateUI();
-        saveGameProgress();
-    };
-
-    hiveHoneyLabel.addEventListener('touchstart', handleCollectHiveHoney, { passive: false });
-    hiveHoneyLabel.addEventListener('mousedown', handleCollectHiveHoney);
-}
+// (The hive honey label is info only now: honey is collected with the bottom bar's GIVE / COLLECT button.)
 
 // ============================================================
 // ACHIEVEMENTS + STATISTICS screens (MENU -> 🏆 ACHIEVEMENTS / 📊 STATISTICS).
@@ -2684,4 +2670,160 @@ function handleTaskTrack(e) {
 if (tasksList) {
     tasksList.addEventListener('touchstart', handleTaskTrack, { passive: false });
     tasksList.addEventListener('mousedown', handleTaskTrack);
+}
+
+
+// ============================================================
+// REGIONS window (bottom bar -> 🗺️ REGIONS). A light-blue screen like the MENU with one wide card per
+// region: a little art preview, its name and the pets that live there. Locked regions are black with a
+// lock. Tap an owned region to travel there (switchToRegion in input.js); tap a locked one for a hint.
+// ============================================================
+const REGION_CARDS = [
+    { n: 1,  name: 'Region 1',  sub: 'Grassy Meadow',   pets: '🐕🐈' },
+    { n: 2,  name: 'Region 2',  sub: 'Sandy Plains',    pets: '🐘' },
+    { n: 3,  name: 'Region 3',  sub: 'Dark Woodland',   pets: '🐿️🐔🐦' },
+    { n: 4,  name: 'Region 4',  sub: 'Beehive',         pets: '🐝' },
+    { n: 5,  name: 'Region 5',  sub: 'Bear Lake',       pets: '🐻' },
+    { n: 6,  name: 'Region 6',  sub: 'Pig Sty',         pets: '🐷' },
+    { n: 7,  name: 'Region 7',  sub: 'Panda Habitat',   pets: '🐼' },
+    { n: 8,  name: 'Region 8',  sub: 'Monkey Jungle',   pets: '🐵' },
+    { n: 9,  name: 'Region 9',  sub: 'Bedroom',         pets: '🎀' },
+    { n: 10, name: 'Region 10', sub: 'Flower Garden',   pets: '🌸' }
+];
+
+// Draws one card's art onto `cv` (drawn at 2x for sharpness). Simple scenes in the same palette as the
+// real region backgrounds in main.js / world.js. Locked = plain black with a lock.
+function drawRegionPreview(cv, n, locked) {
+    const W = 410, H = 96;
+    cv.width = W * 2; cv.height = H * 2;
+    const g = cv.getContext('2d');
+    g.setTransform(2, 0, 0, 2, 0, 0);
+    const rect = (c, x, y, w, h) => { g.fillStyle = c; g.fillRect(x, y, w, h); };
+    const circ = (c, x, y, r) => { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); };
+    const ell = (c, x, y, rx, ry) => { g.fillStyle = c; g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); g.fill(); };
+    const emoji = (e, x, y, size) => { g.font = size + 'px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#000'; g.fillText(e, x, y); };
+    const dots = (c, stepX, stepY, w, h) => { g.fillStyle = c; for (let x = 12; x < W; x += stepX) for (let y = 10; y < H; y += stepY) g.fillRect(x + ((y / stepY) % 2) * 9, y, w, h); };
+    const tree = (x, y, big) => { rect('#5d4037', x - 3, y, 6, big ? 18 : 14); circ('#2e7d32', x, y - 4, big ? 16 : 12); };
+
+    if (locked) {
+        rect('#000', 0, 0, W, H);
+        emoji('🔒', W / 2, H / 2 - 4, 40);
+        return;
+    }
+    if (n === 1) {
+        rect('#27ae60', 0, 0, W, H); dots('#2ecc71', 40, 22, 4, 10);
+        emoji('🐕', 120, 52, 30); emoji('🐈', 270, 58, 28);
+    } else if (n === 2) {
+        rect('#f1c40f', 0, 0, W, H); dots('#e67e22', 38, 20, 5, 5);
+        emoji('🐘', 140, 50, 38); emoji('🐘', 270, 56, 32);
+    } else if (n === 3) {
+        rect('#1e824c', 0, 0, W, H); dots('#3e2723', 44, 24, 7, 4);
+        tree(40, 22, true); tree(365, 28, true); tree(200, 18, false);
+        emoji('🐿️', 100, 60, 26); emoji('🐔', 215, 62, 26); emoji('🐦', 305, 52, 22);
+    } else if (n === 4) {
+        rect('#6c5ce7', 0, 0, W, H); dots('#a29bfe', 42, 22, 4, 4);
+        circ('#f39c12', 205, 44, 24); rect('#d35400', 191, 50, 28, 7); circ('#2c3e50', 205, 52, 5);
+        emoji('🐝', 140, 28, 20); emoji('🐝', 270, 30, 18); emoji('🌼', 70, 60, 20); emoji('🌼', 345, 62, 20);
+    } else if (n === 5) {
+        rect('#013220', 0, 0, W, H);
+        for (let x = 30; x < W; x += 90) tree(x, 12, true);
+        rect('#2980b9', 40, 50, W - 80, 40); g.strokeStyle = '#3498db'; g.lineWidth = 3; g.strokeRect(40, 50, W - 80, 40);
+        emoji('🐻', 120, 40, 30); emoji('🐟', 270, 70, 18); emoji('🐟', 210, 78, 14);
+    } else if (n === 6) {
+        rect('#c9a66b', 0, 0, W, H); dots('#b8905a', 32, 20, 3, 9);
+        for (let x = 14; x < W - 10; x += 34) { rect('#8b5a2b', x, 6, 8, 10); rect('#8b5a2b', x, H - 16, 8, 10); }
+        ell('#5c4326', 205, 50, 62, 22); ell('rgba(0,0,0,0.15)', 185, 44, 18, 8);
+        emoji('🐷', 205, 46, 30);
+    } else if (n === 7) {
+        rect('#356a3d', 0, 0, W, H); dots('#3f7a48', 40, 22, 4, 9);
+        [30, 55, 350, 378, 95].forEach((x, i) => {
+            const top = 8 + (i % 2) * 8;
+            rect('#8bc34a', x - 3, top, 6, 70); rect('#558b2f', x - 3, top + 14, 6, 4); rect('#558b2f', x - 3, top + 38, 6, 4); rect('#558b2f', x - 3, top + 60, 6, 4);
+        });
+        emoji('🐼', 205, 50, 36);
+    } else if (n === 8) {
+        rect('#1b4d2e', 0, 0, W, H); dots('#225c38', 36, 20, 4, 9);
+        [60, 205, 350].forEach(x => {
+            g.strokeStyle = '#4a7c2f'; g.lineWidth = 3;
+            [-14, 0, 14].forEach(o => { g.beginPath(); g.moveTo(x + o, 20); g.quadraticCurveTo(x + o + 5, 50, x + o, 80); g.stroke(); });
+            rect('#5d4037', x - 5, 18, 10, 20); circ('#2e7d32', x, 12, 22);
+        });
+        emoji('🐵', 135, 56, 28); emoji('🍌', 275, 62, 20);
+    } else if (n === 9) {
+        rect('#b98b5e', 0, 0, W, H); rect('#d8c3a5', 0, 0, W, 30);
+        rect('#cfe8ff', 40, 5, 44, 22); g.strokeStyle = '#8a6a3a'; g.lineWidth = 2; g.strokeRect(40, 5, 44, 22);
+        rect('#e8a0b8', 280, 40, 80, 40); rect('#fff', 280, 40, 80, 12);
+        ell('rgba(200,90,90,0.75)', 160, 66, 56, 18);
+        emoji('🎀', 160, 60, 26); emoji('🌙', 62, 16, 12);
+    } else if (n === 10) {
+        rect('#7bc96f', 0, 0, W, H); rect('#3f8f3a', 0, 0, W, 14);
+        const cols = ['#ff7eb6', '#ffd54a', '#b39ddb', '#ffffff', '#ff8a65'];
+        for (let i = 0; i < 46; i++) circ(cols[i % 5], 10 + (i * 53) % (W - 20), 22 + (i * 37) % 66, 3.5);
+        rect('#8d6e63', 120, 36, 170, 44);
+        for (let i = 0; i < 6; i++) { circ('#5e8de0', 145 + i * 28, 52, 8); circ('#7aa5f0', 145 + i * 28, 52, 4); }
+        emoji('🌸', 70, 60, 22); emoji('🌺', 340, 58, 22);
+    }
+}
+
+const regionsOverlay = document.getElementById('regionsOverlay');
+const regionsListEl = document.getElementById('regionsList');
+
+function buildRegionsWindow() {
+    if (!regionsListEl) return;
+    regionsListEl.innerHTML = '';
+    REGION_CARDS.forEach(info => {
+        const owned = isRegionUnlocked(info.n);
+        const card = document.createElement('div');
+        card.className = 'regionCard' + (owned ? '' : ' regionLocked') + (owned && info.n === currentRegion ? ' regionCurrent' : '');
+        const cv = document.createElement('canvas');
+        card.appendChild(cv);
+        drawRegionPreview(cv, info.n, !owned);
+
+        const tag = document.createElement('div');
+        tag.className = 'regionTag';
+        if (owned) {
+            tag.innerHTML = `${info.name}<small>${info.sub} ${info.pets}</small>`;
+        } else {
+            const u = (typeof getUnlockable === 'function') ? getUnlockable('region_' + info.n) : null;
+            tag.innerHTML = `🔒 ${info.name}<small>${u ? u.cost + ' 🪙 in the Shop' : 'Locked'}</small>`;
+        }
+        card.appendChild(tag);
+
+        if (owned && info.n === currentRegion) {
+            const here = document.createElement('div');
+            here.className = 'regionHere';
+            here.textContent = '📍 HERE';
+            card.appendChild(here);
+        }
+
+        const onPick = (e) => {
+            if (e) e.preventDefault();
+            if (switchToRegion(info.n)) closeRegionsWindow();
+        };
+        card.addEventListener('click', onPick);
+        regionsListEl.appendChild(card);
+    });
+}
+
+function openRegionsWindow() {
+    if (!regionsOverlay) return;
+    buildRegionsWindow();
+    regionsOverlay.style.display = 'flex';
+    if (regionsListEl) regionsListEl.scrollTop = 0;
+}
+function closeRegionsWindow() {
+    if (regionsOverlay) regionsOverlay.style.display = 'none';
+}
+
+const openRegionsBtn = document.getElementById('openRegionsBtn');
+const regionsCloseBtn = document.getElementById('regionsClose');
+if (openRegionsBtn) {
+    const h = (e) => { if (e) e.preventDefault(); openRegionsWindow(); };
+    openRegionsBtn.addEventListener('touchstart', h, { passive: false });
+    openRegionsBtn.addEventListener('mousedown', h);
+}
+if (regionsCloseBtn) {
+    const h = (e) => { if (e) e.preventDefault(); closeRegionsWindow(); };
+    regionsCloseBtn.addEventListener('touchstart', h, { passive: false });
+    regionsCloseBtn.addEventListener('mousedown', h);
 }

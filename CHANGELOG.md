@@ -146,6 +146,36 @@ same size."):
 
 ---
 
+### 2026-10-18 (64) — Bottom bar polish: no map icon, bigger text, colour per button
+
+**Changed, at the user's request** (remove the map icon over REGIONS, less bland buttons, larger font, some colour).
+
+- **REGIONS** is text only (🗺️ removed from the button; the Regions window header keeps its icon). ☰ stays on MENU.
+- **Bottom bar buttons (style.css `.barBtn`):** larger bold text (button labels 12-17px, MENU/REGIONS/WHISTLE/GIVE), glossy gradients with a light rim and a thicker bottom edge that "presses" on tap. Colours: MENU purple, REGIONS teal, GIVE/PLAY/COLLECT/TAKE/DROP orange (biggest), blue glider-GIVE, WHISTLE green. `style.css?v=2.6`.
+- Checked at 360x640 and 390x800, including the 5-button glider layout (TAKE + blue GIVE) — REGIONS / WHISTLE sizes were tuned so nothing clips.
+
+### 2026-10-18 (63) — Bottom bar, Regions window, settings in the top bar
+
+**Changed, at the user's request** (remove the region dropdown + icon from the top bar and put Settings there; add a bottom bar with Menu, Regions, Give and Whistle; Give also collects honey; the blue glider Give lives in the bar too; new Regions window with art previews, locked = black with a lock).
+
+- **Top bar (index.html / style.css):** the 🗺️ region dropdown is gone; the ⚙️ Settings button now sits in that slot (no longer floating over the play area). `regionSelector` no longer exists in the page (the old guarded references in state.js / main.js are harmless no-ops).
+- **Bottom bar (`#bottomBar`, 68px, mirrors the top bar):** ☰ MENU | 🗺️ REGIONS | GIVE | WHISTLE. The play area (`#canvasWrapper`) now sits between the two bars (top 60px, bottom 68px), so the canvas is a bit shorter; `resizeCanvas` / `rescaleWorld` keep pets and items in place. The main button is `#interactBtn` (orange): GIVE / PLAY / **COLLECT** / TAKE / DROP. The blue `#giveAuxBtn` (GIVE/PLAY while the main one is TAKE/DROP for a sugar glider) appears next to it in the bar. All button handlers/ids are unchanged, only their layout moved.
+- **Honey:** near the Region 4 hive with honey stored (same 65px reach as before) the main button reads **COLLECT** and pressing it (or GIVE while holding) moves the hive's honey into the bag (`hiveHoneyInReach` / `collectHiveHoney`, world.js; called first thing in `executeContinuousFeed`, input.js). The old "tap the hive label" button is now an info line ("Hive: N — press COLLECT", not tappable).
+- **Contextual buttons** (Buy Bee, Deposit food, garden Buy Plot / Fertilize / Water) still appear only when relevant, now floating just above the bottom bar on the right.
+- **Regions window (`#regionsOverlay`, ui.js):** light-blue full-screen window like the MENU; one wide rectangular card per region (10), scrollable. Each owned region shows a small art preview (drawn in code, `drawRegionPreview`, using each region's own palette + its pets), its name and pets, and a "📍 HERE" badge on the current one; tapping travels there (`switchToRegion` in input.js — the old dropdown's logic, incl. closing pickers and resetting the whistle label) and closes the window. **Locked regions are plain black with a 🔒** and "Region N · price 🪙 in the Shop"; tapping one shows the usual locked toast.
+- **Text:** the unlock tutorial now points to the REGIONS button, the how-to-play, hive and glider tips mention the bottom bar / COLLECT.
+- **Check:** Chromium run at 390x800 and 360x640: bar layout, Regions window (owned / locked / current), switching to Region 4, COLLECT label + honey moved to the bag (12 -> bag), glider TAKE + blue GIVE layout. Art previews are code-drawn placeholders (emoji + shapes) — can be swapped for real images later.
+
+### 2026-10-12 (62) — Shop prices x5 and slower character XP (balance pass)
+
+**Changed, at the user's request** ("Everything is bought too quickly so we need to raise the prices accordingly. Also the perk tree should be completed after about 10 hours. The aim for everything to be bought should be after around 8-9 hours."). Targets found by sweeping the balance simulator (`balance/`, updated for Lv50 — see `BALANCE_SIMULATION.md`).
+
+- **Shop prices x5 (state.js `UNLOCKABLES`, `BEE_COST`):** Bow Elephant 250, Region 4 300, Cat 500, Bird 500, Region 5 750, Bow Bear 500, Region 6 750, Mud Pig 500, Region 8 1,250, Bow Monkey 750, Region 7 1,500, Region 9 2,500, Miss Glider 1,750, Region 10 5,000; extra bees 150 each (was 30). The Region 4 description text updated to match; the hive button text reads `BEE_COST`.
+- **`CHARACTER_XP_STEP` 3 -> 6** (state.js): the character now needs 100 + 600 per level, so the 31-perk Perk Tree (character Lv73) completes at about 10:00.
+- **Simulated result (main player):** everything bought about 8:40 (casual about 9:10); Perk Tree about 10:00 (casual about 12:20); all pets Lv50 about 27:15 (bees are the long pole).
+- **Not changed:** garden soil (200) / seed (300) and Cake / Wisdom Potion prices. Existing saves keep what they already own; only unbought items cost more, and saved characters keep their current level, the next levels just need more XP.
+- **Balance tools:** `sim.js` updated for Lv50 and entry-61 mechanics; new `run1.js` (one playthrough, run in parallel) and `tune.js` (quick sweeps with `COST_MULT` / `XP_STEP` env vars); `report.js` now aggregates the runs.
+
 ### 2026-10-11 (61) — Amended Lv1-50 bonuses for Squirrel, Pig, Sparrow, Panda, Bee, Bear, Monkey, Sugar Glider
 
 **Changed, at the user's request** ("I amended all the level and perk bonuses up to level 50. Recheck all the other levels too"). Source: the user's `Pet_Bonuses_Per_Level.xlsx`. Every pet, Lv1-50, was re-dumped from the game and diffed against the sheet by script.

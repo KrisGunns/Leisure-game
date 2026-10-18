@@ -66,18 +66,24 @@ body, html {
     z-index: 1;
 }
 
-#regionSelector {
-    font-family: monospace;
+/* Settings button in the top bar (took the old region-dropdown slot). */
+#settingsBtn {
     background: #333;
     color: #fff;
-    border: 1px solid #555;
-    padding: 2px 5px;
-    border-radius: 4px;
+    border: 1px solid #666;
+    border-radius: 8px;
+    width: 40px;
+    height: 36px;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    margin-right: 5px;
 }
+#settingsBtn:active { background: #555; }
 #canvasWrapper {
     position: absolute;
-    top: 45px;
-    bottom: 0;
+    top: 60px;       /* directly under the 60px top bar */
+    bottom: 68px;    /* directly above the 68px bottom bar */
     left: 0;
     right: 0;
     background: #2c3e50;
@@ -129,64 +135,96 @@ body, html {
     transition: transform 0.05s linear;
     pointer-events: none;
 }
+/* ---- BOTTOM BAR: mirrors the top bar; houses MENU, REGIONS, GIVE (+ the blue glider GIVE) and WHISTLE ---- */
+#bottomBar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 68px;
+    background: #222;
+    border-top: 2px solid #444;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 0 8px;
+    z-index: 20;
+}
+.barBtn {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 52px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 0;
+    font-family: monospace;
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 1.1;
+    letter-spacing: 0.5px;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.55);
+    background: linear-gradient(180deg, #7c8794, #4b5560);
+    border: 2px solid rgba(255, 255, 255, 0.55);
+    border-bottom-width: 4px;
+    border-radius: 12px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35);
+    cursor: pointer;
+    touch-action: none;
+    padding: 0 2px;
+    text-align: center;
+    overflow: hidden;
+}
+.barBtn span { font-size: 13px; letter-spacing: 0.5px; }
+.barBtn:active { filter: brightness(1.2); transform: translateY(2px); border-bottom-width: 2px; }
+/* a colour per button */
+#openMenuBtn {
+    font-size: 20px;
+    background: linear-gradient(180deg, #8e6bff, #5a3fc9);
+    border-color: #cdbfff;
+}
+#openRegionsBtn {
+    font-size: 13px;
+    letter-spacing: 0;
+    background: linear-gradient(180deg, #2ec4d6, #138a9c);
+    border-color: #b4f1f8;
+}
+/* The main action button: GIVE / PLAY / COLLECT / TAKE / DROP. Orange, a little wider and taller. */
 #interactBtn {
-    position: absolute;
-    bottom: 35px;
-    right: 20px;
-    width: 75px;
-    height: 75px;
-    background: rgba(230, 126, 34, 0.8);
-    border: 2px solid #d35400;
-    border-radius: 50%;
-    color: white;
-    font-size: 12px;
-    font-weight: bold;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 100;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-    touch-action: none;
-}
-#interactBtn:active {
-    background: rgba(211, 84, 0, 1);
-}
-/* Auxiliary GIVE / PLAY button: shown only while #interactBtn is busy being TAKE / DROP for a
-   sugar glider. Sits just to its left, smaller, in a cooler colour so the two don't get
-   mixed up. Same press behaviour as the main button (see input.js). */
-#giveAuxBtn {
-    position: absolute;
-    bottom: 45px;
-    right: 105px;
-    width: 58px;
+    flex: 1.35 1 0;
     height: 58px;
-    background: rgba(41, 128, 185, 0.85);
-    border: 2px solid #1f6391;
-    border-radius: 50%;
-    color: white;
-    font-size: 11px;
-    font-weight: bold;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 100;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-    touch-action: none;
+    font-size: 17px;
+    background: linear-gradient(180deg, #ffb347, #e8731a);
+    border-color: #ffe0b0;
+    color: #fff;
 }
-#giveAuxBtn:active {
-    background: rgba(31, 99, 145, 1);
+/* Auxiliary (blue) GIVE / PLAY button: shown only while #interactBtn is busy being TAKE / DROP for a
+   sugar glider, so feeding stays reachable. Same press behaviour as the main button (see input.js). */
+#giveAuxBtn {
+    flex: 1.1 1 0;
+    height: 54px;
+    font-size: 14px;
+    background: linear-gradient(180deg, #4fb3ff, #1f78c8);
+    border-color: #bfe3ff;
+    color: #fff;
 }
 #whistleBtn {
-    bottom: 125px;
-    right: 20px;
+    font-size: 12px;
+    letter-spacing: 0;
+    background: linear-gradient(180deg, #5fd47a, #249a45);
+    border-color: #c4f5d0;
 }
+
 
 #spawnBeeBtn {
     position: absolute;
-    bottom: 175px;        /* Shifted to hover neatly directly above your whistle trigger */
+    bottom: 10px;         /* just above the bottom bar */
     right: 20px;          /* Locked tightly to the right margin wall baseline line */
     left: auto !important; /* Forces the browser to override any left alignments completely */
-    width: 110px;         /* Squeezes the button width down into a tidy, compact mobile block */
+    width: 150px;         /* wide enough for 'Buy Bee (150🪙)' on one line */
     padding: 8px 6px;     /* Snug padding constraints so the text fits comfortably */
     font-size: 11px;
     font-weight: bold;
@@ -205,7 +243,7 @@ body, html {
    (directly above the whistle button) — the two never show in the same region. */
 #plotActionBtn {
     position: absolute;
-    bottom: 175px;
+    bottom: 10px;
     right: 20px;
     left: auto !important;
     width: 124px;
@@ -225,7 +263,7 @@ body, html {
 /* Feeder box Deposit button: same slot (directly above WHISTLE); feeders never exist in Region 10. */
 #feederBtn {
     position: absolute;
-    bottom: 175px;
+    bottom: 10px;
     right: 20px;
     left: auto !important;
     width: 150px;
@@ -244,7 +282,8 @@ body, html {
 
 #hiveHoneyLabel {
     position: absolute;
-    bottom: 225px;         /* Stacks directly above spawnBeeBtn with the same 10px gap pattern */
+    bottom: 58px;          /* info line stacked above the Buy Bee button; NOT a button any more (GIVE collects) */
+    pointer-events: none;
     right: 20px;
     left: auto !important;
     width: 150px;
@@ -256,14 +295,6 @@ body, html {
     z-index: 100; /* Same fix/reasoning as #spawnBeeBtn above. */
 }
 
-#openMenuBtn {
-    top: 15px;
-    left: 15px;
-}
-#settingsBtn {
-    top: 15px;
-    right: 15px;
-}
 .utilBtn {
     position: absolute;
     background: rgba(255, 255, 255, 0.2);
@@ -1070,8 +1101,8 @@ body, html {
 /* The tracked task, under the MENU button: a small outlined square-ish box. */
 #trackedTaskBox {
     position: absolute;
-    top: 58px;
-    left: 15px;
+    top: 8px;
+    left: 8px;
     max-width: 150px;
     padding: 5px 8px;
     background: rgba(0, 0, 0, 0.55);
@@ -1084,4 +1115,76 @@ body, html {
     line-height: 1.3;
     pointer-events: none;
     z-index: 100;
+}
+
+/* ---- REGIONS window (bottom bar -> REGIONS) ---- */
+#regionsOverlay {
+    display: none;
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(160deg, #d6efff, #a9d8f7 55%, #7fbfe9);
+    color: #0b3c5d;
+    z-index: 9000;
+    flex-direction: column;
+    padding: 20px;
+}
+#regionsHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid rgba(11, 60, 93, 0.35);
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+}
+#regionsHeader h2 { text-shadow: 0 1px 2px rgba(255,255,255,0.7); }
+#regionsClose {
+    background: #c0392b; border: none; color: white; padding: 6px 12px;
+    font-weight: bold; border-radius: 4px; cursor: pointer; font-family: monospace;
+}
+#regionsClose:active { background: #e74c3c; }
+#regionsList {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-bottom: 12px;
+}
+.regionCard {
+    position: relative;
+    flex: 0 0 auto;
+    width: 100%;
+    height: 96px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 3px solid #ffffff;
+    box-shadow: 0 4px 8px rgba(11, 60, 93, 0.35);
+    cursor: pointer;
+    background: #000;
+}
+.regionCard canvas { display: block; width: 100%; height: 100%; }
+.regionCard:active { filter: brightness(1.12); }
+.regionCard.regionCurrent { border-color: #ffd54a; box-shadow: 0 0 0 2px #e6a700, 0 4px 8px rgba(11, 60, 93, 0.35); }
+.regionCard.regionLocked { border-color: #555; }
+.regionTag {
+    position: absolute;
+    left: 0; bottom: 0;
+    padding: 4px 12px 4px 10px;
+    background: rgba(0, 0, 0, 0.62);
+    color: #fff;
+    font-family: monospace;
+    font-size: 13px;
+    font-weight: bold;
+    border-top-right-radius: 10px;
+    pointer-events: none;
+}
+.regionTag small { font-weight: normal; font-size: 10px; opacity: 0.85; margin-left: 6px; }
+.regionHere {
+    position: absolute;
+    right: 8px; top: 8px;
+    background: #ffd54a; color: #4a3200;
+    font-family: monospace; font-size: 11px; font-weight: bold;
+    padding: 3px 8px; border-radius: 10px;
+    pointer-events: none;
 }

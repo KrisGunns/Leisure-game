@@ -297,20 +297,22 @@ if (whistleBtn) {
     });
 }
 
-// Paste this directly below your if (whistleBtn) { ... } listener block
-if (regionSelector) {
-    regionSelector.addEventListener('change', (e) => {
-        let selectedRegion = parseInt(e.target.value);
+// Travel to a region. Called by the REGIONS window (ui.js). Returns true if the player is now in
+// `selectedRegion`, false if it's locked / invalid.
+function switchToRegion(selectedRegion) {
+    selectedRegion = parseInt(selectedRegion);
+    if (!(selectedRegion >= 1 && selectedRegion <= 10)) return false;
+    {
 
         // Regions 4-10 have to be bought in the shop (Menu > Shop > Unlockables).
         if (!isRegionUnlocked(selectedRegion)) {
             const regionUnlockable = getUnlockable('region_' + selectedRegion);
             const price = regionUnlockable ? ` for ${regionUnlockable.cost} 🪙` : '';
             showInfoToast(`🔒 Region locked! You can unlock Region ${selectedRegion}${price} in the Shop (Menu → Shop → Unlockables).`);
-            regionSelector.value = currentRegion;
-            return;
+            return false;
         }
 
+        if (selectedRegion === currentRegion) return true;   // already here
         currentRegion = selectedRegion;
         foods = regionalItems[currentRegion].foods;
         waters = regionalItems[currentRegion].waters;
@@ -338,7 +340,8 @@ if (regionSelector) {
         }
 
         saveGameProgress();
-    });
+        return true;
+    }
 }
 
 window.addEventListener('keydown', (e) => {
@@ -463,6 +466,9 @@ function executeContinuousFeed() {
     if (!Array.isArray(activePets)) return;
 
     feedGliders();
+
+    // Region 4: GIVE (labelled COLLECT) near the hive also collects the honey the bees stored there.
+    collectHiveHoney();
 
         activePets.forEach(pet => {
         if (!isPetAvailable(pet)) return; // not bought yet — not in the world

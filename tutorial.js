@@ -11,9 +11,9 @@
 const TUTORIAL_TIPS = [
     { id: 'intro', icon: '🌟', title: 'Welcome!', pages: [
         "Welcome to Just a Little Leisure! 🐾\n\nThe idea is simple: pick up 🍪 food and 💧 water lying around the map and feed it to your pets. Fed pets level up and tamed pets help you gather resources automatically.",
-        "🕹️ How to play\n\n• Touch and drag anywhere on the field to move — a joystick appears under your finger.\n• Walk over 🍪 and 💧 to pick them up.\n• Stand next to a pet and HOLD the GIVE button to feed it (the longer you hold, the faster it goes).\n• Tap WHISTLE to call your tamed pets over to you.",
+        "🕹️ How to play\n\n• Touch and drag anywhere on the field to move — a joystick appears under your finger.\n• Walk over 🍪 and 💧 to pick them up.\n• Stand next to a pet and HOLD the GIVE button to feed it (the longer you hold, the faster it goes).\n• Everything you need is on the bottom bar: ☰ MENU, 🗺️ REGIONS (travel between regions), GIVE, and WHISTLE to call your tamed pets over to you.",
         "🐶 Taming and levelling up\n\nNew pets start out wild (Lv.1) and stay put. Feed one until it reaches Lv.2 and it is tamed: it wanders around and gathers food and water for you on its own. Keep feeding to level it up — higher levels gather more and unlock special perks. Feeding pets also earns YOU experience.",
-        "🔓 Unlocking more pets and regions\n\nOpen ☰ MENU → 🛒 SHOP → Unlockables. Regions 1–3 are free; Regions 4–10 and extra pets (Cat, Bird, the 'Bow' pets…) are bought with 🪙 coins. Earn coins from your pets' special perks, from mini-games, and by selling eggs, fish (and spare gold for 💎) in the Shop's Sell tab. Use the 🗺️ dropdown at the top right to travel to regions you own.",
+        "🔓 Unlocking more pets and regions\n\nOpen ☰ MENU → 🛒 SHOP → Unlockables. Regions 1–3 are free; Regions 4–10 and extra pets (Cat, Bird, the 'Bow' pets…) are bought with 🪙 coins. Earn coins from your pets' special perks, from mini-games, and by selling eggs, fish (and spare gold for 💎) in the Shop's Sell tab. Tap 🗺️ REGIONS on the bottom bar to travel to the regions you own.",
         () => `🍖 Feeder boxes\n\nFully grown pets (Lv.${MAX_PET_LEVEL}) get hungry and stop moving if they run out of food. Every region except Regions 4 and 10 has a wooden feeder box: stand next to it, tap Deposit Food to fill it, and hungry pets will walk over and eat from it by themselves.`,
         "📚 More to explore\n\n☰ MENU holds your 🎒 Bag, 🧑 Tamers, 🌳 Perk Tree, 📋 Tasks (they unlock once you own Regions 1–9), 🏆 Achievements and 📊 Statistics. Every tip you see is saved in ❓ HELP, so you can read it again any time. The game saves automatically — have fun!"
     ] },
@@ -34,7 +34,7 @@ const TUTORIAL_TIPS = [
         "The panda wants bamboo! 🎍\n\nPick Play to start a 30-second round in Region 7: run around collecting the bamboo stalks (new ones keep appearing). Every 5 stalks earns 1 🪙 coin, and the panda naps afterwards. Pick Starve to skip the round — the panda just wanders off for a while."
     ] },
     { id: 'region_4', icon: '🐝', title: 'Region 4 — Beehive', pages: [
-        () => `You unlocked the Hive and your first Bee! 🐝\n\nBees collect honey from flowers and carry it back to the hive. Stand near the hive and tap the button to collect the 🍯 honey stored there.`
+        () => `You unlocked the Hive and your first Bee! 🐝\n\nBees collect honey from flowers and carry it back to the hive. Stand near the hive and the GIVE button on the bottom bar turns into COLLECT — tap it to take the 🍯 honey stored there.`
     ] },
     { id: 'region_5', icon: '🐻', title: 'Region 5 — Bear Lake', pages: [
         "Meet the bears! 🐻\n\nBears eat 🍯 honey (from your bees) instead of food and water. From Lv.5 they go fishing in the lake on their own and bring back 🐟 fish — sell fish in the Shop's Sell tab for coins."
@@ -49,7 +49,7 @@ const TUTORIAL_TIPS = [
         "Meet the monkeys! 🐵\n\nMonkeys eat 🍌 bananas, which grow in this jungle — walk over them to pick them up, then feed the monkeys. Bananas are also a favourite treat of sugar gliders."
     ] },
     { id: 'region_9', icon: '🛏️', title: 'Region 9 — Sugar Gliders', pages: [
-        "Welcome to the Bedroom! 🛏️\n\nThis is home to the Sugar Gliders. They're tame from the start: stand next to one and the main button becomes TAKE — tap it to pick the glider up and carry it around, and tap DROP to set it down in whichever region you're standing in. (A small blue GIVE button appears so you can still feed it.)",
+        "Welcome to the Bedroom! 🛏️\n\nThis is home to the Sugar Gliders. They're tame from the start: stand next to one and the main button becomes TAKE — tap it to pick the glider up and carry it around, and tap DROP to set it down in whichever region you're standing in. (A blue GIVE button appears next to it on the bottom bar so you can still feed it.)",
         () => `What gliders do\n\n• Feed them treats (🍯 honey or 🍌 bananas) plus 💧 water to level them up.\n• Dropped in Regions 1, 2, 3, 6 or 7 they gather food and water for you.\n• Dropped in Region 4 they give +${Math.round(GLIDER_BUFF_PER_GLIDER[4] * 100)}% honey, in Region 5 +${Math.round(GLIDER_BUFF_PER_GLIDER[5] * 100)}% bear fishing speed, in Region 8 +${Math.round(GLIDER_BUFF_PER_GLIDER[8] * 100)}% monkey yield.\n• Every glider has stamina ⚡. Working drains it; at 0 it stops. Bring it home to Region 9 and it rests in a tree to recharge.\n• Gliders can't be dropped in Region 10.`
     ] },
     { id: 'region_10', icon: '🌸', title: 'Region 10 — Flower Garden', pages: [
