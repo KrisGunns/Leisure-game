@@ -82,6 +82,42 @@ function tickGliderClock() {
 // seconds since the last frame", not glider-specific) — see the excursion branch of
 // Pet.update(). The name is historical.
 
+// FENCE / TREE-LINE LIMITS. Some regions have a solid border along the top (and bottom) that nobody can
+// walk through: Region 1's picket fence, Region 3's wooden fence, Region 5's tree line and Region 6's two
+// wooden fences. The limits are on the walker's FEET (y + size), so the head can still overlap the fence
+// like in a normal 3/4 view. Used for the player (Player.update), pets (main.js + wander targets) and item
+// spawns (Item constructor). minFeet = lowest the feet may go UP to; maxFeet = lowest they may go DOWN to.
+function getWalkLimits(region) {
+    switch (region) {
+        case 1: return { minFeet: 46 };                                  // picket fence (y 4-38) + its shadow
+        case 3: return { minFeet: 50 };                                  // plank fence (y 4-42) + dirt strip
+        case 5: return { minFeet: 88 };                                  // tree trunks at the top (bases y 70-78)
+        case 6: return { minFeet: 48, maxFeet: canvas.height - 34 };     // fence along the top AND the bottom
+    }
+    return {};
+}
+function clampFeetY(y, size, region) {
+    const l = getWalkLimits(region);
+    if (l.minFeet !== undefined && y + size < l.minFeet) y = l.minFeet - size;
+    if (l.maxFeet !== undefined && y + size > l.maxFeet) y = l.maxFeet - size;
+    return y;
+}
+// Same idea for something whose y is its centre (food / water on the ground): keep it where it can be reached.
+function clampItemCentreY(y, region) {
+    const l = getWalkLimits(region);
+    if (l.minFeet !== undefined && y < l.minFeet - 4) y = l.minFeet - 4;
+    if (l.maxFeet !== undefined && y > l.maxFeet - 10) y = l.maxFeet - 10;
+    return y;
+}
+// Which region a pet is in right now (gliders carry it; the others are listed in petsByRegion).
+function getPetRegion(p) {
+    if (p.type === 'glider') return p.regionNow;
+    try {   // pets are created (and pick their first wander target) before petsByRegion exists
+        for (const r in petsByRegion) { if (Array.isArray(petsByRegion[r]) && petsByRegion[r].indexOf(p) !== -1) return +r; }
+    } catch (e) { /* not set up yet */ }
+    return null;
+}
+
 // Region 6's mud patch — one definition shared by the visual (main.js draws the pit) and the
 // gameplay check (entities.js only lets the pig's mud-play perk trigger while it's standing
 // in this ellipse), so the playable area can never drift from what's actually drawn. Centered
@@ -1823,8 +1859,8 @@ function processSpawns(dt) {
         } else {
             regionRefillTimers[r] -= dt;
             if (regionRefillTimers[r] <= 0) {
-                while (items.foods.length < 5) items.foods.push(new Item('food'));
-                while (items.waters.length < 5) items.waters.push(new Item('water'));
+                while (items.foods.length < 5) items.foods.push(new Item('food', r));
+                while (items.waters.length < 5) items.waters.push(new Item('water', r));
                 regionRefillTimers[r] = undefined;
             }
         }

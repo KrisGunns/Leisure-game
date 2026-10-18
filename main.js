@@ -60,18 +60,22 @@ function runGameFrame(timestamp) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         // --- REGION GRID BACKGROUNDS RENDERING LAYER ---
-        // Regions 1-8: detailed scenery painted once into a cache and blitted here (backgrounds.js).
-        if (currentRegion <= 8) {
-            drawRegionBackground(currentRegion);
-        } else if (currentRegion === 9) {
-            // Bedroom: wooden floor, back wall with a window, bed, desk, rug and two small
-            // artificial trees with an opening (world.js — the layout is shared with the gliders).
-            drawBedroomBackground();
+        // Regions 1-9: detailed scenery painted once into a cache and blitted here (backgrounds.js).
+        if (currentRegion <= 9) {
+            drawRegionBackground(currentRegion);   // 9 = bedroom, painted from getBedroomLayout() (world.js)
         } else if (currentRegion === 10) {
             // Flower garden: lawn, hedge, meadow flowers and the raised bed with the 12 plots
             // (world.js). Plots are part of the ground, so they are drawn here, under the pets.
             drawGardenBackground();
             drawGardenPlots();
+        }
+
+        // Region 4: walk up to the beehive and the amount of honey stored in it shows above it.
+        if (currentRegion === 4) {
+            const hdx = (player.x + player.size / 2) - region4Hive.x, hdy = (player.y + player.size / 2) - region4Hive.y;
+            if (hdx * hdx + hdy * hdy < 140 * 140) {
+                drawPetText('🍯 ' + Math.floor(region4Hive.honey + 1e-9), region4Hive.x, region4Hive.y - 38, { size: 14, color: '#ffd54a' });
+            }
         }
 
 
@@ -146,6 +150,7 @@ function runGameFrame(timestamp) {
                     // Region 10 flower garden: bees move 10% faster while a bloom is watered.
                     if (pet.type === 'bee') pet._regionSpeedMult *= getGardenBeeBoost();
                     pet.update(dt, rFood, rWater, rFlower);
+                    pet.y = clampFeetY(pet.y, pet.size, r);   // pets can't walk through fences either
                     
                     if (r === currentRegion) {
                         pet.draw();
@@ -171,6 +176,7 @@ function runGameFrame(timestamp) {
 
             g._regionSpeedMult = getRegionSpeedBoost(gr) * getBirdVisitSpeedBoost(gr) * getGliderSpeedBoost(gr);
             g.update(dt, gFood, gWater, gFlower);
+            g.y = clampFeetY(g.y, g.size, gr);
 
             if (gr === currentRegion) {
                 g.draw();
@@ -226,8 +232,8 @@ window.addEventListener('pagehide', saveGameProgress);
 
 FOOD_WATER_REGIONS.forEach(r => {
     for (let i = 0; i < 3; i++) {
-        regionalItems[r].foods.push(new Item('food'));
-        regionalItems[r].waters.push(new Item('water'));
+        regionalItems[r].foods.push(new Item('food', r));
+        regionalItems[r].waters.push(new Item('water', r));
     }
 });
 

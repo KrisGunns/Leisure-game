@@ -1,12 +1,13 @@
 // ============================================================
-// backgrounds.js — Detailed scenery for Regions 1-8.
+// backgrounds.js — Detailed scenery for Regions 1-9.
 //
 // Each region's ground is painted ONCE into an off-screen canvas (1px-level detail: grass blades,
 // pebbles, flowers, fences, trees, water...) and then simply blitted every frame, so it costs
 // next to nothing at run time. The cache is rebuilt whenever the canvas size changes (rotation /
 // resize) and uses a seeded random generator, so a region always looks the same.
 //
-// Regions 9 (Bedroom) and 10 (Flower Garden) keep their own drawing code in world.js.
+// Region 10 (Flower Garden) keeps its own drawing code in world.js. Region 9 (Bedroom) is painted here
+// from getBedroomLayout() (world.js), the same layout the sugar gliders use.
 // Depends on: state.js / world.js (canvas, ctx, region4Hive, getMudPatch). Load BEFORE main.js.
 // ============================================================
 
@@ -714,10 +715,297 @@ function bgBuildJungle(c, W, H, r) {
     bgVignette(c, W, H, 0.32);
 }
 
+// ---------- REGION 9: BEDROOM --------------------------------------------------------------
+// Uses getBedroomLayout() (world.js) for every position the gliders rely on (the two tree openings,
+// the bed and the desk), so what is drawn is exactly what the game logic uses.
+function bgSphere(c, x, y, rad, light, mid, dark) {
+    const g = c.createRadialGradient(x - rad * 0.35, y - rad * 0.4, rad * 0.1, x, y, rad);
+    g.addColorStop(0, light); g.addColorStop(0.55, mid); g.addColorStop(1, dark);
+    c.fillStyle = g; c.beginPath(); c.arc(x, y, rad, 0, Math.PI * 2); c.fill();
+}
+function bgBedroomWall(c, r, W, wallH) {
+    c.fillStyle = '#e0d5ef'; c.fillRect(0, 0, W, wallH);
+    for (let x = 0; x < W; x += 28) { c.fillStyle = '#d4c7e8'; c.fillRect(x, 0, 13, wallH); c.fillStyle = 'rgba(255,255,255,0.35)'; c.fillRect(x + 13, 0, 1, wallH); c.fillStyle = 'rgba(120,90,170,0.18)'; c.fillRect(x, 0, 1, wallH); }
+    for (let x = 6, row = 0; x < W; x += 28, row++) for (let y = 12 + (row % 2) * 10; y < wallH - 12; y += 20) {   // tiny sparkle motifs
+        c.fillStyle = '#c3b3df'; c.fillRect(x + 4, y, 1, 3); c.fillRect(x + 3, y + 1, 3, 1);
+    }
+    bgSpeckle(c, r, 0, 0, W, wallH, ['rgba(255,255,255,0.18)', 'rgba(120,90,170,0.1)'], W * wallH / 14, 1, 1);
+    const sg = c.createLinearGradient(0, wallH - 26, 0, wallH - 9);
+    sg.addColorStop(0, 'rgba(70,40,110,0)'); sg.addColorStop(1, 'rgba(70,40,110,0.16)');
+    c.fillStyle = sg; c.fillRect(0, wallH - 26, W, 18);
+    // crown moulding + baseboard
+    c.fillStyle = '#f7f2e8'; c.fillRect(0, 0, W, 5); c.fillStyle = '#d6cebd'; c.fillRect(0, 5, W, 1); c.fillStyle = 'rgba(0,0,0,0.1)'; c.fillRect(0, 6, W, 2);
+    c.fillStyle = '#f7f2e8'; c.fillRect(0, wallH - 9, W, 9);
+    c.fillStyle = '#fffdf6'; c.fillRect(0, wallH - 9, W, 1);
+    c.fillStyle = '#d6cebd'; c.fillRect(0, wallH - 3, W, 1); c.fillRect(0, wallH - 6, W, 1);
+}
+function bgBedroomWindow(c, r, W, wallH) {
+    const winW = 62, winH = wallH - 28, winX = Math.round(W / 2 - winW / 2), winY = 12;
+    // curtain rod
+    c.fillStyle = '#5a3a1e'; c.fillRect(winX - 34, winY - 6, winW + 68, 3);
+    c.fillStyle = '#8a5e34'; c.fillRect(winX - 34, winY - 6, winW + 68, 1);
+    bgCircle(c, winX - 35, winY - 5, 3, '#b8863f'); bgCircle(c, winX + winW + 35, winY - 5, 3, '#b8863f');
+    // frame + sky
+    c.fillStyle = 'rgba(0,0,0,0.18)'; c.fillRect(winX - 3, winY - 1, winW + 8, winH + 8);
+    c.fillStyle = '#fbf7ee'; c.fillRect(winX - 4, winY - 4, winW + 8, winH + 8);
+    c.save(); c.beginPath(); c.rect(winX, winY, winW, winH); c.clip();
+    const sky = c.createLinearGradient(0, winY, 0, winY + winH);
+    sky.addColorStop(0, '#7cc4f2'); sky.addColorStop(1, '#d8f1ff');
+    c.fillStyle = sky; c.fillRect(winX, winY, winW, winH);
+    bgCircle(c, winX + winW - 14, winY + 9, 6, '#fff2a8'); bgCircle(c, winX + winW - 14, winY + 9, 9, 'rgba(255,242,168,0.3)');
+    bgEllipse(c, winX + 16, winY + 11, 11, 3.5, '#ffffff'); bgEllipse(c, winX + 24, winY + 9, 7, 3.5, '#ffffff'); bgEllipse(c, winX + 40, winY + 16, 9, 3, 'rgba(255,255,255,0.85)');
+    bgEllipse(c, winX + 14, winY + winH + 6, 34, 14, '#6dbb6a'); bgEllipse(c, winX + 48, winY + winH + 8, 30, 14, '#58a85a');
+    bgBush(c, r, winX + 34, winY + winH - 3, 14, { leafD: '#2f7d3c', leafM: '#47a653', leafL: '#7ad680', fruit: '#ff9fbd' });
+    c.fillStyle = 'rgba(255,255,255,0.35)'; c.beginPath(); c.moveTo(winX + 4, winY); c.lineTo(winX + 20, winY); c.lineTo(winX + 8, winY + winH); c.lineTo(winX - 6, winY + winH); c.closePath(); c.fill();
+    c.restore();
+    c.fillStyle = '#fbf7ee'; c.fillRect(winX + winW / 2 - 1, winY, 3, winH); c.fillRect(winX, winY + winH / 2 - 1, winW, 3);
+    c.fillStyle = '#d6cebd'; c.fillRect(winX + winW / 2 + 1, winY, 1, winH);
+    c.fillStyle = '#efe8da'; c.fillRect(winX - 7, winY + winH + 3, winW + 14, 4); c.fillStyle = '#fffdf6'; c.fillRect(winX - 7, winY + winH + 3, winW + 14, 1);
+    // curtains with folds and tie-backs
+    [[winX - 27, 0], [winX + winW + 3, 1]].forEach(([cx, side]) => {
+        const cw = 24, ch = winH + 12;
+        c.fillStyle = '#e394b0'; c.fillRect(cx, winY - 3, cw, ch);
+        for (let i = 0; i < cw; i += 6) { c.fillStyle = (i / 6) % 2 ? '#cf7a98' : '#f0b2c8'; c.fillRect(cx + i, winY - 3, 3, ch); }
+        c.fillStyle = 'rgba(0,0,0,0.12)'; c.fillRect(cx, winY - 3 + ch - 3, cw, 3);
+        c.fillStyle = '#f7d27a'; c.fillRect(cx, winY + winH * 0.55, cw, 3); bgCircle(c, cx + (side ? 0 : cw), winY + winH * 0.55 + 1, 2.5, '#f7d27a');
+    });
+}
+function bgBedroomWallDecor(c, r, W, wallH) {
+    // framed landscape picture
+    const picW = 38, picH = 28, picX = Math.round(Math.max(46, W * 0.17)), picY = 22;
+    c.fillStyle = 'rgba(0,0,0,0.2)'; c.fillRect(picX + 2, picY + 3, picW, picH);
+    c.fillStyle = '#6d4222'; c.fillRect(picX, picY, picW, picH); c.fillStyle = '#9a6a3f'; c.fillRect(picX, picY, picW, 2);
+    c.fillStyle = '#f6f0e2'; c.fillRect(picX + 3, picY + 3, picW - 6, picH - 6);
+    const pg = c.createLinearGradient(0, picY + 5, 0, picY + picH - 5); pg.addColorStop(0, '#a6d8f5'); pg.addColorStop(1, '#d8f0d0');
+    c.fillStyle = pg; c.fillRect(picX + 5, picY + 5, picW - 10, picH - 10);
+    c.fillStyle = '#5fa36f'; c.beginPath(); c.moveTo(picX + 5, picY + picH - 5); c.lineTo(picX + 14, picY + 11); c.lineTo(picX + 24, picY + picH - 5); c.closePath(); c.fill();
+    c.fillStyle = '#4a8a5c'; c.beginPath(); c.moveTo(picX + 17, picY + picH - 5); c.lineTo(picX + 25, picY + 14); c.lineTo(picX + picW - 5, picY + picH - 5); c.closePath(); c.fill();
+    bgCircle(c, picX + picW - 11, picY + 10, 3, '#fff0a0');
+    // wall shelf with books, a plant and a trophy
+    const shX = Math.round(W * 0.64), shW = Math.round(W * 0.2), shY = 44;
+    c.fillStyle = 'rgba(0,0,0,0.2)'; c.fillRect(shX + 2, shY + 5, shW, 4);
+    c.fillStyle = '#8b5a2b'; c.fillRect(shX, shY, shW, 4); c.fillStyle = '#b07d44'; c.fillRect(shX, shY, shW, 1);
+    let bx = shX + 4; const bookCols = ['#d9534f', '#4a90d9', '#f0ad4e', '#5cb85c', '#9b59b6', '#e8639a'];
+    for (let i = 0; i < 6 && bx < shX + shW * 0.62; i++) { const bw = 4 + (i % 3), bh = 16 + (i * 5) % 8; c.fillStyle = bookCols[i]; c.fillRect(bx, shY - bh, bw, bh); c.fillStyle = 'rgba(255,255,255,0.3)'; c.fillRect(bx, shY - bh, 1, bh); c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(bx + bw - 1, shY - bh, 1, bh); bx += bw + 1; }
+    const px = shX + shW - 14;
+    c.fillStyle = '#d98a52'; c.fillRect(px, shY - 8, 9, 8); c.fillStyle = '#b86d3a'; c.fillRect(px + 6, shY - 8, 3, 8);
+    bgFrond(c, px + 4, shY - 8, -Math.PI / 2 - 0.5, 10, 2.2, 0.4, '#4cae52', '#2f8a3b'); bgFrond(c, px + 4, shY - 8, -Math.PI / 2 + 0.5, 10, 2.2, 0.4, '#4cae52', '#2f8a3b'); bgFrond(c, px + 4, shY - 8, -Math.PI / 2, 12, 2.2, 0.1, '#5fc362', '#2f8a3b');
+}
+function bgBedroomFloor(c, r, W, H, wallH) {
+    c.fillStyle = '#c8935a'; c.fillRect(0, wallH, W, H - wallH);
+    const tones = ['#c7915a', '#cf9b63', '#c28b52', '#d4a26c', '#ca9660'];
+    for (let y = wallH, row = 0; y < H; y += 26, row++) {
+        let x = -((row * 53) % 130);
+        while (x < W) {
+            const pw = 100 + Math.floor(r() * 50), t = tones[Math.floor(r() * tones.length)];
+            const x0 = Math.max(0, x), x1 = Math.min(W, x + pw);
+            if (x1 > x0) {
+                c.fillStyle = t; c.fillRect(x0, y, x1 - x0, 26);
+                c.fillStyle = 'rgba(255,235,200,0.16)'; c.fillRect(x0, y + 1, x1 - x0, 1);
+                for (let g = 0; g < (x1 - x0) / 7; g++) { c.fillStyle = r() < 0.5 ? 'rgba(110,65,25,0.28)' : 'rgba(255,225,180,0.2)'; c.fillRect(x0 + ((r() * (x1 - x0 - 8)) | 0), y + 3 + ((r() * 20) | 0), 6 + Math.floor(r() * 26), 1); }
+                if (r() < 0.22) { const kx = x0 + 10 + r() * Math.max(1, x1 - x0 - 20), ky = y + 6 + r() * 14; bgEllipse(c, kx, ky, 3.4, 2.2, '#9a6535'); bgEllipse(c, kx, ky, 2, 1.2, '#b8804a'); }
+                c.fillStyle = 'rgba(70,38,12,0.5)'; c.fillRect(x1 - 1, y, 1, 26);
+                c.fillStyle = 'rgba(70,38,12,0.55)'; c.fillRect(x0 + 2, y + 12, 1, 1); c.fillRect(x1 - 4, y + 12, 1, 1);
+            }
+            x += pw;
+        }
+        c.fillStyle = 'rgba(70,38,12,0.5)'; c.fillRect(0, y, W, 1);
+    }
+    // soft shadow under the baseboard, light from the window falling across the floor
+    const sg = c.createLinearGradient(0, wallH, 0, wallH + 14); sg.addColorStop(0, 'rgba(40,20,5,0.4)'); sg.addColorStop(1, 'rgba(40,20,5,0)');
+    c.fillStyle = sg; c.fillRect(0, wallH, W, 14);
+    const lg = c.createLinearGradient(0, wallH, 0, H * 0.7); lg.addColorStop(0, 'rgba(255,248,205,0.26)'); lg.addColorStop(1, 'rgba(255,248,205,0)');
+    c.fillStyle = lg; c.beginPath(); c.moveTo(W / 2 - 34, wallH); c.lineTo(W / 2 + 34, wallH); c.lineTo(W / 2 + 120, H * 0.7); c.lineTo(W / 2 - 60, H * 0.7); c.closePath(); c.fill();
+    bgSpeckle(c, r, 0, wallH, W, H - wallH, ['rgba(255,255,255,0.07)', 'rgba(60,30,5,0.08)'], W * H / 30, 2, 1);
+}
+function bgBedroomRug(c, r, W, H) {
+    const cx = W / 2, cy = H * 0.47, rx = W * 0.30, ry = H * 0.085;
+    bgEllipse(c, cx + 3, cy + 5, rx + 4, ry + 3, 'rgba(0,0,0,0.2)');
+    bgEllipse(c, cx, cy, rx, ry, '#d4849c');
+    bgEllipse(c, cx, cy, rx - 5, ry - 4, '#f1c2d0');
+    bgEllipse(c, cx, cy, rx - 14, ry - 11, '#e9a9bd');
+    bgEllipse(c, cx, cy, rx - 22, ry - 17, '#f7dce4');
+    c.strokeStyle = '#fff3f6'; c.lineWidth = 1; c.beginPath(); c.ellipse(cx, cy, rx - 9, ry - 7.5, 0, 0, Math.PI * 2); c.stroke();
+    for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2; bgFlowerTop(c, cx + Math.cos(a) * (rx - 30), cy + Math.sin(a) * (ry - 22), 2.2, '#ffffff', '#f0b83c'); }
+    for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 + 0.5; bgFlowerTop(c, cx + Math.cos(a) * (rx * 0.45), cy + Math.sin(a) * (ry * 0.45), 2.6, '#d4849c', '#fff3b0'); }
+    c.save(); c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); c.clip();
+    for (let y = cy - ry; y < cy + ry; y += 3) { c.fillStyle = 'rgba(120,40,70,0.07)'; c.fillRect(cx - rx, y, rx * 2, 1); }
+    c.restore();
+}
+function bgBedroomBed(c, r, b) {
+    c.fillStyle = 'rgba(0,0,0,0.22)'; c.fillRect(b.x + 6, b.y + 6, b.w + 4, b.h + 2);
+    c.fillStyle = '#6a3f1f'; c.fillRect(b.x - 2, b.y, b.w + 4, b.h);
+    c.fillStyle = '#8a5a30'; c.fillRect(b.x - 2, b.y, 2, b.h);
+    // mattress + sheet
+    c.fillStyle = '#e9e3d6'; bedroomRoundRect(c, b.x + 4, b.y + 10, b.w - 8, b.h - 14, 6); c.fill();
+    c.fillStyle = '#fbf8f0'; bedroomRoundRect(c, b.x + 5, b.y + 11, b.w - 10, b.h - 18, 6); c.fill();
+    // pillows
+    const pw = (b.w - 12 - 14) / 2, ph = Math.min(30, b.h * 0.18), py = b.y + 15;
+    [b.x + 8, b.x + 8 + pw + 6].forEach((px, i) => {
+        c.fillStyle = 'rgba(0,0,0,0.18)'; bedroomRoundRect(c, px + 2, py + 3, pw, ph, 8); c.fill();
+        c.fillStyle = '#d3e0f2'; bedroomRoundRect(c, px, py, pw, ph, 8); c.fill();
+        c.fillStyle = '#eef4fc'; bedroomRoundRect(c, px + 1, py + 1, pw - 2, ph - 4, 7); c.fill();
+        c.fillStyle = 'rgba(120,150,200,0.28)'; bgEllipse(c, px + pw / 2, py + ph * 0.55, pw * 0.3, ph * 0.18, 'rgba(120,150,200,0.28)');
+        c.strokeStyle = '#b4c8e6'; c.lineWidth = 1; bedroomRoundRect(c, px + 3, py + 3, pw - 6, ph - 8, 5); c.stroke();
+        c.fillStyle = '#ffffff'; c.fillRect(px + 6, py + 2, pw * 0.4, 1);
+    });
+    // quilt
+    const qy = py + ph + 8, qh = b.y + b.h - 8 - qy;
+    c.fillStyle = 'rgba(0,0,0,0.2)'; bedroomRoundRect(c, b.x + 6, qy + 2, b.w - 12, qh, 5); c.fill();
+    c.fillStyle = '#7d90d8'; bedroomRoundRect(c, b.x + 5, qy, b.w - 10, qh, 5); c.fill();
+    c.save(); bedroomRoundRect(c, b.x + 5, qy, b.w - 10, qh, 5); c.clip();
+    c.strokeStyle = 'rgba(70,86,170,0.55)'; c.lineWidth = 1;
+    for (let k = -qh; k < b.w; k += 14) { c.beginPath(); c.moveTo(b.x + 5 + k, qy); c.lineTo(b.x + 5 + k + qh, qy + qh); c.stroke(); c.beginPath(); c.moveTo(b.x + 5 + k + qh, qy); c.lineTo(b.x + 5 + k, qy + qh); c.stroke(); }
+    c.fillStyle = 'rgba(255,255,255,0.22)';
+    for (let x = b.x + 12; x < b.x + b.w - 8; x += 14) for (let y = qy + 8; y < qy + qh - 4; y += 14) c.fillRect(x, y, 2, 2);
+    const sh = c.createLinearGradient(0, qy, 0, qy + qh); sh.addColorStop(0, 'rgba(255,255,255,0.12)'); sh.addColorStop(1, 'rgba(0,0,40,0.16)');
+    c.fillStyle = sh; c.fillRect(b.x, qy, b.w, qh);
+    c.restore();
+    c.fillStyle = '#b6c3f4'; bedroomRoundRect(c, b.x + 5, qy, b.w - 10, 12, 5); c.fill();                       // folded top
+    c.fillStyle = '#9fb0ec'; c.fillRect(b.x + 6, qy + 9, b.w - 12, 3);
+    c.fillStyle = 'rgba(255,255,255,0.45)'; c.fillRect(b.x + 8, qy + 1, b.w - 16, 1);
+    // teddy bear
+    const tx = b.x + b.w - 26, ty = qy + 22;
+    bgShadow(c, tx + 2, ty + 12, 11, 4, 0.25);
+    bgCircle(c, tx - 7, ty - 8, 4, '#a96d3d'); bgCircle(c, tx + 7, ty - 8, 4, '#a96d3d'); bgCircle(c, tx - 7, ty - 8, 2, '#e3a878'); bgCircle(c, tx + 7, ty - 8, 2, '#e3a878');
+    bgSphere(c, tx, ty + 5, 8, '#d49a62', '#b9783f', '#8d5a2e');
+    bgSphere(c, tx, ty - 4, 8, '#e0a870', '#c18349', '#98602f');
+    bgEllipse(c, tx, ty - 1, 4, 3, '#f0cba0'); c.fillStyle = '#3a2412'; c.fillRect(tx - 4, ty - 6, 2, 2); c.fillRect(tx + 2, ty - 6, 2, 2); c.fillRect(tx - 1, ty - 2, 3, 2);
+    bgCircle(c, tx - 11, ty + 8, 3, '#b9783f'); bgCircle(c, tx + 11, ty + 8, 3, '#b9783f');
+    c.fillStyle = '#e84a5f'; c.fillRect(tx - 5, ty + 2, 10, 2);
+    // headboard (carved arches) + footboard with posts
+    c.fillStyle = '#4e2c12'; c.fillRect(b.x - 5, b.y - 6, b.w + 10, 15);
+    c.fillStyle = '#6e4220'; c.fillRect(b.x - 5, b.y - 6, b.w + 10, 6);
+    c.fillStyle = '#8a5a30'; c.fillRect(b.x - 5, b.y - 6, b.w + 10, 1);
+    for (let x = b.x + 4; x < b.x + b.w - 14; x += 22) { c.fillStyle = '#3a200c'; c.beginPath(); c.arc(x + 8, b.y + 8, 7, Math.PI, 0); c.lineTo(x + 15, b.y + 8); c.lineTo(x + 1, b.y + 8); c.fill(); }
+    [b.x - 5, b.x + b.w - 3].forEach(px => { c.fillStyle = '#4e2c12'; c.fillRect(px, b.y - 9, 8, 14); bgCircle(c, px + 4, b.y - 10, 4, '#7a4a24'); bgCircle(c, px + 3, b.y - 11, 1.6, '#c79a62'); });
+    c.fillStyle = '#4e2c12'; c.fillRect(b.x - 5, b.y + b.h - 9, b.w + 10, 12);
+    c.fillStyle = '#6e4220'; c.fillRect(b.x - 5, b.y + b.h - 9, b.w + 10, 4); c.fillStyle = '#8a5a30'; c.fillRect(b.x - 5, b.y + b.h - 9, b.w + 10, 1);
+    [b.x - 5, b.x + b.w - 3].forEach(px => { c.fillStyle = '#4e2c12'; c.fillRect(px, b.y + b.h - 11, 8, 14); bgCircle(c, px + 4, b.y + b.h - 12, 4, '#7a4a24'); bgCircle(c, px + 3, b.y + b.h - 13, 1.6, '#c79a62'); });
+    // slippers by the bed
+    [[b.x + 12, b.y + b.h + 16], [b.x + 30, b.y + b.h + 20]].forEach((p, i) => {
+        bgShadow(c, p[0] + 1, p[1] + 5, 8, 3, 0.25);
+        bgEllipse(c, p[0], p[1], 7, 11, '#8ec7e8'); bgEllipse(c, p[0], p[1] - 4, 6, 6, '#bfe2f5'); bgEllipse(c, p[0], p[1] + 2, 5, 7, '#6fb0d6');
+        bgSpeckle(c, r, p[0] - 5, p[1] - 8, 10, 16, ['#ffffff', '#9fd0ea'], 6, 1, 1);
+    });
+}
+function bgBedroomDesk(c, r, d) {
+    const chairW = 36, chairX = d.x + d.w / 2 - chairW / 2, chairY = d.y + d.h + 8;
+    // chair: base wheels, seat, cushion, backrest
+    bgShadow(c, chairX + chairW / 2 + 2, chairY + 36, 22, 6, 0.26);
+    [[-14, 34], [14, 34], [-8, 38], [8, 38], [0, 32]].forEach(p => bgCircle(c, chairX + chairW / 2 + p[0], chairY + p[1], 2.2, '#2d2d33'));
+    c.fillStyle = '#7a2f3a'; bedroomRoundRect(c, chairX, chairY, chairW, 32, 9); c.fill();
+    c.fillStyle = '#9a3f4c'; bedroomRoundRect(c, chairX + 2, chairY + 2, chairW - 4, 27, 8); c.fill();
+    c.fillStyle = '#b3525f'; bedroomRoundRect(c, chairX + 5, chairY + 5, chairW - 12, 10, 5); c.fill();
+    bgCircle(c, chairX + chairW / 2, chairY + 18, 1.6, '#5a1f29');
+    c.fillStyle = '#5a1f29'; bedroomRoundRect(c, chairX - 1, chairY - 3, chairW + 2, 9, 4); c.fill();
+    c.fillStyle = '#8a3844'; c.fillRect(chairX + 3, chairY - 2, chairW - 6, 2);
+    // desk top
+    c.fillStyle = 'rgba(0,0,0,0.22)'; c.fillRect(d.x + 5, d.y + 6, d.w, d.h);
+    c.fillStyle = '#5d3a1b'; c.fillRect(d.x, d.y, d.w, d.h);
+    c.fillStyle = '#a8703a'; c.fillRect(d.x, d.y, d.w, d.h - 4);
+    for (let i = 0; i < d.w / 5; i++) { c.fillStyle = r() < 0.5 ? 'rgba(90,50,15,0.3)' : 'rgba(255,220,170,0.25)'; c.fillRect(d.x + 3 + ((r() * (d.w - 20)) | 0), d.y + 3 + ((r() * (d.h - 12)) | 0), 8 + Math.floor(r() * 24), 1); }
+    c.fillStyle = 'rgba(255,230,190,0.35)'; c.fillRect(d.x, d.y, d.w, 1);
+    c.fillStyle = '#7a4c24'; c.fillRect(d.x, d.y + d.h - 4, d.w, 4); c.fillStyle = '#5d3a1b'; c.fillRect(d.x + d.w / 2 - 4, d.y + d.h - 3, 8, 2);
+    // lamp glow + lamp
+    const lx = d.x + 14, ly = d.y + d.h * 0.45;
+    const lg = c.createRadialGradient(lx, ly, 2, lx, ly, 40); lg.addColorStop(0, 'rgba(255,240,170,0.5)'); lg.addColorStop(1, 'rgba(255,240,170,0)');
+    c.fillStyle = lg; c.fillRect(d.x, d.y, 60, d.h);
+    bgEllipse(c, lx, ly + 6, 7, 3, '#4a4a52'); c.fillStyle = '#6a6a74'; c.fillRect(lx - 1, ly - 4, 2, 10);
+    bgSphere(c, lx + 1, ly - 6, 7, '#fff7c0', '#f6c53d', '#c8891a');
+    // laptop
+    const lapW = Math.min(44, d.w * 0.36), lapH = d.h * 0.7, lapX = d.x + d.w * 0.3, lapY = d.y + d.h * 0.12;
+    c.fillStyle = '#9aa1a8'; c.fillRect(lapX, lapY + lapH * 0.45, lapW, lapH * 0.55);
+    c.fillStyle = '#c4cbd2'; c.fillRect(lapX, lapY + lapH * 0.45, lapW, 1);
+    c.fillStyle = '#5a6168'; for (let x = lapX + 3; x < lapX + lapW - 3; x += 3) { c.fillRect(x, lapY + lapH * 0.55, 2, 1); c.fillRect(x, lapY + lapH * 0.7, 2, 1); }
+    c.fillStyle = '#26323d'; c.fillRect(lapX + 2, lapY, lapW - 4, lapH * 0.46);
+    const sg = c.createLinearGradient(0, lapY + 2, 0, lapY + lapH * 0.46); sg.addColorStop(0, '#6ec3f4'); sg.addColorStop(1, '#2f7fc4');
+    c.fillStyle = sg; c.fillRect(lapX + 4, lapY + 2, lapW - 8, lapH * 0.46 - 4);
+    c.fillStyle = 'rgba(255,255,255,0.8)'; c.fillRect(lapX + 7, lapY + 5, 10, 1); c.fillRect(lapX + 7, lapY + 8, 16, 1);
+    // notepad + pencil, mug with steam, cactus, book stack
+    const nx = d.x + d.w - 34;
+    c.fillStyle = 'rgba(0,0,0,0.15)'; c.fillRect(nx + 2, d.y + 9, 20, Math.max(18, d.h - 20));
+    c.fillStyle = '#fdfcf4'; c.fillRect(nx, d.y + 7, 20, Math.max(18, d.h - 20));
+    c.fillStyle = '#d6dde6'; for (let y = d.y + 13; y < d.y + d.h - 14; y += 5) c.fillRect(nx + 3, y, 14, 1);
+    c.fillStyle = '#e8613c'; c.fillRect(nx - 8, d.y + d.h - 18, 14, 2); c.fillStyle = '#f7d27a'; c.fillRect(nx + 3, d.y + d.h - 18, 3, 2);
+    const mx = d.x + d.w - 46, my = d.y + d.h - 14;
+    bgShadow(c, mx + 1, my + 3, 7, 3, 0.25);
+    bgCircle(c, mx, my, 6, '#e8e4dc'); bgCircle(c, mx, my, 5, '#d9453a'); bgCircle(c, mx, my, 3.4, '#4a2c1c'); bgCircle(c, mx - 1, my - 1, 1.4, '#7a5238');
+    c.fillStyle = 'rgba(255,255,255,0.55)'; for (let i = 0; i < 4; i++) c.fillRect(mx - 1 + (i % 2), my - 9 - i * 2, 1, 2);
+    const kx = d.x + d.w * 0.2 + 10, ky = d.y + d.h - 11;
+    c.fillStyle = '#c4703c'; c.fillRect(kx - 5, ky, 10, 7); c.fillStyle = '#a45a2c'; c.fillRect(kx + 2, ky, 3, 7);
+    c.fillStyle = '#3f9a4b'; c.fillRect(kx - 3, ky - 8, 6, 9); c.fillStyle = '#5cbf68'; c.fillRect(kx - 3, ky - 8, 2, 9); c.fillRect(kx - 7, ky - 5, 3, 5); c.fillRect(kx + 4, ky - 4, 3, 4);
+    c.fillStyle = '#ffd1e0'; c.fillRect(kx - 1, ky - 10, 2, 2);
+}
+function bgBedroomTree(c, r, t) {
+    const k = t.k;
+    bgEllipse(c, t.x + 3, t.baseY + 2, 28 * k, 7 * k, 'rgba(0,0,0,0.24)');
+    // glossy white pot with a decorative band
+    c.fillStyle = '#e8e4da';
+    c.beginPath(); c.moveTo(t.x - 18 * k, t.baseY - t.potH); c.lineTo(t.x + 18 * k, t.baseY - t.potH); c.lineTo(t.x + 13 * k, t.baseY); c.lineTo(t.x - 13 * k, t.baseY); c.closePath(); c.fill();
+    c.fillStyle = '#fbf9f3'; c.beginPath(); c.moveTo(t.x - 18 * k, t.baseY - t.potH); c.lineTo(t.x - 4 * k, t.baseY - t.potH); c.lineTo(t.x - 3 * k, t.baseY); c.lineTo(t.x - 13 * k, t.baseY); c.closePath(); c.fill();
+    c.fillStyle = '#c9c3b5'; c.fillRect(t.x + 8 * k, t.baseY - t.potH + 2 * k, 5 * k, t.potH - 2 * k);
+    c.fillStyle = '#7bb8d8'; c.fillRect(t.x - 16 * k, t.baseY - t.potH * 0.55, 32 * k, 3 * k);
+    c.fillStyle = '#cfc9ba'; c.fillRect(t.x - 20 * k, t.baseY - t.potH - 3 * k, 40 * k, 5 * k); c.fillStyle = '#fffdf6'; c.fillRect(t.x - 20 * k, t.baseY - t.potH - 3 * k, 40 * k, 1.5);
+    bgEllipse(c, t.x, t.baseY - t.potH - 1 * k, 16 * k, 3 * k, '#2f5a30');
+    bgSpeckle(c, r, t.x - 14 * k, t.baseY - t.potH - 3 * k, 28 * k, 4 * k, ['#4f8a4a', '#7ab870'], 14, 1, 1);
+    // faux-wood trunk
+    const trunkTop = t.baseY - t.potH - t.trunkH, tw = t.trunkW;
+    c.fillStyle = '#6a4224'; c.fillRect(t.x - tw / 2, trunkTop, tw, t.trunkH + 2 * k);
+    c.fillStyle = '#8a5a30'; c.fillRect(t.x - tw / 2, trunkTop, tw * 0.45, t.trunkH + 2 * k);
+    c.fillStyle = '#4e2f16'; c.fillRect(t.x + tw * 0.28, trunkTop, tw * 0.22, t.trunkH + 2 * k);
+    for (let i = 0; i < 12; i++) { c.fillStyle = r() < 0.5 ? '#4e2f16' : '#a47040'; c.fillRect((t.x - tw / 2 + 2 + r() * (tw - 5)) | 0, (trunkTop + r() * (t.trunkH - 6)) | 0, 1, 4 + Math.floor(r() * 8)); }
+    // the opening gliders rest in: dark cavity with depth + a rim
+    const hg = c.createRadialGradient(t.hollowX, t.hollowY - t.hollowRY * 0.2, 1, t.hollowX, t.hollowY, t.hollowRY);
+    hg.addColorStop(0, '#0b0603'); hg.addColorStop(1, '#2b190c');
+    c.fillStyle = '#9a6a3a'; c.beginPath(); c.ellipse(t.hollowX, t.hollowY, t.hollowRX + 2.5, t.hollowRY + 2.5, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = hg; c.beginPath(); c.ellipse(t.hollowX, t.hollowY, t.hollowRX, t.hollowRY, 0, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = '#5a3818'; c.lineWidth = 1.5; c.beginPath(); c.ellipse(t.hollowX, t.hollowY, t.hollowRX + 2.5, t.hollowRY + 2.5, 0, 0, Math.PI * 2); c.stroke();
+    c.fillStyle = 'rgba(190,140,80,0.45)'; c.fillRect(t.hollowX - t.hollowRX * 0.7, t.hollowY + t.hollowRY * 0.65, t.hollowRX * 1.4, 1);
+    // canopy: smooth plastic-looking spheres with highlights
+    const R = t.canopyR, cy = trunkTop - R * 0.45;
+    const blobs = [[-0.72, 0.28, 0.66], [0.72, 0.28, 0.66], [0, -0.12, 1], [-0.42, -0.5, 0.6], [0.44, -0.5, 0.6]];
+    blobs.forEach(([ox, oy, sc]) => bgSphere(c, t.x + ox * R, cy + oy * R, R * sc, '#7fe08c', '#3fa851', '#1f6a31'));
+    for (let i = 0; i < 40; i++) { const a = r() * Math.PI * 2, d = Math.sqrt(r()) * R * 1.3; c.fillStyle = r() < 0.5 ? 'rgba(200,255,205,0.5)' : 'rgba(20,80,35,0.35)'; c.fillRect((t.x + Math.cos(a) * d) | 0, (cy + Math.sin(a) * d * 0.8) | 0, 2, 1); }
+    blobs.forEach(([ox, oy, sc]) => bgEllipse(c, t.x + ox * R - R * 0.2 * sc, cy + oy * R - R * 0.3 * sc, R * sc * 0.16, R * sc * 0.09, 'rgba(255,255,255,0.55)'));
+}
+function bgBuildBedroom(c, W, H, r) {
+    const L = getBedroomLayout(), wallH = L.wallH;
+    bgBedroomFloor(c, r, W, H, wallH);
+    bgBedroomWall(c, r, W, wallH);
+    bgBedroomWindow(c, r, W, wallH);
+    bgBedroomWallDecor(c, r, W, wallH);
+    bgBedroomRug(c, r, W, H);
+    // floor clutter in the lower part of the room
+    const by = H * 0.88;
+    bgShadow(c, W * 0.8 + 4, by + 22, 40, 9, 0.28);                     // beanbag
+    bgSphere(c, W * 0.8, by, 30, '#7fd6cf', '#3fb0a8', '#217a74');
+    bgSphere(c, W * 0.8 + 4, by - 10, 22, '#9de6df', '#4fc2b9', '#2a8c84');
+    c.strokeStyle = 'rgba(20,90,85,0.5)'; c.lineWidth = 1; c.beginPath(); c.moveTo(W * 0.8 - 20, by - 4); c.quadraticCurveTo(W * 0.8, by - 18, W * 0.8 + 22, by - 6); c.stroke();
+    const kx = W * 0.2, ky = H * 0.9;                                  // toy basket
+    bgShadow(c, kx + 3, ky + 20, 28, 7, 0.28);
+    ['#e8613c', '#4a90d9', '#f7c53d'].forEach((col, i) => { c.fillStyle = col; c.fillRect(kx - 14 + i * 10, ky - 14 - (i % 2) * 5, 8, 8); c.fillStyle = 'rgba(255,255,255,0.35)'; c.fillRect(kx - 14 + i * 10, ky - 14 - (i % 2) * 5, 8, 2); });
+    bgSphere(c, kx + 16, ky - 8, 6, '#ff9ab8', '#e8587f', '#a82f55');
+    c.fillStyle = '#b07a3e'; c.beginPath(); c.moveTo(kx - 26, ky - 8); c.lineTo(kx + 26, ky - 8); c.lineTo(kx + 21, ky + 18); c.lineTo(kx - 21, ky + 18); c.closePath(); c.fill();
+    for (let y = ky - 6; y < ky + 18; y += 5) { c.fillStyle = 'rgba(80,45,15,0.4)'; c.fillRect(kx - 25 + (y - ky) * 0.2, y, 50 - (y - ky) * 0.4, 1); }
+    for (let x = kx - 20; x < kx + 22; x += 6) { c.fillStyle = 'rgba(255,225,170,0.3)'; c.fillRect(x, ky - 7, 1, 25); }
+    c.fillStyle = '#d9a566'; c.fillRect(kx - 27, ky - 10, 54, 4);
+    // scattered building blocks
+    [[W * 0.46, H * 0.74, '#e8613c'], [W * 0.5, H * 0.76, '#4a90d9'], [W * 0.43, H * 0.78, '#f7c53d'], [W * 0.56, H * 0.72, '#5cb85c']].forEach(p => {
+        c.fillStyle = 'rgba(0,0,0,0.22)'; c.fillRect(p[0] + 2, p[1] + 2, 9, 9);
+        c.fillStyle = p[2]; c.fillRect(p[0], p[1], 9, 9); c.fillStyle = 'rgba(255,255,255,0.4)'; c.fillRect(p[0], p[1], 9, 2); c.fillRect(p[0], p[1], 2, 9);
+    });
+    bgBedroomBed(c, r, L.bed);
+    bgBedroomDesk(c, r, L.desk);
+    L.trees.slice().sort((a, b) => a.baseY - b.baseY).forEach(t => bgBedroomTree(c, r, t));
+    bgLightPools(c, r, W, H, 4, 0.08, '255,248,210');
+    bgVignette(c, W, H, 0.2);
+}
+
 // ---------- cache + public entry points -----------------------------------------------------
 const REGION_BG_BUILDERS = {
     1: bgBuildLawn, 2: bgBuildSafari, 3: bgBuildBackyard, 4: bgBuildBeeYard,
-    5: bgBuildLake, 6: bgBuildSty, 7: bgBuildBamboo, 8: bgBuildJungle
+    5: bgBuildLake, 6: bgBuildSty, 7: bgBuildBamboo, 8: bgBuildJungle, 9: bgBuildBedroom
 };
 const REGION_BG_CACHE = {};
 
@@ -737,7 +1025,7 @@ function getRegionBackground(region) {
     return cv;
 }
 
-// Draws region 1-8's ground (returns false for regions that draw themselves: 9 and 10).
+// Draws the ground for regions 1-9 (returns false for region 10, which draws itself in world.js).
 function drawRegionBackground(region) {
     const cv = getRegionBackground(region);
     if (!cv) return false;
@@ -763,7 +1051,7 @@ function drawRegionBackground(region) {
 (function prewarmBackgrounds() {
     let n = 1;
     function step() {
-        if (n > 8) return;
+        if (n > 9) return;
         try { getRegionBackground(n); } catch (e) { /* the real draw will report it */ }
         n++;
         setTimeout(step, 350);

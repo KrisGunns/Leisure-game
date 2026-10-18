@@ -2687,23 +2687,18 @@ function drawRegionPreview(cv, n, locked) {
         emoji('🔒', W / 2, H / 2 - 4, 40);
         return;
     }
-    if (n >= 1 && n <= 8) {
+    if (n >= 1 && n <= 9) {
         // Regions 1-8: a slice of the real (cached) background from backgrounds.js, so the card always
         // matches the game. `focus` = which vertical band of the playfield best shows the region.
         const bg = (typeof getRegionBackground === 'function') ? getRegionBackground(n) : null;
         if (bg) {
-            const focus = { 1: 0.02, 2: 0, 3: 0, 4: 0.02, 5: 0.82, 6: 0.38, 7: 0.1, 8: 0 }[n];
+            const focus = { 1: 0.02, 2: 0, 3: 0, 4: 0.02, 5: 0.82, 6: 0.38, 7: 0.1, 8: 0, 9: 0.02 }[n];
             const sc = W / bg.width, sh = Math.min(bg.height, H / sc);
             const sy = Math.max(0, Math.min(bg.height - sh, bg.height * focus));
             g.drawImage(bg, 0, sy, bg.width, sh, 0, 0, W, H);
         } else {
             rect('#3a7a3a', 0, 0, W, H);
         }
-    } else if (n === 9) {
-        rect('#b98b5e', 0, 0, W, H); rect('#d8c3a5', 0, 0, W, 30);
-        rect('#cfe8ff', 40, 5, 44, 22); g.strokeStyle = '#8a6a3a'; g.lineWidth = 2; g.strokeRect(40, 5, 44, 22);
-        rect('#e8a0b8', 280, 40, 80, 40); rect('#fff', 280, 40, 80, 12);
-        ell('rgba(200,90,90,0.75)', 160, 66, 56, 18);
     } else if (n === 10) {
         rect('#7bc96f', 0, 0, W, H); rect('#3f8f3a', 0, 0, W, 14);
         const cols = ['#ff7eb6', '#ffd54a', '#b39ddb', '#ffffff', '#ff8a65'];

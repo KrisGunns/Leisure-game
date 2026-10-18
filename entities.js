@@ -2605,6 +2605,7 @@ class Player {
         if (this.y < padding) this.y = padding;
         if (this.x + this.size > canvas.width - padding) this.x = canvas.width - padding - this.size;
         if (this.y + this.size > canvas.height - padding) this.y = canvas.height - padding - this.size;
+        this.y = clampFeetY(this.y, this.size, currentRegion);   // fences / tree line (world.js getWalkLimits)
 
         // Animation bookkeeping. Based on how far the player ACTUALLY moved (after the edge clamping
         // above), so pushing against a wall doesn't make the feet run on the spot.
@@ -2673,11 +2674,12 @@ class Player {
     }
 }
 class Item {
-    constructor(type) {
+    constructor(type, region) {
         this.type = type;
         let padding = 26;
         this.x = Math.random() * (canvas.width - padding * 2) + padding;
         this.y = Math.random() * (canvas.height - padding * 2) + padding;
+        if (region) this.y = clampItemCentreY(this.y, region);   // never inside a fence / behind the tree line
     }
 
     draw() {
@@ -3042,6 +3044,7 @@ class Pet {
         let padding = 4;
         this.targetX = Math.random() * (canvas.width - this.size - padding * 2) + padding;
         this.targetY = Math.random() * (canvas.height - this.size - padding * 2) + padding;
+        this.targetY = clampFeetY(this.targetY, this.size, getPetRegion(this));   // stay in front of fences
     }
 
     // Was previously attached as a one-off function property on the single hand-built
