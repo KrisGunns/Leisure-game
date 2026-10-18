@@ -362,10 +362,10 @@ let character = {
 // compounding): 100, 400, 700, 1,000 ... 3,100 at Lv11, 6,100 at Lv21, 10,300 at Lv35. History: the
 // original was 100 x level^0.6; a compounding 1.5^(lvl-1) version reached ~97 million XP per level
 // by Lv35 so it was replaced. The step is tuned with the balance simulation (balance/) so the whole
-// Perk Tree (31 perks, 72 points = character Lv73) is unlocked at about the 10-hour mark of a full
+// Perk Tree (31 perks, 72 points = character Lv73) is unlocked at about the 10-hour mark (step 6, entry 62) of a full
 // playthrough. Change CHARACTER_XP_BASE / CHARACTER_XP_STEP to rebalance, then re-run balance/report.js.
 const CHARACTER_XP_BASE = 100;
-const CHARACTER_XP_STEP = 3;     // each level adds this fraction of the base
+const CHARACTER_XP_STEP = 6;     // each level adds this fraction of the base
 function getCharacterNextXP(currentLevel) {
     const lvl = Math.max(1, Math.floor(Number(currentLevel)) || 1);
     return Math.floor(CHARACTER_XP_BASE * (1 + CHARACTER_XP_STEP * (lvl - 1)));
@@ -610,27 +610,27 @@ function isShopBuffActive(id) { return shopBuffs[id] > 0; }
 // A 'pet' in Region 4+ can only be bought once that region is owned (nothing would show it).
 // ------------------------------------------------------------------
 const UNLOCKABLES = [
-    { id: 'pet_cat',         kind: 'pet',    region: 1, icon: '🐱', name: 'Cat',          cost: 100, desc: 'Joins Region 1. Arrives wild (Lv1) — tame it at Lv2 like the others.' },
-    { id: 'pet_bowElephant', kind: 'pet',    region: 2, icon: '🐘', name: 'Bow Elephant', cost: 50,  desc: 'Joins Region 2 (white bow). Arrives wild (Lv1).' },
-    { id: 'pet_bird',        kind: 'pet',    region: 3, icon: '🐦', name: 'Bird',         cost: 100, desc: 'Joins Region 3. Arrives wild (Lv1).' },
+    { id: 'pet_cat',         kind: 'pet',    region: 1, icon: '🐱', name: 'Cat',          cost: 500, desc: 'Joins Region 1. Arrives wild (Lv1) — tame it at Lv2 like the others.' },
+    { id: 'pet_bowElephant', kind: 'pet',    region: 2, icon: '🐘', name: 'Bow Elephant', cost: 250,  desc: 'Joins Region 2 (white bow). Arrives wild (Lv1).' },
+    { id: 'pet_bird',        kind: 'pet',    region: 3, icon: '🐦', name: 'Bird',         cost: 500, desc: 'Joins Region 3. Arrives wild (Lv1).' },
 
-    { id: 'region_4',        kind: 'region', region: 4, icon: '🐝', name: 'Region 4 — Beehive',    cost: 60,  desc: 'Unlocks Region 4 and comes with your first Bee. More bees can be bought at the hive (30 🪙 each, max 5).' },
+    { id: 'region_4',        kind: 'region', region: 4, icon: '🐝', name: 'Region 4 — Beehive',    cost: 300,  desc: 'Unlocks Region 4 and comes with your first Bee. More bees can be bought at the hive (150 🪙 each, max 5).' },
 
-    { id: 'region_5',        kind: 'region', region: 5, icon: '🐻', name: 'Region 5 — Bear Lake',  cost: 150, desc: 'Unlocks Region 5 and comes with the Bear (Lv1 — needs Lv2 to be tamed).' },
-    { id: 'pet_bowBear',     kind: 'pet',    region: 5, icon: '🐻', name: 'Bow Bear',     cost: 100, desc: 'Joins Region 5. Arrives wild (Lv1).' },
+    { id: 'region_5',        kind: 'region', region: 5, icon: '🐻', name: 'Region 5 — Bear Lake',  cost: 750, desc: 'Unlocks Region 5 and comes with the Bear (Lv1 — needs Lv2 to be tamed).' },
+    { id: 'pet_bowBear',     kind: 'pet',    region: 5, icon: '🐻', name: 'Bow Bear',     cost: 500, desc: 'Joins Region 5. Arrives wild (Lv1).' },
 
-    { id: 'region_6',        kind: 'region', region: 6, icon: '🐷', name: 'Region 6 — Pig Sty',    cost: 150, desc: 'Unlocks Region 6 and comes with the Pig (Lv1 — needs Lv2 to be tamed).' },
-    { id: 'pet_mudPig',      kind: 'pet',    region: 6, icon: '🐖', name: 'Mud Pig',      cost: 100, desc: 'Joins Region 6. Arrives wild (Lv1).' },
+    { id: 'region_6',        kind: 'region', region: 6, icon: '🐷', name: 'Region 6 — Pig Sty',    cost: 750, desc: 'Unlocks Region 6 and comes with the Pig (Lv1 — needs Lv2 to be tamed).' },
+    { id: 'pet_mudPig',      kind: 'pet',    region: 6, icon: '🐖', name: 'Mud Pig',      cost: 500, desc: 'Joins Region 6. Arrives wild (Lv1).' },
 
-    { id: 'region_7',        kind: 'region', region: 7, icon: '🐼', name: 'Region 7 — Panda Habitat', cost: 300, desc: 'Unlocks Region 7 and comes with the Panda (Lv1 — needs Lv2 to be tamed).' },
+    { id: 'region_7',        kind: 'region', region: 7, icon: '🐼', name: 'Region 7 — Panda Habitat', cost: 1500, desc: 'Unlocks Region 7 and comes with the Panda (Lv1 — needs Lv2 to be tamed).' },
 
-    { id: 'region_8',        kind: 'region', region: 8, icon: '🐵', name: 'Region 8 — Monkey Jungle', cost: 250, desc: 'Unlocks Region 8 and comes with the Monkey (Lv1 — needs Lv2 to be tamed).' },
-    { id: 'pet_bowMonkey',   kind: 'pet',    region: 8, icon: '🙈', name: 'Bow Monkey',   cost: 150, desc: 'Joins Region 8 (green bow). Arrives wild (Lv1).' },
+    { id: 'region_8',        kind: 'region', region: 8, icon: '🐵', name: 'Region 8 — Monkey Jungle', cost: 1250, desc: 'Unlocks Region 8 and comes with the Monkey (Lv1 — needs Lv2 to be tamed).' },
+    { id: 'pet_bowMonkey',   kind: 'pet',    region: 8, icon: '🙈', name: 'Bow Monkey',   cost: 750, desc: 'Joins Region 8 (green bow). Arrives wild (Lv1).' },
 
-    { id: 'region_9',        kind: 'region', region: 9, icon: '🛏️', name: 'Region 9 — Bedroom',    cost: 500, desc: 'Unlocks Region 9 and comes with the Sugar Glider, already tamed at Lv1.' },
-    { id: 'pet_missGlider',  kind: 'pet',    region: 9, icon: '🎀', name: 'Miss Glider',  cost: 350, desc: 'A second sugar glider with a red bow, already tamed at Lv1.' },
+    { id: 'region_9',        kind: 'region', region: 9, icon: '🛏️', name: 'Region 9 — Bedroom',    cost: 2500, desc: 'Unlocks Region 9 and comes with the Sugar Glider, already tamed at Lv1.' },
+    { id: 'pet_missGlider',  kind: 'pet',    region: 9, icon: '🎀', name: 'Miss Glider',  cost: 1750, desc: 'A second sugar glider with a red bow, already tamed at Lv1.' },
 
-    { id: 'region_10',       kind: 'region', region: 10, icon: '🌸', name: 'Region 10 — Flower Garden', cost: 1000, desc: 'Unlocks Region 10 with your first garden plot. Grow hydrangeas (soil + seeds from the Buy tab, plus lots of water) for +10% coins and +10% bee speed per watered flower (stacks). Gliders cannot be dropped here.' }
+    { id: 'region_10',       kind: 'region', region: 10, icon: '🌸', name: 'Region 10 — Flower Garden', cost: 5000, desc: 'Unlocks Region 10 with your first garden plot. Grow hydrangeas (soil + seeds from the Buy tab, plus lots of water) for +10% coins and +10% bee speed per watered flower (stacks). Gliders cannot be dropped here.' }
 ];
 
 // Which unlockables the player owns: id -> true. Empty at the start of a new game.
@@ -682,7 +682,7 @@ function buyUnlockable(id) {
 // rest cost this each, up to HIVE_MAX_BEES total (see countHiveBees()/spawnBeeBtn wiring
 // in world.js and ui.js — all four read this one constant, so the cap can't drift between
 // the buy-button lock, its display toggle, and the shop's own description text below).
-const BEE_COST = 30;
+const BEE_COST = 150;
 const HIVE_MAX_BEES = 5;
 
 // The OLD unlock rules — regions used to open by pet levels. Kept ONLY so a save made
