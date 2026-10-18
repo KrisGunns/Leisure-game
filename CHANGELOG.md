@@ -16,6 +16,7 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 <script src="state.js"></script>
 <script src="entities.js"></script>
 <script src="world.js"></script>
+<script src="backgrounds.js"></script>
 <script src="input.js"></script>
 <script src="ui.js"></script>
 <script src="main.js"></script>
@@ -26,6 +27,7 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 | `state.js` | `inventory`, `character` (level/xp/**perkPoints/perks**), `gainPlayerXP()`, `showLevelUpToast()`, `getLevelRequirement()`, `getCharacterNextXP()`, `FORAGE_TIERS` + `getForageYield()` (pet forage yield table), `saveGameProgress()`, `loadGameProgress()`, core DOM label refs, **perk tree data + rules** (`PERK_TREE`, `getPerkStatus()`, `unlockPerk()`, `normalizeCharacterPerks()`, `getCharacterBonuses()`), **shop data** (`shopBuffs`, `SHOP_ITEMS`, `SELL_ITEMS`), `tickShopBuffs()`, buff multipliers (`getPetSpeedMultiplier()`/`getPetForageMultiplier()`/`getXPMultiplier()`) | none (loads first) |
 | `entities.js` | `Player`, `Item`, `Flower`, `Pet` classes (all pet AI/state-machine logic lives in `Pet.update()`) | `state.js` |
 | `world.js` | The `player` instance, `regionalItems` (food/water/flower/banana/egg pools per region), `petsByRegion` (pet roster per region), `region4Hive`, `createBee()`/`createBear()`/`createMonkey()` factories, `isJungleTierUnlocked()`/`areRegions1to3Tamed()`/`isRegionUnlocked()` (region-lock single source of truth), `spawnCoinPopup()`/`spawnRegionFX()` (floating visual effects), `resizeCanvas()`, `checkCollisions()`, `processSpawns()` | `state.js`, `entities.js` |
+| `backgrounds.js` | Region 1-8 scenery (2026-10-18 (66)): per-region builders paint the ground ONCE into a cached off-screen canvas (`getRegionBackground(n)`), `drawRegionBackground(n)` blits it each frame. Regions 9/10 still draw themselves in world.js. Loaded right after `world.js`. |
 | `input.js` | Floating virtual joystick (appears under the touch, see 2026-09-20 (6)), GIVE/PLAY interact button (hold-to-feed with ramping `feedHoldCounter`, pointer-capture for reliability), whistle button (single-tap toggle or multi-pet picker), region selector (+ region-lock check), keyboard controls, `executeContinuousFeed()` | `state.js`, `entities.js`, `world.js` |
 | `ui.js` | `updateUI()`, `renderMiniPet()`, pet Codex overlay, settings/dev panel, pet renaming, bag overlay, bee-purchase button, whistle-picker overlay (`showWhistlePicker()`/`hideWhistlePicker()`), consolidated MENU overlay (`handleOpenMenu()`/`handleCloseMenu()`), **Shop screen** (`renderShop()`, `buyShopItem()`, `sellShopItem()`), **Perk Tree screen** (`renderPerkTree()`, `renderPerkDetail()`) | `state.js`, `entities.js`, `world.js` |
 | `main.js` | `gameLoop()` (render + update loop), startup sequence (`loadGameProgress()`, initial item spawns, `requestAnimationFrame` kickoff) | all of the above (loads last) |
@@ -145,6 +147,17 @@ same size."):
   hand-drawn canvas code (in both entities.js and ui.js) was removed.
 
 ---
+
+### 2026-10-18 (66) — Background overhaul for Regions 1-8 (finer detail, no more big pixels)
+
+**Changed, at the user's request.** Regions 9 (Bedroom) and 10 (Flower Garden) were left exactly as they were.
+
+- **New file `backgrounds.js`** (script tag added after `world.js` in index.html). The old backgrounds were flat colour fills with a sparse grid of 4-12px flecks; they are replaced by hand-built scenes made of 1-2px grain: grass blades, speckled ground texture, tufts, clover, daisies, pebbles, shading, soft light pools and a gentle edge vignette.
+- Each region is painted **once** into an off-screen canvas and just blitted every frame (about 0.02 ms), rebuilt only when the canvas size changes. A seeded random generator keeps every region looking identical each time. All 8 are pre-built in the background ~1.2 s after start-up (one every 350 ms) so nothing stutters later (a build takes ~35-70 ms on a desktop).
+- **Region 1 Front Lawn:** mown-stripe lawn, white picket fence along the top, flowering bushes, flagstone path, daisies/dandelions. **Region 2 Safari:** sandy ground with wind ripples, cracked earth, dry grass tufts, rocks, a termite mound and three acacia trees. **Region 3 Backyard:** wooden plank fence, big oak, vegetable patch, tulip bed, stepping stones, tree stump with growth rings. **Region 4 Bee Yard:** wildflower meadow, lavender rows, apple trees and a proper wooden beehive on a stand (same position as before, `region4Hive`). **Region 5 Lake:** forest edge, an organic lake with sandy shore, reeds, lily pads, rocks, a wooden dock where the bear fishes, and twinkling water glints (the only per-frame animation). **Region 6 Pig Sty:** straw-covered dirt, wooden fences with posts, hay bales and a textured mud pit drawn from `getMudPatch()` (so the drawn pit is still the playable pit). **Region 7 Bamboo Forest:** moss ground, ferns, stone path, detailed segmented bamboo with leaves, light shafts. **Region 8 Jungle:** dark understory, ferns, monstera plants, buttress-root palm trees with hanging vines, a fallen log, mossy boulders, flowers, fireflies.
+- Gameplay geometry is unchanged: hive position, mud-pit ellipse, feeder spot and the lake position the bear walks to are the same as before.
+- `main.js`: the eight old `if (currentRegion === n)` background blocks are replaced by one `drawRegionBackground(currentRegion)` call (regions 9/10 branches untouched).
+- **Regions window:** the cards for regions 1-8 now show a slice of the real cached background (`drawRegionPreview` in ui.js), so the preview always matches the game. Cards for 9/10 and the locked black cards are unchanged.
 
 ### 2026-10-18 (65) — Regions screen clean-up, tap-only buttons, no white border, edge-to-edge movement
 

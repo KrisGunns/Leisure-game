@@ -2687,38 +2687,18 @@ function drawRegionPreview(cv, n, locked) {
         emoji('🔒', W / 2, H / 2 - 4, 40);
         return;
     }
-    if (n === 1) {
-        rect('#27ae60', 0, 0, W, H); dots('#2ecc71', 40, 22, 4, 10);
-    } else if (n === 2) {
-        rect('#f1c40f', 0, 0, W, H); dots('#e67e22', 38, 20, 5, 5);
-    } else if (n === 3) {
-        rect('#1e824c', 0, 0, W, H); dots('#3e2723', 44, 24, 7, 4);
-        tree(40, 22, true); tree(365, 28, true); tree(200, 18, false);
-    } else if (n === 4) {
-        rect('#6c5ce7', 0, 0, W, H); dots('#a29bfe', 42, 22, 4, 4);
-        circ('#f39c12', 205, 44, 24); rect('#d35400', 191, 50, 28, 7); circ('#2c3e50', 205, 52, 5);
-        [[70,60],[345,62],[110,30],[300,26]].forEach(p => { circ('#ffeb3b', p[0], p[1], 6); circ('#fff', p[0]-9, p[1], 4); circ('#fff', p[0]+9, p[1], 4); circ('#fff', p[0], p[1]-9, 4); circ('#fff', p[0], p[1]+9, 4); });
-    } else if (n === 5) {
-        rect('#013220', 0, 0, W, H);
-        for (let x = 30; x < W; x += 90) tree(x, 12, true);
-        rect('#2980b9', 40, 50, W - 80, 40); g.strokeStyle = '#3498db'; g.lineWidth = 3; g.strokeRect(40, 50, W - 80, 40);
-    } else if (n === 6) {
-        rect('#c9a66b', 0, 0, W, H); dots('#b8905a', 32, 20, 3, 9);
-        for (let x = 14; x < W - 10; x += 34) { rect('#8b5a2b', x, 6, 8, 10); rect('#8b5a2b', x, H - 16, 8, 10); }
-        ell('#5c4326', 205, 50, 62, 22); ell('rgba(0,0,0,0.15)', 185, 44, 18, 8);
-    } else if (n === 7) {
-        rect('#356a3d', 0, 0, W, H); dots('#3f7a48', 40, 22, 4, 9);
-        [30, 55, 350, 378, 95].forEach((x, i) => {
-            const top = 8 + (i % 2) * 8;
-            rect('#8bc34a', x - 3, top, 6, 70); rect('#558b2f', x - 3, top + 14, 6, 4); rect('#558b2f', x - 3, top + 38, 6, 4); rect('#558b2f', x - 3, top + 60, 6, 4);
-        });
-    } else if (n === 8) {
-        rect('#1b4d2e', 0, 0, W, H); dots('#225c38', 36, 20, 4, 9);
-        [60, 205, 350].forEach(x => {
-            g.strokeStyle = '#4a7c2f'; g.lineWidth = 3;
-            [-14, 0, 14].forEach(o => { g.beginPath(); g.moveTo(x + o, 20); g.quadraticCurveTo(x + o + 5, 50, x + o, 80); g.stroke(); });
-            rect('#5d4037', x - 5, 18, 10, 20); circ('#2e7d32', x, 12, 22);
-        });
+    if (n >= 1 && n <= 8) {
+        // Regions 1-8: a slice of the real (cached) background from backgrounds.js, so the card always
+        // matches the game. `focus` = which vertical band of the playfield best shows the region.
+        const bg = (typeof getRegionBackground === 'function') ? getRegionBackground(n) : null;
+        if (bg) {
+            const focus = { 1: 0.02, 2: 0, 3: 0, 4: 0.02, 5: 0.82, 6: 0.38, 7: 0.1, 8: 0 }[n];
+            const sc = W / bg.width, sh = Math.min(bg.height, H / sc);
+            const sy = Math.max(0, Math.min(bg.height - sh, bg.height * focus));
+            g.drawImage(bg, 0, sy, bg.width, sh, 0, 0, W, H);
+        } else {
+            rect('#3a7a3a', 0, 0, W, H);
+        }
     } else if (n === 9) {
         rect('#b98b5e', 0, 0, W, H); rect('#d8c3a5', 0, 0, W, 30);
         rect('#cfe8ff', 40, 5, 44, 22); g.strokeStyle = '#8a6a3a'; g.lineWidth = 2; g.strokeRect(40, 5, 44, 22);
