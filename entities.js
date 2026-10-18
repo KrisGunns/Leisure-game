@@ -2600,7 +2600,7 @@ class Player {
         this.x += moveX * this.speed * dt;
         this.y += moveY * this.speed * dt;
 
-        let padding = 20;
+        let padding = 0;   // no border any more: the player can walk right up to the edges
         if (this.x < padding) this.x = padding;
         if (this.y < padding) this.y = padding;
         if (this.x + this.size > canvas.width - padding) this.x = canvas.width - padding - this.size;
@@ -2675,7 +2675,7 @@ class Player {
 class Item {
     constructor(type) {
         this.type = type;
-        let padding = 50;
+        let padding = 26;
         this.x = Math.random() * (canvas.width - padding * 2) + padding;
         this.y = Math.random() * (canvas.height - padding * 2) + padding;
     }
@@ -2716,7 +2716,7 @@ class Item {
 
 class Flower {
     constructor() {
-        let padding = 50;
+        let padding = 26;
         this.x = Math.random() * (canvas.width - padding * 2) + padding;
         this.y = Math.random() * (canvas.height - padding * 2) + padding;
         this.isTargeted = false;
@@ -3039,7 +3039,7 @@ class Pet {
     }
 
     pickNewWanderTarget() {
-        let padding = 40;
+        let padding = 4;
         this.targetX = Math.random() * (canvas.width - this.size - padding * 2) + padding;
         this.targetY = Math.random() * (canvas.height - this.size - padding * 2) + padding;
     }

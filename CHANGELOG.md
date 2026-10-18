@@ -146,6 +146,18 @@ same size."):
 
 ---
 
+### 2026-10-18 (65) — Regions screen clean-up, tap-only buttons, no white border, edge-to-edge movement
+
+**Changed, at the user's request.**
+
+- **Regions window:** no emojis any more — the title is plain "REGIONS", cards read "Region N  <name>" (no pet icons, no 📍/🔒/🪙 in the tag; the big black-card lock stays as the locked marker, price text says "750 coins in the Shop"). New names: 1 Front Lawn, 2 Safari, 3 Backyard, 4 Bee Yard, 5 Lake, 6 Pig Sty (unchanged), 7 Bamboo Forest, 8 Jungle, 9 Bedroom, 10 Flower Garden. The previews no longer contain any pet / animal emojis — just the region scenery (Region 4's emoji flowers became drawn flowers).
+- **Hive label removed:** the "Hive: N" box in the game area is gone (element, CSS and world.js code). Honey is collected with the bottom bar's COLLECT button only.
+- **Bottom bar layout:** the main GIVE button is the same size as WHISTLE. The blue glider GIVE moved to sit between REGIONS and the main button; by default it is just a small 8px gap (invisible), and it widens into the blue button when a glider is in reach / carried (`.auxShown`, toggled in `updateUI`).
+- **Tap-only buttons:** new `addTap(el, handler)` helper (state.js). It fires only when the finger/mouse goes down AND comes up on the same button without sliding more than 12px (or off a button). All 27 old `touchstart` + `mousedown` pairs in ui.js / input.js (menu, close buttons, shop, settings, bag, pickers, Buy Bee, feeder, garden action, regions, achievements/tasks lists...) use it. The GIVE / PLAY hold-to-feed buttons are unchanged (they are hold buttons), WHISTLE and the region cards already used `click`.
+- **White border removed** from every region (main.js), and the player now walks right up to all four edges (Player padding 20 -> 0); pets wander to within 4px of the edges (was 40); food / water / flower spawns start 26px from the edge (was 40-50).
+- **Tracked task:** plain text only (e.g. "Easter 0/60") in the top-left of the play area — no box, border or fill; a dark text-shadow keeps it readable.
+- `style.css?v=2.8`.
+
 ### 2026-10-18 (64) — Bottom bar polish: no map icon, bigger text, colour per button
 
 **Changed, at the user's request** (remove the map icon over REGIONS, less bland buttons, larger font, some colour).

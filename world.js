@@ -212,8 +212,8 @@ function spawnBambooBatch() {
     bambooItems = [];
     for (let i = 0; i < 10; i++) {
         bambooItems.push({
-            x: 40 + Math.random() * (canvas.width - 80),
-            y: 40 + Math.random() * (canvas.height - 80)
+            x: 26 + Math.random() * (canvas.width - 52),
+            y: 26 + Math.random() * (canvas.height - 52)
         });
     }
 }
@@ -247,8 +247,8 @@ function updateBambooFever(dt) {
                 // Keep a steady supply on the map so there's always something to chase
                 // for the whole 30s instead of it petering out early.
                 bambooItems.push({
-                    x: 40 + Math.random() * (canvas.width - 80),
-                    y: 40 + Math.random() * (canvas.height - 80)
+                    x: 26 + Math.random() * (canvas.width - 52),
+                    y: 26 + Math.random() * (canvas.height - 52)
                 });
             }
         }
@@ -1759,7 +1759,6 @@ function checkCollisions() {
 
     // 5. 🐝 Dynamic Proximity Distance Hive Button Trigger
     const spawnBeeBtn = document.getElementById('spawnBeeBtn');
-    const hiveHoneyLabel = document.getElementById('hiveHoneyLabel');
     if (currentRegion === 4 && typeof region4Hive !== 'undefined' && region4Hive && spawnBeeBtn) {
         let hx = region4Hive.x;
         let hy = region4Hive.y;
@@ -1773,20 +1772,11 @@ function checkCollisions() {
             } else {
                 spawnBeeBtn.style.display = 'none';
             }
-            // Shows the hive's currently-stored (uncollected) honey whenever the player
-            // is close enough to collect it with GIVE — see executeContinuousFeed() in
-            // input.js for the actual collection.
-            if (hiveHoneyLabel) {
-                hiveHoneyLabel.style.display = 'block';
-                hiveHoneyLabel.textContent = `🍯 Hive: ${region4Hive.honey}` + (region4Hive.honey > 0 ? ' — press COLLECT' : '');
-            }
         } else {
             spawnBeeBtn.style.display = 'none';
-            if (hiveHoneyLabel) hiveHoneyLabel.style.display = 'none';
         }
     } else {
         if (spawnBeeBtn) spawnBeeBtn.style.display = 'none';
-        if (hiveHoneyLabel) hiveHoneyLabel.style.display = 'none';
     }
 
 }

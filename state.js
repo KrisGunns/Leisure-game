@@ -14,6 +14,49 @@ const bagCoins = document.getElementById('bagCoins');
 const bagEggs = document.getElementById('bagEggs');
 const bagBananas = document.getElementById('bagBananas');
 const bagDiamonds = document.getElementById('bagDiamonds');
+// TAP helper: runs `handler` only for a real tap — finger/mouse goes down on the element AND comes up on it
+// without sliding away (> 12px of movement, or releasing outside a button, cancels it). Replaces the old
+// touchstart/mousedown pairs, which fired the moment a finger touched a button even if it then slid off.
+function addTap(el, handler) {
+    if (!el) return;
+    const TAP_SLOP = 12;
+    let start = null, lastTouchEnd = 0;
+    const releasedOk = (x, y) => {
+        if (!start) return false;
+        const moved = Math.hypot(x - start.x, y - start.y);
+        if (moved > TAP_SLOP) return false;
+        if (el.tagName === 'BUTTON') {
+            const r = el.getBoundingClientRect();
+            if (x < r.left - 4 || x > r.right + 4 || y < r.top - 4 || y > r.bottom + 4) return false;
+        }
+        return true;
+    };
+    el.addEventListener('touchstart', (e) => {
+        const t = e.changedTouches[0];
+        start = { id: t.identifier, x: t.clientX, y: t.clientY };
+    }, { passive: true });
+    el.addEventListener('touchend', (e) => {
+        lastTouchEnd = Date.now();
+        if (!start) return;
+        let t = null;
+        for (let i = 0; i < e.changedTouches.length; i++) if (e.changedTouches[i].identifier === start.id) t = e.changedTouches[i];
+        const ok = t && releasedOk(t.clientX, t.clientY);
+        start = null;
+        if (ok) handler(e);
+    }, { passive: false });
+    el.addEventListener('touchcancel', () => { start = null; });
+    el.addEventListener('mousedown', (e) => {
+        if (Date.now() - lastTouchEnd < 700) return;   // emulated mouse event after a touch
+        start = { x: e.clientX, y: e.clientY };
+    });
+    el.addEventListener('mouseup', (e) => {
+        if (Date.now() - lastTouchEnd < 700) return;
+        const ok = releasedOk(e.clientX, e.clientY);
+        start = null;
+        if (ok) handler(e);
+    });
+}
+
 const regionSelector = document.getElementById('regionSelector');
 const whistleBtn = document.getElementById('whistleBtn');
 

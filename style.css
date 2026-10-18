@@ -194,22 +194,34 @@ body, html {
 }
 /* The main action button: GIVE / PLAY / COLLECT / TAKE / DROP. Orange, a little wider and taller. */
 #interactBtn {
-    flex: 1.35 1 0;
-    height: 58px;
-    font-size: 17px;
+    height: 52px;
+    font-size: 15px;
     background: linear-gradient(180deg, #ffb347, #e8731a);
     border-color: #ffe0b0;
     color: #fff;
 }
-/* Auxiliary (blue) GIVE / PLAY button: shown only while #interactBtn is busy being TAKE / DROP for a
-   sugar glider, so feeding stays reachable. Same press behaviour as the main button (see input.js). */
+/* Auxiliary (blue) GIVE / PLAY button, sitting between REGIONS and the main button. By default it is just a
+   small invisible gap; when a sugar glider is in reach (main button = TAKE / DROP) the gap widens into the
+   blue GIVE button so feeding stays reachable. Toggled with .auxShown by updateUI() (ui.js). */
 #giveAuxBtn {
-    flex: 1.1 1 0;
-    height: 54px;
+    flex: 0 0 8px;
+    visibility: hidden;
+    padding: 0;
+    border-width: 0;
+    box-shadow: none;
     font-size: 14px;
+    height: 52px;
     background: linear-gradient(180deg, #4fb3ff, #1f78c8);
     border-color: #bfe3ff;
     color: #fff;
+}
+#giveAuxBtn.auxShown {
+    flex: 1 1 0;
+    visibility: visible;
+    padding: 0 2px;
+    border: 2px solid #bfe3ff;
+    border-bottom-width: 4px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35);
 }
 #whistleBtn {
     font-size: 12px;
@@ -280,20 +292,7 @@ body, html {
 }
 #feederBtn:active { background: #ffd07a; }
 
-#hiveHoneyLabel {
-    position: absolute;
-    bottom: 58px;          /* info line stacked above the Buy Bee button; NOT a button any more (GIVE collects) */
-    pointer-events: none;
-    right: 20px;
-    left: auto !important;
-    width: 150px;
-    padding: 6px 6px;
-    font-size: 10px;
-    font-weight: bold;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-    z-index: 100; /* Same fix/reasoning as #spawnBeeBtn above. */
-}
+
 
 .utilBtn {
     position: absolute;
@@ -1103,14 +1102,14 @@ body, html {
     position: absolute;
     top: 8px;
     left: 8px;
-    max-width: 150px;
-    padding: 5px 8px;
-    background: rgba(0, 0, 0, 0.55);
-    border: 2px solid rgba(255, 255, 255, 0.7);
-    border-radius: 4px;
+    max-width: 190px;
+    padding: 0;
+    background: none;
+    border: none;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.9);
     color: #fff;
     font-family: monospace;
-    font-size: 11px;
+    font-size: 13px;
     font-weight: bold;
     line-height: 1.3;
     pointer-events: none;

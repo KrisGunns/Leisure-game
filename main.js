@@ -239,9 +239,6 @@ function runGameFrame(timestamp) {
             drawGardenPlots();
         }
 
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 4;
-        ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
 
         // --- CORE LOGIC STEP PHYSICS HANDLERS ---
         processSpawns(dt);

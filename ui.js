@@ -60,8 +60,7 @@ function showWhistlePicker(pets) {
             }
             showWhistlePicker(pets); // rebuild so the label/color reflect the new state
         };
-        btn.addEventListener('touchstart', toggle, { passive: false });
-        btn.addEventListener('mousedown', toggle);
+        addTap(btn, toggle);
         picker.appendChild(btn);
     });
 
@@ -72,8 +71,7 @@ function showWhistlePicker(pets) {
         font-family: monospace; background: #555; color: #fff; margin-top: 4px;
     `;
     const closeHandler = (e) => { if (e) e.preventDefault(); hideWhistlePicker(); };
-    closeBtn.addEventListener('touchstart', closeHandler, { passive: false });
-    closeBtn.addEventListener('mousedown', closeHandler);
+    addTap(closeBtn, closeHandler);
     picker.appendChild(closeBtn);
 
     picker.style.display = 'flex';
@@ -143,8 +141,7 @@ function showSchrodingerPicker(cat) {
             background: ${color}; color: #fff;
         `;
         const handler = resolve(value);
-        btn.addEventListener('touchstart', handler, { passive: false });
-        btn.addEventListener('mousedown', handler);
+        addTap(btn, handler);
         picker.appendChild(btn);
     });
 
@@ -155,8 +152,7 @@ function showSchrodingerPicker(cat) {
         font-family: monospace; background: #555; color: #fff; margin-top: 4px;
     `;
     const closeHandler = (e) => { if (e) e.preventDefault(); hideSchrodingerPicker(); };
-    closeBtn.addEventListener('touchstart', closeHandler, { passive: false });
-    closeBtn.addEventListener('mousedown', closeHandler);
+    addTap(closeBtn, closeHandler);
     picker.appendChild(closeBtn);
 
     picker.style.display = 'flex';
@@ -219,8 +215,7 @@ function showBambooFeverPicker(panda) {
             background: ${color}; color: #fff;
         `;
         const handler = resolve(value);
-        btn.addEventListener('touchstart', handler, { passive: false });
-        btn.addEventListener('mousedown', handler);
+        addTap(btn, handler);
         picker.appendChild(btn);
     });
 
@@ -442,8 +437,7 @@ function showPetDetail(pet) {
         font-family: monospace; font-weight: bold;
     `;
     const closeHandler = (e) => { if (e) e.preventDefault(); hidePetDetail(); };
-    closeBtn.addEventListener('touchstart', closeHandler, { passive: false });
-    closeBtn.addEventListener('mousedown', closeHandler);
+    addTap(closeBtn, closeHandler);
     card.appendChild(closeBtn);
 
     let title = document.createElement('h2');
@@ -592,8 +586,8 @@ function updateUI() {
 
         const giveAuxBtn = document.getElementById('giveAuxBtn');
         if (giveAuxBtn) {
-            giveAuxBtn.style.display = (gliderMode === 'normal') ? 'none' : 'flex';
-            giveAuxBtn.textContent = giveLabel;
+            giveAuxBtn.classList.toggle('auxShown', gliderMode !== 'normal');
+            giveAuxBtn.textContent = (gliderMode === 'normal') ? '' : giveLabel;
         }
     }
 
@@ -1313,12 +1307,10 @@ const handleCloseMenu = (e) => {
 };
 
 if (openMenuBtn) {
-    openMenuBtn.addEventListener('touchstart', handleOpenMenu, { passive: false });
-    openMenuBtn.addEventListener('mousedown', handleOpenMenu);
+    addTap(openMenuBtn, handleOpenMenu);
 }
 if (menuClose) {
-    menuClose.addEventListener('touchstart', handleCloseMenu, { passive: false });
-    menuClose.addEventListener('mousedown', handleCloseMenu);
+    addTap(menuClose, handleCloseMenu);
 }
 
 const handleOpenCodex = (e) => {
@@ -1333,12 +1325,10 @@ const handleCloseCodex = (e) => {
 };
 
 if (openCodexBtn) {
-    openCodexBtn.addEventListener('touchstart', handleOpenCodex, { passive: false });
-    openCodexBtn.addEventListener('mousedown', handleOpenCodex);
+    addTap(openCodexBtn, handleOpenCodex);
 }
 if (codexClose) {
-    codexClose.addEventListener('touchstart', handleCloseCodex, { passive: false });
-    codexClose.addEventListener('mousedown', handleCloseCodex);
+    addTap(codexClose, handleCloseCodex);
 }
 
 const characterOverlay = document.getElementById('characterOverlay');
@@ -1492,12 +1482,10 @@ const handleCloseCharacter = (e) => {
 };
 
 if (openCharacterBtn) {
-    openCharacterBtn.addEventListener('touchstart', handleOpenCharacter, { passive: false });
-    openCharacterBtn.addEventListener('mousedown', handleOpenCharacter);
+    addTap(openCharacterBtn, handleOpenCharacter);
 }
 if (characterClose) {
-    characterClose.addEventListener('touchstart', handleCloseCharacter, { passive: false });
-    characterClose.addEventListener('mousedown', handleCloseCharacter);
+    addTap(characterClose, handleCloseCharacter);
 }
 
 // Renaming the character works the same way as renaming a pet (bindPetRename), just
@@ -1782,12 +1770,10 @@ const handleCloseShop = (e) => {
 };
 
 if (openShopBtn) {
-    openShopBtn.addEventListener('touchstart', handleOpenShop, { passive: false });
-    openShopBtn.addEventListener('mousedown', handleOpenShop);
+    addTap(openShopBtn, handleOpenShop);
 }
 if (shopClose) {
-    shopClose.addEventListener('touchstart', handleCloseShop, { passive: false });
-    shopClose.addEventListener('mousedown', handleCloseShop);
+    addTap(shopClose, handleCloseShop);
 }
 if (shopTabBuy) shopTabBuy.addEventListener('click', () => { shopTab = 'buy'; renderShop(); });
 if (shopTabSell) shopTabSell.addEventListener('click', () => { shopTab = 'sell'; renderShop(); });
@@ -1983,12 +1969,10 @@ const handleClosePerkTree = (e) => {
 };
 
 if (openPerkTreeBtn) {
-    openPerkTreeBtn.addEventListener('touchstart', handleOpenPerkTree, { passive: false });
-    openPerkTreeBtn.addEventListener('mousedown', handleOpenPerkTree);
+    addTap(openPerkTreeBtn, handleOpenPerkTree);
 }
 if (perkTreeClose) {
-    perkTreeClose.addEventListener('touchstart', handleClosePerkTree, { passive: false });
-    perkTreeClose.addEventListener('mousedown', handleClosePerkTree);
+    addTap(perkTreeClose, handleClosePerkTree);
 }
 
 const settingsBtn = document.getElementById('settingsBtn');
@@ -2011,8 +1995,7 @@ const handleSettings = (e) => {
 };
 
 if (settingsBtn) {
-    settingsBtn.addEventListener('touchstart', handleSettings, { passive: false });
-    settingsBtn.addEventListener('mousedown', handleSettings);
+    addTap(settingsBtn, handleSettings);
 }
 
 if (closeDev && devPanel) {
@@ -2263,12 +2246,10 @@ const handleCloseBag = (e) => {
 
 // Bind touchstart and mousedown to make it feel highly responsive on Android touch devices
 if (openBagBtn) {
-    openBagBtn.addEventListener('touchstart', handleOpenBag, { passive: false });
-    openBagBtn.addEventListener('mousedown', handleOpenBag);
+    addTap(openBagBtn, handleOpenBag);
 }
 if (bagClose) {
-    bagClose.addEventListener('touchstart', handleCloseBag, { passive: false });
-    bagClose.addEventListener('mousedown', handleCloseBag);
+    addTap(bagClose, handleCloseBag);
 }
 
 if (spawnBeeBtn) {
@@ -2316,8 +2297,7 @@ if (spawnBeeBtn) {
         }
     };
 
-    spawnBeeBtn.addEventListener('touchstart', handlePurchaseBee, { passive: false });
-    spawnBeeBtn.addEventListener('mousedown', handlePurchaseBee);
+    addTap(spawnBeeBtn, handlePurchaseBee);
 }
 
 // (The hive honey label is info only now: honey is collected with the bottom bar's GIVE / COLLECT button.)
@@ -2519,8 +2499,7 @@ function refreshAchievementScreens() {
 
 function bindOverlayButton(el, handler) {
     if (!el) return;
-    el.addEventListener('touchstart', handler, { passive: false });
-    el.addEventListener('mousedown', handler);
+    addTap(el, handler);
 }
 bindOverlayButton(document.getElementById('openAchievementsBtn'), (e) => {
     if (e) e.preventDefault();
@@ -2551,8 +2530,7 @@ function handleAchievementClaim(e) {
     if (claimAchievementTier(box.getAttribute('data-claim')) > 0) renderAchievementsScreen(true);
 }
 if (achievementsList) {
-    achievementsList.addEventListener('touchstart', handleAchievementClaim, { passive: false });
-    achievementsList.addEventListener('mousedown', handleAchievementClaim);
+    addTap(achievementsList, handleAchievementClaim);
 }
 
 
@@ -2668,8 +2646,7 @@ function handleTaskTrack(e) {
     refreshTrackedTaskBox();
 }
 if (tasksList) {
-    tasksList.addEventListener('touchstart', handleTaskTrack, { passive: false });
-    tasksList.addEventListener('mousedown', handleTaskTrack);
+    addTap(tasksList, handleTaskTrack);
 }
 
 
@@ -2679,16 +2656,16 @@ if (tasksList) {
 // lock. Tap an owned region to travel there (switchToRegion in input.js); tap a locked one for a hint.
 // ============================================================
 const REGION_CARDS = [
-    { n: 1,  name: 'Region 1',  sub: 'Grassy Meadow',   pets: '🐕🐈' },
-    { n: 2,  name: 'Region 2',  sub: 'Sandy Plains',    pets: '🐘' },
-    { n: 3,  name: 'Region 3',  sub: 'Dark Woodland',   pets: '🐿️🐔🐦' },
-    { n: 4,  name: 'Region 4',  sub: 'Beehive',         pets: '🐝' },
-    { n: 5,  name: 'Region 5',  sub: 'Bear Lake',       pets: '🐻' },
-    { n: 6,  name: 'Region 6',  sub: 'Pig Sty',         pets: '🐷' },
-    { n: 7,  name: 'Region 7',  sub: 'Panda Habitat',   pets: '🐼' },
-    { n: 8,  name: 'Region 8',  sub: 'Monkey Jungle',   pets: '🐵' },
-    { n: 9,  name: 'Region 9',  sub: 'Bedroom',         pets: '🎀' },
-    { n: 10, name: 'Region 10', sub: 'Flower Garden',   pets: '🌸' }
+    { n: 1,  name: 'Region 1',  sub: 'Front Lawn' },
+    { n: 2,  name: 'Region 2',  sub: 'Safari' },
+    { n: 3,  name: 'Region 3',  sub: 'Backyard' },
+    { n: 4,  name: 'Region 4',  sub: 'Bee Yard' },
+    { n: 5,  name: 'Region 5',  sub: 'Lake' },
+    { n: 6,  name: 'Region 6',  sub: 'Pig Sty' },
+    { n: 7,  name: 'Region 7',  sub: 'Bamboo Forest' },
+    { n: 8,  name: 'Region 8',  sub: 'Jungle' },
+    { n: 9,  name: 'Region 9',  sub: 'Bedroom' },
+    { n: 10, name: 'Region 10', sub: 'Flower Garden' }
 ];
 
 // Draws one card's art onto `cv` (drawn at 2x for sharpness). Simple scenes in the same palette as the
@@ -2712,35 +2689,29 @@ function drawRegionPreview(cv, n, locked) {
     }
     if (n === 1) {
         rect('#27ae60', 0, 0, W, H); dots('#2ecc71', 40, 22, 4, 10);
-        emoji('🐕', 120, 52, 30); emoji('🐈', 270, 58, 28);
     } else if (n === 2) {
         rect('#f1c40f', 0, 0, W, H); dots('#e67e22', 38, 20, 5, 5);
-        emoji('🐘', 140, 50, 38); emoji('🐘', 270, 56, 32);
     } else if (n === 3) {
         rect('#1e824c', 0, 0, W, H); dots('#3e2723', 44, 24, 7, 4);
         tree(40, 22, true); tree(365, 28, true); tree(200, 18, false);
-        emoji('🐿️', 100, 60, 26); emoji('🐔', 215, 62, 26); emoji('🐦', 305, 52, 22);
     } else if (n === 4) {
         rect('#6c5ce7', 0, 0, W, H); dots('#a29bfe', 42, 22, 4, 4);
         circ('#f39c12', 205, 44, 24); rect('#d35400', 191, 50, 28, 7); circ('#2c3e50', 205, 52, 5);
-        emoji('🐝', 140, 28, 20); emoji('🐝', 270, 30, 18); emoji('🌼', 70, 60, 20); emoji('🌼', 345, 62, 20);
+        [[70,60],[345,62],[110,30],[300,26]].forEach(p => { circ('#ffeb3b', p[0], p[1], 6); circ('#fff', p[0]-9, p[1], 4); circ('#fff', p[0]+9, p[1], 4); circ('#fff', p[0], p[1]-9, 4); circ('#fff', p[0], p[1]+9, 4); });
     } else if (n === 5) {
         rect('#013220', 0, 0, W, H);
         for (let x = 30; x < W; x += 90) tree(x, 12, true);
         rect('#2980b9', 40, 50, W - 80, 40); g.strokeStyle = '#3498db'; g.lineWidth = 3; g.strokeRect(40, 50, W - 80, 40);
-        emoji('🐻', 120, 40, 30); emoji('🐟', 270, 70, 18); emoji('🐟', 210, 78, 14);
     } else if (n === 6) {
         rect('#c9a66b', 0, 0, W, H); dots('#b8905a', 32, 20, 3, 9);
         for (let x = 14; x < W - 10; x += 34) { rect('#8b5a2b', x, 6, 8, 10); rect('#8b5a2b', x, H - 16, 8, 10); }
         ell('#5c4326', 205, 50, 62, 22); ell('rgba(0,0,0,0.15)', 185, 44, 18, 8);
-        emoji('🐷', 205, 46, 30);
     } else if (n === 7) {
         rect('#356a3d', 0, 0, W, H); dots('#3f7a48', 40, 22, 4, 9);
         [30, 55, 350, 378, 95].forEach((x, i) => {
             const top = 8 + (i % 2) * 8;
             rect('#8bc34a', x - 3, top, 6, 70); rect('#558b2f', x - 3, top + 14, 6, 4); rect('#558b2f', x - 3, top + 38, 6, 4); rect('#558b2f', x - 3, top + 60, 6, 4);
         });
-        emoji('🐼', 205, 50, 36);
     } else if (n === 8) {
         rect('#1b4d2e', 0, 0, W, H); dots('#225c38', 36, 20, 4, 9);
         [60, 205, 350].forEach(x => {
@@ -2748,20 +2719,17 @@ function drawRegionPreview(cv, n, locked) {
             [-14, 0, 14].forEach(o => { g.beginPath(); g.moveTo(x + o, 20); g.quadraticCurveTo(x + o + 5, 50, x + o, 80); g.stroke(); });
             rect('#5d4037', x - 5, 18, 10, 20); circ('#2e7d32', x, 12, 22);
         });
-        emoji('🐵', 135, 56, 28); emoji('🍌', 275, 62, 20);
     } else if (n === 9) {
         rect('#b98b5e', 0, 0, W, H); rect('#d8c3a5', 0, 0, W, 30);
         rect('#cfe8ff', 40, 5, 44, 22); g.strokeStyle = '#8a6a3a'; g.lineWidth = 2; g.strokeRect(40, 5, 44, 22);
         rect('#e8a0b8', 280, 40, 80, 40); rect('#fff', 280, 40, 80, 12);
         ell('rgba(200,90,90,0.75)', 160, 66, 56, 18);
-        emoji('🎀', 160, 60, 26); emoji('🌙', 62, 16, 12);
     } else if (n === 10) {
         rect('#7bc96f', 0, 0, W, H); rect('#3f8f3a', 0, 0, W, 14);
         const cols = ['#ff7eb6', '#ffd54a', '#b39ddb', '#ffffff', '#ff8a65'];
         for (let i = 0; i < 46; i++) circ(cols[i % 5], 10 + (i * 53) % (W - 20), 22 + (i * 37) % 66, 3.5);
         rect('#8d6e63', 120, 36, 170, 44);
         for (let i = 0; i < 6; i++) { circ('#5e8de0', 145 + i * 28, 52, 8); circ('#7aa5f0', 145 + i * 28, 52, 4); }
-        emoji('🌸', 70, 60, 22); emoji('🌺', 340, 58, 22);
     }
 }
 
@@ -2782,17 +2750,17 @@ function buildRegionsWindow() {
         const tag = document.createElement('div');
         tag.className = 'regionTag';
         if (owned) {
-            tag.innerHTML = `${info.name}<small>${info.sub} ${info.pets}</small>`;
+            tag.innerHTML = `${info.name}<small>${info.sub}</small>`;
         } else {
             const u = (typeof getUnlockable === 'function') ? getUnlockable('region_' + info.n) : null;
-            tag.innerHTML = `🔒 ${info.name}<small>${u ? u.cost + ' 🪙 in the Shop' : 'Locked'}</small>`;
+            tag.innerHTML = `${info.name}<small>${u ? u.cost + ' coins in the Shop' : 'Locked'}</small>`;
         }
         card.appendChild(tag);
 
         if (owned && info.n === currentRegion) {
             const here = document.createElement('div');
             here.className = 'regionHere';
-            here.textContent = '📍 HERE';
+            here.textContent = 'HERE';
             card.appendChild(here);
         }
 
@@ -2819,11 +2787,9 @@ const openRegionsBtn = document.getElementById('openRegionsBtn');
 const regionsCloseBtn = document.getElementById('regionsClose');
 if (openRegionsBtn) {
     const h = (e) => { if (e) e.preventDefault(); openRegionsWindow(); };
-    openRegionsBtn.addEventListener('touchstart', h, { passive: false });
-    openRegionsBtn.addEventListener('mousedown', h);
+    addTap(openRegionsBtn, h);
 }
 if (regionsCloseBtn) {
     const h = (e) => { if (e) e.preventDefault(); closeRegionsWindow(); };
-    regionsCloseBtn.addEventListener('touchstart', h, { passive: false });
-    regionsCloseBtn.addEventListener('mousedown', h);
+    addTap(regionsCloseBtn, h);
 }

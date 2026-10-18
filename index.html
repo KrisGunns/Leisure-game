@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Just a little leisure</title>
-    <link rel="stylesheet" href="style.css?v=2.7">
+    <link rel="stylesheet" href="style.css?v=2.8">
 </head>
 <body>
     <div id="gameContainer">
@@ -45,7 +45,6 @@
     
     <!-- FIXED: Removed inline positioning coordinates so it maps cleanly to your right-side style.css parameters! -->
     <button id="spawnBeeBtn" class="utilBtn" style="display: none; background: #fbbf24; border-color: #f59e0b; color: #000;">🐝 Buy Bee (30🪙)</button>
-    <button id="hiveHoneyLabel" class="utilBtn" style="display: none; background: #fff3cd; border-color: #f59e0b; color: #7a5c00; text-align: center; cursor: pointer;"></button>
     
     <!-- Region 10 (flower garden): Buy Plot / Fertilize / Water. Shown by world.js while the player stands at a plot. -->
     <!-- Feeder box: deposit food when standing next to it (world.js updateFeederButton). -->
@@ -420,8 +419,8 @@
         <div id="bottomBar">
             <button id="openMenuBtn" class="barBtn">MENU</button>
             <button id="openRegionsBtn" class="barBtn">REGIONS</button>
+            <div id="giveAuxBtn" class="barBtn">GIVE</div>
             <div id="interactBtn" class="barBtn">GIVE</div>
-            <div id="giveAuxBtn" class="barBtn" style="display: none;">GIVE</div>
             <button id="whistleBtn" class="barBtn">WHISTLE</button>
         </div>
 
@@ -436,7 +435,7 @@
              with a little art preview; locked regions are black with a lock. Cards are built by ui.js. -->
         <div id="regionsOverlay" style="display: none;">
             <div id="regionsHeader">
-                <h2>🗺️ REGIONS</h2>
+                <h2>REGIONS</h2>
                 <button id="regionsClose">X</button>
             </div>
             <div id="regionsList"></div>

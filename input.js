@@ -247,8 +247,7 @@ if (feederBtnElement) {
         if (e) e.preventDefault();
         depositFeederFood();
     };
-    feederBtnElement.addEventListener('touchstart', onFeederDeposit, { passive: false });
-    feederBtnElement.addEventListener('mousedown', onFeederDeposit);
+    addTap(feederBtnElement, onFeederDeposit);
 }
 const plotActionBtnElement = document.getElementById('plotActionBtn');
 if (plotActionBtnElement) {
@@ -256,8 +255,7 @@ if (plotActionBtnElement) {
         if (e) e.preventDefault();
         handleGardenAction();
     };
-    plotActionBtnElement.addEventListener('touchstart', onPlotAction, { passive: false });
-    plotActionBtnElement.addEventListener('mousedown', onPlotAction);
+    addTap(plotActionBtnElement, onPlotAction);
 }
 
 // INPUT HANDLER REGION
