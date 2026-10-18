@@ -150,7 +150,7 @@ same size."):
 
 **Changed, at the user's request** (remove the map icon over REGIONS, less bland buttons, larger font, some colour).
 
-- **REGIONS** is text only (🗺️ removed from the button; the Regions window header keeps its icon). ☰ stays on MENU.
+- **REGIONS** is text only (🗺️ removed from the button; the Regions window header keeps its icon). The ☰ (three lines) over MENU was removed too — MENU is text only (the Menu window title keeps its icon).
 - **Bottom bar buttons (style.css `.barBtn`):** larger bold text (button labels 12-17px, MENU/REGIONS/WHISTLE/GIVE), glossy gradients with a light rim and a thicker bottom edge that "presses" on tap. Colours: MENU purple, REGIONS teal, GIVE/PLAY/COLLECT/TAKE/DROP orange (biggest), blue glider-GIVE, WHISTLE green. `style.css?v=2.6`.
 - Checked at 360x640 and 390x800, including the 5-button glider layout (TAKE + blue GIVE) — REGIONS / WHISTLE sizes were tuned so nothing clips.
 
