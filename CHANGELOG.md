@@ -148,6 +148,10 @@ same size."):
 
 ---
 
+### 2026-10-19 (70) — APK wrapper: stop the page itself from pulling to refresh
+
+**Reported on a real phone** (APK built with WebIntoApp): the joystick misbehaves when dragging down, the screen acts like it is about to refresh, and the wrapper shows its own title bar ("JALL" + icon) above the game's top bar. Only the first part can be helped from game code: `html, body` now have `overscroll-behavior: none`, `-webkit-tap-highlight-color: transparent` and `-webkit-touch-callout: none` (style.css), `style.css?v=2.9`. The play area already had `touch-action: none`. **Not fixable from here:** the title bar and, most likely, the pull-to-refresh are the wrapper app's own native UI (a toolbar and a swipe-to-refresh layer around the WebView), so they need either a setting in the wrapper or a different packaging tool. Recommendation given to the user: Capacitor (bundles the game files, no native toolbar, no pull-to-refresh, true fullscreen), or PWABuilder / Trusted Web Activity if the hosted copy is kept (needs a manifest, service worker and a Digital Asset Links file served from the site's root). The in-game ☁️ Account cloud save can carry progress between the old and new APK.
+
 ### 2026-10-19 (69) — Deposit fills the feeder instantly
 
 **Changed, at the user's request** (corrects entry 68's timed deposit). `depositFeederTick()` (world.js): if the player carries at least as much food as the feeder has room for, a single press fills it to the maximum at once. If the player is short, the food they have still goes in gradually while GIVE/DEPOSIT is held (the 1% / 3% / 6% per-tick ramp from entry 68), so a partial deposit is still possible. Toasts ("feeder is full", "no food") are unchanged.
