@@ -1217,9 +1217,9 @@ function isNearFeeder() {
 }
 
 // Depositing is done with the GIVE button: next to a feeder it reads DEPOSIT (ui.js), and holding it calls
-// this once per 100ms tick (executeContinuousFeed in input.js). Same hold-to-ramp idea as levelling a pet:
-// each tick moves a fraction of the feeder's capacity, speeding up the longer the button is held, so even an
-// empty 5000-food feeder fills in about 2.6 seconds (never more than 3).
+// this once per 100ms tick (executeContinuousFeed in input.js). If the player carries enough food to fill the
+// box, one press fills it to the brim instantly. If not, the food they have goes in gradually (a hold-to-ramp
+// like levelling a pet: a fraction of the capacity per tick, speeding up the longer the button is held).
 function getDepositFraction() {
     if (feedHoldCounter > 15) return 0.06;   // after 1.5s
     if (feedHoldCounter > 5) return 0.03;    // after 0.5s
@@ -1232,7 +1232,11 @@ function depositFeederTick() {
     const room = cap - (feederFood[currentRegion] || 0);
     if (room <= 0) { if (first) showInfoToast('🍖 The feeder is full!'); return; }
     if (inventory.food < 1) { if (first) showInfoToast('🍪 You have no food to deposit.'); return; }
-    const amount = Math.min(room, inventory.food, Math.max(1, Math.ceil(cap * getDepositFraction())));
+    // Enough food to fill the box completely? Then it fills INSTANTLY, in one go. Otherwise the player is
+    // short, so what they carry is put in gradually while the button is held (the ramp below).
+    const amount = (inventory.food >= room)
+        ? room
+        : Math.min(inventory.food, Math.max(1, Math.ceil(cap * getDepositFraction())));
     inventory.food -= amount;
     feederFood[currentRegion] = (feederFood[currentRegion] || 0) + amount;
     if (amount >= room || inventory.food < 1) saveGameProgress();   // finished: save (otherwise the autosave does)

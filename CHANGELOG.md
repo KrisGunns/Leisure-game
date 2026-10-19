@@ -148,6 +148,10 @@ same size."):
 
 ---
 
+### 2026-10-19 (69) — Deposit fills the feeder instantly
+
+**Changed, at the user's request** (corrects entry 68's timed deposit). `depositFeederTick()` (world.js): if the player carries at least as much food as the feeder has room for, a single press fills it to the maximum at once. If the player is short, the food they have still goes in gradually while GIVE/DEPOSIT is held (the 1% / 3% / 6% per-tick ramp from entry 68), so a partial deposit is still possible. Toasts ("feeder is full", "no food") are unchanged.
+
 ### 2026-10-18 (68) — GIVE button deposits into feeders; three feeder-capacity upgrades in the shop
 
 **Changed, at the user's request.**
