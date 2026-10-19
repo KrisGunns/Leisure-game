@@ -241,14 +241,6 @@ function haltFeedTimers() {
 }
 // Region 10 (flower garden): the Buy Plot / Fertilize / Water button that appears above the whistle
 // button while the player stands at a plot (shown/labelled by updateGardenButtons() in world.js).
-const feederBtnElement = document.getElementById('feederBtn');
-if (feederBtnElement) {
-    const onFeederDeposit = (e) => {
-        if (e) e.preventDefault();
-        depositFeederFood();
-    };
-    addTap(feederBtnElement, onFeederDeposit);
-}
 const plotActionBtnElement = document.getElementById('plotActionBtn');
 if (plotActionBtnElement) {
     const onPlotAction = (e) => {
@@ -460,6 +452,10 @@ function feedHunger(pet) {
 }
 
 function executeContinuousFeed() {
+    // Next to a feeder box GIVE reads DEPOSIT and puts the player's food into the box instead (world.js).
+    // The elephant's PLAY and the cat's box keep priority.
+    if (isNearFeeder() && !isElephantGameOn()) { depositFeederTick(); return; }
+
     let activePets = petsByRegion[currentRegion];
     if (!Array.isArray(activePets)) return;
 

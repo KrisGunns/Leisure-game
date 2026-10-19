@@ -148,6 +148,16 @@ same size."):
 
 ---
 
+### 2026-10-18 (68) — GIVE button deposits into feeders; three feeder-capacity upgrades in the shop
+
+**Changed, at the user's request.**
+
+- **No separate Deposit button any more** (the `#feederBtn` element, its CSS, its tap handler and `updateFeederButton()` are gone). Standing next to a feeder box (within 70px), the bottom bar's GIVE button reads **DEPOSIT** (ui.js label order: PLAY > COLLECT > DEPOSIT > GIVE; the blue aux GIVE shows it too while TAKE/DROP is busy). Holding it calls `depositFeederTick()` (world.js) from `executeContinuousFeed()` (input.js), which returns before the normal pet feeding — so next to a feeder GIVE deposits instead of feeding a pet; step away from the box to feed a pet by hand. The elephant's PLAY (`isElephantGameOn()`) and the cat's Schrödinger box keep priority.
+- **Same hold-to-ramp feel as levelling a pet:** every 100ms tick moves a fraction of the feeder's capacity (1% for the first 0.5s, 3% to 1.5s, then 6%), limited by the room left and the food you carry. Measured in a browser: an empty feeder fills in ~2.65s at every size (500, 1000, 2000, 5000), so never over 3s. "Feeder is full" / "no food to deposit" toasts show only on the first tick of a hold; the game saves when the deposit finishes.
+- **Feeder upgrades** (state.js `FEEDER_BASE_CAPACITY = 500`, `FEEDER_UPGRADES`, `feederUpgradeLevel`, `getFeederCapacity()`): Upgrade 1 500 -> 1000, Upgrade 2 1000 -> 2000, Upgrade 3 2000 -> 5000, for ALL feeder boxes. They are bought in order, once each, on the shop's **Buy** tab under the garden supplies (📦 rows; a later upgrade shows "🔒 Buy Feeder Upgrade N first"). **Prices are my placeholders — 1500 / 4000 / 10000 coins** (the user didn't give any; change `cost` in `FEEDER_UPGRADES`). They were NOT added to the balance simulator's shopping list, so the "everything bought by ~8-9h" figures are unchanged and don't include these.
+- Saved as `feederUpgrade` (0-3, sanitised on load); stored feeder food is now clamped to the current capacity on load; a save wipe resets the level. The feeder's label and fill bar use `getFeederCapacity()`.
+- Tutorial text (feeder tips) now says to hold GIVE / DEPOSIT and mentions the upgrades.
+
 ### 2026-10-18 (67) — Solid fences / tree line, honey count over the hive, Bedroom (Region 9) graphics overhaul
 
 **Changed, at the user's request.**

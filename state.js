@@ -68,8 +68,8 @@ const MAX_PET_LEVEL = 50;
 // HUNGER + FEEDER BOXES. A pet at MAX_PET_LEVEL gets a hunger bar (0-100) that drops 1 point every
 // HUNGER_SECONDS_PER_POINT seconds. At 0 the pet stops dead until it is fed (GIVE, or by walking to
 // the feeder). A point costs HUNGER_FOOD_PER_POINT food (200 food = a full bar). Every region except
-// Region 4 (bees) and Region 10 (garden) has a feeder box holding up to FEEDER_CAPACITY food; the
-// player deposits food into it and hungry pets (below HUNGER_SEEK_BELOW) walk over and eat from it.
+// Region 4 (bees) and Region 10 (garden) has a feeder box holding up to getFeederCapacity() food; the
+// player deposits food into it (hold GIVE, which reads DEPOSIT next to the box) and hungry pets (below HUNGER_SEEK_BELOW) walk over and eat from it.
 // Bees do not use hunger at all (their region has no feeder).
 // ------------------------------------------------------------------
 const HUNGER_MAX = 100;
@@ -82,7 +82,18 @@ const HUNGER_FREEZE_STATES = ['wander', 'idle', 'whistled', 'forage', 'travel'];
 const WELL_FED_MIN_HUNGER = 50;    // "well fed" = a max-level pet whose hunger bar is at least this
 const WELL_FED_SPEED_MULT = 1.10;  // ...moves 10% faster
 const HUNGER_EAT_RATE = 10;        // points restored per second while eating at the feeder
-const FEEDER_CAPACITY = 500;
+// Feeder capacity: 500 food to start with, raised for ALL feeder boxes by three upgrades bought on the
+// shop's Buy tab (in order). feederUpgradeLevel (0-3) is saved; getFeederCapacity() is what everything uses.
+const FEEDER_BASE_CAPACITY = 500;
+const FEEDER_UPGRADES = [
+    { capacity: 1000, cost: 1500 },    // upgrade 1: 500  -> 1000
+    { capacity: 2000, cost: 4000 },    // upgrade 2: 1000 -> 2000
+    { capacity: 5000, cost: 10000 }    // upgrade 3: 2000 -> 5000
+];
+let feederUpgradeLevel = 0;
+function getFeederCapacity() {
+    return feederUpgradeLevel > 0 ? FEEDER_UPGRADES[feederUpgradeLevel - 1].capacity : FEEDER_BASE_CAPACITY;
+}
 const FEEDER_REGIONS = [1, 2, 3, 5, 6, 7, 8, 9];
 // Tutorial tips the player has already been shown (id -> true); the HELP screen lists exactly these.
 const tutorialSeen = {};
@@ -1220,6 +1231,7 @@ function saveGameProgress() {
         stateMatrix.tutorialSeen = Object.keys(tutorialSeen).filter(id => tutorialSeen[id]);
         stateMatrix.feeders = {};
         FEEDER_REGIONS.forEach(r => { stateMatrix.feeders[r] = feederFood[r] || 0; });
+        stateMatrix.feederUpgrade = feederUpgradeLevel;
 
         // Region 10 garden plots (world.js). Timers are real-clock seconds and only run while the game
         // is open and in the foreground, so a closed app never makes a flower die.
@@ -1555,9 +1567,10 @@ function loadGameProgress() {
         });
 
         guard('feeders', () => {
+            feederUpgradeLevel = Math.floor(cleanSavedNum(stateMatrix.feederUpgrade, 0, FEEDER_UPGRADES.length, 0));
             FEEDER_REGIONS.forEach(r => {
                 const v = stateMatrix.feeders ? stateMatrix.feeders[r] : 0;
-                feederFood[r] = Math.floor(cleanSavedNum(v, 0, FEEDER_CAPACITY, 0));
+                feederFood[r] = Math.floor(cleanSavedNum(v, 0, getFeederCapacity(), 0));
             });
         });
 

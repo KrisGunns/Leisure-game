@@ -85,7 +85,6 @@ function runGameFrame(timestamp) {
         checkCollisions();
         checkTutorialTriggers();   // perk-point / fully-grown-pet tips (tutorial.js)
         updateGardenButtons();   // Buy Plot / Fertilize / Water button (Region 10)
-        updateFeederButton();    // Deposit Food button (feeder boxes)
         if (isGardenBoostActive()) {
             const gb = Math.round(countWateredBlooms() * GARDEN_BOOST * 100);
             drawPetText(`🌸 Garden bonus: +${gb}% coins · bees +${gb}% faster`, canvas.width / 2, 64, { size: 10, color: '#ffd1e8' });

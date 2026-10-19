@@ -1166,8 +1166,8 @@ resizeCanvas();
 
 // ------------------------------------------------------------------
 // FEEDER BOXES (every region except 4 and 10 — see HUNGER_* / FEEDER_* in state.js)
-// A wooden trough holding food (up to FEEDER_CAPACITY). The player deposits food with the Deposit
-// button (above WHISTLE) when standing next to it; hungry max-level pets walk over and eat from it
+// A wooden trough holding food (up to getFeederCapacity()). The player deposits food by holding GIVE
+// (which reads DEPOSIT) when standing next to it; hungry max-level pets walk over and eat from it
 // (Pet.hungerStep in entities.js).
 // ------------------------------------------------------------------
 function getFeederSpot(region) {
@@ -1180,7 +1180,7 @@ function hasFeeder(region) { return FEEDER_REGIONS.indexOf(region) !== -1; }
 function drawFeeder() {
     if (!hasFeeder(currentRegion)) return;
     const c = ctx, sp = getFeederSpot(currentRegion);
-    const food = feederFood[currentRegion] || 0, ratio = Math.min(1, food / FEEDER_CAPACITY);
+    const food = feederFood[currentRegion] || 0, ratio = Math.min(1, food / getFeederCapacity());
     const w = 64, h = 30, x = sp.x - w / 2, y = sp.y - h / 2;
     c.fillStyle = 'rgba(0,0,0,0.22)';
     c.beginPath(); c.ellipse(sp.x, y + h + 3, w / 2 + 4, 6, 0, 0, Math.PI * 2); c.fill();
@@ -1207,7 +1207,7 @@ function drawFeeder() {
     c.fillRect(x, y - 9, w, 5);
     c.fillStyle = ratio > 0.2 ? '#f1c40f' : '#e74c3c';
     c.fillRect(x, y - 9, w * ratio, 5);
-    drawPetText(`🍖 ${food}/${FEEDER_CAPACITY}`, sp.x, y - 13, { size: 9 });
+    drawPetText(`🍖 ${food}/${getFeederCapacity()}`, sp.x, y - 13, { size: 9 });
 }
 
 function isNearFeeder() {
@@ -1216,26 +1216,33 @@ function isNearFeeder() {
     return Math.hypot(player.x + player.size / 2 - sp.x, player.y + player.size / 2 - sp.y) < 70;
 }
 
-function updateFeederButton() {
-    const btn = document.getElementById('feederBtn');
-    if (!btn) return;
-    if (!isNearFeeder()) { if (btn.style.display !== 'none') btn.style.display = 'none'; return; }
-    if (btn.style.display !== 'block') btn.style.display = 'block';
-    const label = `Deposit Food (${feederFood[currentRegion] || 0}/${FEEDER_CAPACITY})`;
-    if (btn.textContent !== label) btn.textContent = label;
+// Depositing is done with the GIVE button: next to a feeder it reads DEPOSIT (ui.js), and holding it calls
+// this once per 100ms tick (executeContinuousFeed in input.js). Same hold-to-ramp idea as levelling a pet:
+// each tick moves a fraction of the feeder's capacity, speeding up the longer the button is held, so even an
+// empty 5000-food feeder fills in about 2.6 seconds (never more than 3).
+function getDepositFraction() {
+    if (feedHoldCounter > 15) return 0.06;   // after 1.5s
+    if (feedHoldCounter > 5) return 0.03;    // after 0.5s
+    return 0.01;
 }
-
-function depositFeederFood() {
+function depositFeederTick() {
     if (!isNearFeeder()) return;
-    const room = FEEDER_CAPACITY - (feederFood[currentRegion] || 0);
-    if (room <= 0) { showInfoToast('🍖 The feeder is full!'); return; }
-    if (inventory.food < 1) { showInfoToast('🍪 You have no food to deposit.'); return; }
-    const amount = Math.min(room, inventory.food);
+    const first = feedHoldCounter === 0;     // only the first tick of a hold may show a message
+    const cap = getFeederCapacity();
+    const room = cap - (feederFood[currentRegion] || 0);
+    if (room <= 0) { if (first) showInfoToast('🍖 The feeder is full!'); return; }
+    if (inventory.food < 1) { if (first) showInfoToast('🍪 You have no food to deposit.'); return; }
+    const amount = Math.min(room, inventory.food, Math.max(1, Math.ceil(cap * getDepositFraction())));
     inventory.food -= amount;
     feederFood[currentRegion] = (feederFood[currentRegion] || 0) + amount;
-    saveGameProgress();
+    if (amount >= room || inventory.food < 1) saveGameProgress();   // finished: save (otherwise the autosave does)
     updateUI();
-    updateFeederButton();
+}
+// Is a Region 2 elephant tag game running? (GIVE then reads PLAY and keeps that job.)
+function isElephantGameOn() {
+    if (currentRegion !== 2 || !Array.isArray(petsByRegion[2])) return false;
+    return petsByRegion[2].some(p => p.type === 'elephant' && isPetAvailable(p) && p.state &&
+        (p.state.startsWith('playing') || p.state === 'playing_wait_for_move'));
 }
 
 // ------------------------------------------------------------------

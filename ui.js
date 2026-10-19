@@ -570,7 +570,7 @@ function updateUI() {
             });
         }
 
-        const giveLabel = (activeSchrodingerCat || elephantPlaying) ? 'PLAY' : ((typeof hiveHoneyInReach === 'function' && hiveHoneyInReach()) ? 'COLLECT' : 'GIVE');
+        const giveLabel = (activeSchrodingerCat || elephantPlaying) ? 'PLAY' : ((typeof hiveHoneyInReach === 'function' && hiveHoneyInReach()) ? 'COLLECT' : (isNearFeeder() ? 'DEPOSIT' : 'GIVE'));
 
         // Sugar gliders (Region 9): when one is within reach the main button becomes TAKE, and
         // while the player is carrying one it becomes DROP (see getGliderButtonMode() in
@@ -1601,6 +1601,17 @@ function sellShopItem(item, amount) {
     updateUI();
 }
 
+function buyFeederUpgrade(n) {
+    const up = FEEDER_UPGRADES[n - 1];
+    if (!up || feederUpgradeLevel !== n - 1) return;     // must be bought in order, once
+    if (inventory.coins < up.cost) return;
+    inventory.coins -= up.cost;
+    feederUpgradeLevel = n;
+    saveGameProgress();
+    renderShop();
+    updateUI();
+}
+
 function buyShopUnlockable(u) {
     if (!buyUnlockable(u.id)) return;
     renderShop();
@@ -1696,6 +1707,21 @@ function renderShop() {
             let meta = (shortBy > 0 ? `🪙 ${item.cost} (need ${shortBy} more)` : `🪙 ${item.cost}`) + ` · you have ${have}`;
             let btn = makeShopButton('Buy', '', shortBy > 0, () => buyShopSupply(item));
             shopContent.appendChild(makeShopRow(item.icon, item.name, item.desc, meta, [btn], null));
+        });
+        // Feeder upgrades: bigger feeder boxes (all regions), bought in order.
+        FEEDER_UPGRADES.forEach((up, i) => {
+            const n = i + 1, owned = feederUpgradeLevel >= n, locked = feederUpgradeLevel < n - 1;
+            const prevCap = i === 0 ? FEEDER_BASE_CAPACITY : FEEDER_UPGRADES[i - 1].capacity;
+            const shortBy = up.cost - inventory.coins;
+            let meta;
+            if (owned) meta = '✅ Owned';
+            else if (locked) meta = `🔒 Buy Feeder Upgrade ${n - 1} first · 🪙 ${up.cost}`;
+            else meta = shortBy > 0 ? `🪙 ${up.cost} (need ${shortBy} more)` : `🪙 ${up.cost}`;
+            const btn = owned ? makeShopButton('Owned', 'shopActionBtnActive', true, null)
+                : makeShopButton('Buy', '', locked || shortBy > 0, () => buyFeederUpgrade(n));
+            const row = makeShopRow('📦', `Feeder Upgrade ${n}`, `Every feeder box holds ${up.capacity} food instead of ${prevCap}.`, meta, [btn], null);
+            if (owned) row.classList.add('shopRowOwned');
+            shopContent.appendChild(row);
         });
     } else if (shopTab === 'unlockables') {
         // Grouped by region. Regions 1-3 are open from the start, so they only get a plain
@@ -2064,6 +2090,7 @@ if (btnWipeSave) {
             inventory.soil = 0;
             inventory.seeds = 0;
             FEEDER_REGIONS.forEach(r => { feederFood[r] = 0; });
+            feederUpgradeLevel = 0;
             Object.keys(tutorialSeen).forEach(id => { delete tutorialSeen[id]; });
             if (typeof gardenPlots !== 'undefined') {
                 for (let gi = 0; gi < gardenPlots.length; gi++) gardenPlots[gi] = createGardenPlot();
