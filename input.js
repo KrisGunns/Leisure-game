@@ -363,12 +363,13 @@ window.addEventListener('keyup', (e) => {
 });
 
 // Fraction of a pet's remaining requirement given per 100ms tick, ramping up the longer
-// GIVE has been held (thresholds in ticks: 0.5s / 1.5s). Shared by the normal pets and the
-// sugar gliders so they always feed at the same speed.
+// GIVE has been held (thresholds in ticks: 0.2s / 0.5s). Shared by the normal pets and the
+// sugar gliders so they always feed at the same speed. Tuned so a full level bar fills in ~1 second of
+// holding (was ~3s): 3% x3 ticks, 7.5% x3 ticks, then 14% per tick -> 100% at tick 10 (1.0s).
 function getFeedFraction() {
-    if (feedHoldCounter > 15) return 0.0467;
-    if (feedHoldCounter > 5) return 0.025;
-    return 0.01;
+    if (feedHoldCounter > 5) return 0.14;
+    if (feedHoldCounter > 2) return 0.075;
+    return 0.03;
 }
 
 // Feeds the sugar gliders in reach — the ones in the region the player is in, plus the one
@@ -494,10 +495,10 @@ function executeContinuousFeed() {
             // rather than a fixed unit count per tick — a flat rate meant a pet needing
             // a few hundred food/water at high levels took far longer to fill than one
             // needing a handful. These fractions (of the total still needed) are tuned
-            // so holding at max speed fills the bar in ~3 seconds regardless of the
-            // pet's actual requirement: roughly 1% per tick for the first 0.5s, 2.5%
-            // per tick through 1.5s, then ~4.7% per tick from 1.5s onward (which is
-            // also the sustained "max speed" rate for any overflow into further levels).
+            // so holding fills the bar in ~1 second regardless of the
+            // pet's actual requirement: 3% per tick for the first 0.3s, 7.5% per tick
+            // through 0.6s, then 14% per tick (also the sustained "max speed" rate for
+            // any overflow into further levels). See getFeedFraction().
             let totalNeeded = (pet.type === 'bear' || pet.type === 'monkey') ? req : (req.food + req.water);
             if (!(totalNeeded > 0)) totalNeeded = 1;
 

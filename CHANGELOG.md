@@ -148,6 +148,11 @@ same size."):
 
 ---
 
+### 2026-10-20 (73) — Hold-to-feed is 3x faster (3s → 1s)
+- input.js `getFeedFraction()`: share of a level's requirement given per 100ms tick while GIVE is held is now 3% (ticks 0-2), 7.5% (ticks 3-5), 14% (tick 6+), so a full level bar fills in **~1 second** instead of ~3 (was 1% / 2.5% / 4.67% at 0.5s / 1.5s). Verified: cumulative 101.5% by tick 10 (1.0s). Because it is still a fraction of the pet's own requirement, 1s holds at every level; overflow into further levels keeps the 14%/tick rate.
+- Same function is shared by sugar gliders and the max-level hunger refill (`feedHunger`), so those also speed up. Feeder DEPOSIT (`getDepositFraction()` in world.js) is a separate ramp and is unchanged (it fills instantly when the player has enough anyway).
+- Balance note: levelling is limited only by food/water supply now, not hold time. If late game feels too fast, tweak the three values in `getFeedFraction()`.
+
 ### 2026-10-20 (72) — Bottom bar lifted off the screen edge, bigger buttons
 - style.css: new `:root` variables `--bar-h` (88px), `--bar-lift` (24px, space under the buttons) and `--bar-btn-h` (66px, was 52px) drive the bottom bar, its buttons and `#canvasWrapper`'s bottom edge, so the play area shrinks automatically. The bar's background still runs to the very bottom of the screen (the lift is bottom padding), so no game shows under it. To nudge the bar, change `--bar-lift` only. Button fonts raised (MENU/GIVE 18px, REGIONS 15px, WHISTLE 14px, others 17px), gap 8px, radius 14px.
 - Fixed: the safe-area bottom padding added in 71 was being overridden by the later `padding: 0 8px` — now merged into one rule.
