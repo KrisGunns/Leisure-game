@@ -148,6 +148,17 @@ same size."):
 
 ---
 
+### 2026-10-20 (72) — Bottom bar lifted off the screen edge, bigger buttons
+- style.css: new `:root` variables `--bar-h` (88px), `--bar-lift` (24px, space under the buttons) and `--bar-btn-h` (66px, was 52px) drive the bottom bar, its buttons and `#canvasWrapper`'s bottom edge, so the play area shrinks automatically. The bar's background still runs to the very bottom of the screen (the lift is bottom padding), so no game shows under it. To nudge the bar, change `--bar-lift` only. Button fonts raised (MENU/GIVE 18px, REGIONS 15px, WHISTLE 14px, others 17px), gap 8px, radius 14px.
+- Fixed: the safe-area bottom padding added in 71 was being overridden by the later `padding: 0 8px` — now merged into one rule.
+- Verified at 390x780: wrapper 60 → 668, bar 668 → 780, buttons 66px tall, no overlap. **Phone test recommended** (real gesture-bar clearance can't be judged in a browser).
+- `style.css?v=3.1`.
+
+### 2026-10-19 (71) — Android kit (Capacitor) + notch-safe bars
+- New standalone **`jall-android-kit.zip`** (not part of the game): a Capacitor project that packages the game as a native Android app — no title bar, no pull-to-refresh, immersive fullscreen, portrait lock, no overscroll. Replaces WebIntoApp. Contents: `package.json`, `capacitor.config.json` (appId `com.jall.game`), `scripts/build-www.js` (copies `game/` to `www/`), `scripts/patch-android.js` (idempotent manifest/styles/MainActivity patch), `README.md`. Written WITHOUT a test build (npm registry unreachable in the sandbox) — if a step errors, fix the script.
+- style.css: `#topBar`, `#bottomBar` and `#canvasWrapper` now add `env(safe-area-inset-top/bottom)` so the HUD clears camera cut-outs; zero in a normal browser (verified: wrapper still 60 → 712 at 390x780). `style.css?v=3.0`.
+- Signing: keep one release key for every update or the saved game is lost on reinstall (save lives in the app's WebView storage).
+
 ### 2026-10-19 (70) — APK wrapper: stop the page itself from pulling to refresh
 
 **Reported on a real phone** (APK built with WebIntoApp): the joystick misbehaves when dragging down, the screen acts like it is about to refresh, and the wrapper shows its own title bar ("JALL" + icon) above the game's top bar. Only the first part can be helped from game code: `html, body` now have `overscroll-behavior: none`, `-webkit-tap-highlight-color: transparent` and `-webkit-touch-callout: none` (style.css), `style.css?v=2.9`. The play area already had `touch-action: none`. **Not fixable from here:** the title bar and, most likely, the pull-to-refresh are the wrapper app's own native UI (a toolbar and a swipe-to-refresh layer around the WebView), so they need either a setting in the wrapper or a different packaging tool. Recommendation given to the user: Capacitor (bundles the game files, no native toolbar, no pull-to-refresh, true fullscreen), or PWABuilder / Trusted Web Activity if the hosted copy is kept (needs a manifest, service worker and a Digital Asset Links file served from the site's root). The in-game ☁️ Account cloud save can carry progress between the old and new APK.

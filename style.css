@@ -27,10 +27,20 @@ body, html {
     overflow: hidden;
     box-shadow: 0 0 20px rgba(0,0,0,0.8);
 }
+/* Bottom bar sizing. --bar-lift raises the whole bar off the bottom edge of the screen (clear of the phone's
+   gesture bar / rounded corners); the bar's background still runs down to the edge so no game shows underneath.
+   Tweak --bar-lift (and --bar-h) here to move/resize the bar - everything else follows. */
+:root {
+    --bar-h: 88px;      /* height of the button row area */
+    --bar-lift: 24px;   /* extra space UNDER the buttons, lifting them up */
+    --bar-btn-h: 66px;  /* button height */
+}
 #topBar {
     background: #222;
     color: #fff;
-    height: 60px; /* Expanded from 45px to comfortably fit stacked lines on mobile screens */
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);   /* notch / camera cut-out room in the APK; 0 in a normal browser */
+    height: calc(60px + env(safe-area-inset-top, 0px)); /* Expanded from 45px to comfortably fit stacked lines on mobile screens */
     display: flex;
     justify-content: space-around;
     align-items: center;
@@ -85,8 +95,8 @@ body, html {
 #settingsBtn:active { background: #555; }
 #canvasWrapper {
     position: absolute;
-    top: 60px;       /* directly under the 60px top bar */
-    bottom: 68px;    /* directly above the 68px bottom bar */
+    top: calc(60px + env(safe-area-inset-top, 0px));       /* directly under the top bar */
+    bottom: calc(var(--bar-h) + var(--bar-lift) + env(safe-area-inset-bottom, 0px));    /* directly above the bottom bar */
     left: 0;
     right: 0;
     background: #2c3e50;
@@ -144,27 +154,28 @@ body, html {
     left: 0;
     right: 0;
     bottom: 0;
-    height: 68px;
+    box-sizing: border-box;
+    height: calc(var(--bar-h) + var(--bar-lift) + env(safe-area-inset-bottom, 0px));
     background: #222;
     border-top: 2px solid #444;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 6px;
-    padding: 0 8px;
+    gap: 8px;
+    padding: 0 10px calc(var(--bar-lift) + env(safe-area-inset-bottom, 0px));   /* bottom padding = the lift */
     z-index: 20;
 }
 .barBtn {
     flex: 1 1 0;
     min-width: 0;
-    height: 52px;
+    height: var(--bar-btn-h);
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     gap: 0;
     font-family: monospace;
-    font-size: 14px;
+    font-size: 17px;
     font-weight: bold;
     line-height: 1.1;
     letter-spacing: 0.5px;
@@ -173,7 +184,7 @@ body, html {
     background: linear-gradient(180deg, #7c8794, #4b5560);
     border: 2px solid rgba(255, 255, 255, 0.55);
     border-bottom-width: 4px;
-    border-radius: 12px;
+    border-radius: 14px;
     box-shadow: 0 3px 6px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35);
     cursor: pointer;
     touch-action: none;
@@ -181,24 +192,24 @@ body, html {
     text-align: center;
     overflow: hidden;
 }
-.barBtn span { font-size: 13px; letter-spacing: 0.5px; }
+.barBtn span { font-size: 15px; letter-spacing: 0.5px; }
 .barBtn:active { filter: brightness(1.2); transform: translateY(2px); border-bottom-width: 2px; }
 /* a colour per button */
 #openMenuBtn {
-    font-size: 15px;
+    font-size: 18px;
     background: linear-gradient(180deg, #8e6bff, #5a3fc9);
     border-color: #cdbfff;
 }
 #openRegionsBtn {
-    font-size: 13px;
+    font-size: 15px;
     letter-spacing: 0;
     background: linear-gradient(180deg, #2ec4d6, #138a9c);
     border-color: #b4f1f8;
 }
 /* The main action button: GIVE / PLAY / COLLECT / TAKE / DROP. Orange, a little wider and taller. */
 #interactBtn {
-    height: 52px;
-    font-size: 15px;
+    height: var(--bar-btn-h);
+    font-size: 18px;
     background: linear-gradient(180deg, #ffb347, #e8731a);
     border-color: #ffe0b0;
     color: #fff;
@@ -213,7 +224,7 @@ body, html {
     border-width: 0;
     box-shadow: none;
     font-size: 14px;
-    height: 52px;
+    height: var(--bar-btn-h);
     background: linear-gradient(180deg, #4fb3ff, #1f78c8);
     border-color: #bfe3ff;
     color: #fff;
@@ -227,7 +238,7 @@ body, html {
     box-shadow: 0 3px 6px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35);
 }
 #whistleBtn {
-    font-size: 12px;
+    font-size: 14px;
     letter-spacing: 0;
     background: linear-gradient(180deg, #5fd47a, #249a45);
     border-color: #c4f5d0;
