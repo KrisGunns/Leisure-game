@@ -1182,3 +1182,21 @@ body, html {
     padding: 3px 8px; border-radius: 10px;
     pointer-events: none;
 }
+
+/* ---- MENU tabs open FULL SCREEN ----
+   PETS, BAG, TAMERS, SHOP, PERK TREE, TASKS, ACHIEVEMENTS, STATISTICS and HELP used to be inset cards (50px / 20px
+   margins), so the orange MENU showed around them. They now fill the whole game screen (covering the top bar and
+   bottom bar too), fully opaque, with padding that clears camera notches / the gesture bar in the APK. Closing a
+   tab still returns to the MENU underneath. Kept at the end of the file so it overrides the per-screen rules above. */
+#codexOverlay, #characterOverlay, #bagOverlay, #shopOverlay, #perkTreeOverlay,
+#achievementsOverlay, #statsOverlay, #tasksOverlay, #helpOverlay {
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    box-sizing: border-box;
+    background: #141414;
+    border: none;
+    border-radius: 0;
+    padding: calc(15px + env(safe-area-inset-top, 0px)) 15px calc(15px + env(safe-area-inset-bottom, 0px));
+}

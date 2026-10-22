@@ -148,6 +148,13 @@ same size."):
 
 ---
 
+### 2026-10-22 (75) — MENU tabs open full screen
+- PETS, BAG, TAMERS, SHOP, PERK TREE, TASKS, ACHIEVEMENTS, STATISTICS and HELP were inset cards (50px/20px margins) inside the play area, so the orange MENU and the game bars showed around them. They now fill the **whole screen**, fully opaque (`#141414`), no border/rounding, with top/bottom padding that clears notches/gesture bar (`env(safe-area-inset-*)`). Closing a tab still returns to the MENU underneath.
+- style.css: one override block at the END of the file ("MENU tabs open FULL SCREEN") sets `top/bottom/left/right: 0`, `border: none`, `border-radius: 0`, opaque background and safe-area padding for the nine overlays (the per-screen rules above it are untouched). `style.css?v=3.2`.
+- index.html: the nine overlay elements were written inside `#canvasWrapper`, which stops at the top/bottom bars, so a tiny inline script just before `state.js` re-parents them to `#gameContainer` (ids unchanged, so ui.js lookups still work; they also no longer sit under the play area's touch handlers). Stacking: bars z-index 20, MENU 9000, tab screens 10000, Settings 15000, dialogs 20000.
+- Not changed: REGIONS and MENU windows (already full screen), Settings/Account card (small centred popup by design).
+- **Check:** 390x780 Chromium — all nine overlays measure 0,0 390x780 and render correctly (PETS CODEX, SHOP screenshots); no script errors. TASKS is locked until Regions 1-9 are owned, so its overlay was forced open for the measurement.
+
 ### 2026-10-21 (74) — Accounts: one device at a time + sign-out restarts from local data
 - **Before:** an account could be signed in on several devices at once, each overwriting the other's cloud save every 5 min. **Now (account.js):** one signed-in device per account. The device holds a lock — `deviceId` + `lockAt` fields on the SAME Firestore doc `saves/{uid}` (no rules change needed; `deviceId` is a random id kept in localStorage `just_a_little_leisure_device_v1`, so the browser and the APK count as different devices). Writes use Firestore preconditions (`currentDocument.updateTime` / `exists=false`), so two devices can't both win the lock.
 - **Second sign-in is refused:** after the password is accepted, `takeAccountLockOrCancel()` tries to take the lock; if another device holds a fresh one the session is thrown away and the message reads "This account is already signed in on another device. Sign out there first… (unlocks by itself in about N min if that device is off)". Create Account does the same.
