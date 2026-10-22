@@ -14,6 +14,14 @@
 //     and whenever the app is hidden). Sync now / Download cloud save buttons are also provided.
 //   • Signing in on a device that already has a different local save asks which one to keep —
 //     nothing is overwritten without a choice.
+//   • ONE DEVICE AT A TIME: an account can only be signed in on one device. The signed-in device holds
+//     a "lock" (deviceId + lockAt fields on the same Firestore document, so no extra rules are needed)
+//     that it refreshes with every cloud write (about every 5 minutes). Signing in on a second device
+//     while the first still holds a fresh lock FAILS with a message. A lock nobody has refreshed for
+//     LOCK_STALE_MS (phone off / app killed) is treated as free, and the device that lost it signs
+//     itself out the next time it checks (its local progress is kept).
+//   • Signing out uploads the latest progress, releases the lock, then reloads the game, which starts
+//     from the progress kept on this device.
 //
 // ONE-TIME SETUP (see CHANGELOG): create a free Firebase project, enable Email/Password sign-in,
 // create a Firestore database, then paste the Web API key and Project ID below. Until both are
@@ -25,6 +33,24 @@ const FIREBASE_PROJECT_ID = 'jall-a6adf';   // Firebase console -> Project setti
 
 const ACCOUNT_KEY = 'just_a_little_leisure_account_v1';
 const CLOUD_AUTOSAVE_MS = 5 * 60 * 1000;   // every 5 minutes keeps a big player base inside the free Firestore write quota
+const DEVICE_KEY = 'just_a_little_leisure_device_v1';
+const LOCK_STALE_MS = 12 * 60 * 1000;      // a lock not refreshed for this long (> two autosave ticks) is considered abandoned
+const LOCK_TOUCH_MIN_MS = 60 * 1000;      // never refresh the lock more often than this when only the app visibility changes
+
+// A random id that identifies THIS install (the browser and the APK each get their own).
+function getDeviceId() {
+    try {
+        let id = localStorage.getItem(DEVICE_KEY);
+        if (!id) {
+            const a = new Uint32Array(4);
+            if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(a);
+            else for (let i = 0; i < 4; i++) a[i] = Math.floor(Math.random() * 4294967296);
+            id = Array.from(a).map(n => n.toString(16)).join('') + Date.now().toString(36);
+            localStorage.setItem(DEVICE_KEY, id);
+        }
+        return id;
+    } catch (e) { return window._jallTmpDeviceId || (window._jallTmpDeviceId = 'tmp' + Math.random().toString(36).slice(2) + Date.now().toString(36)); }
+}
 
 function cloudConfigured() { return !!(FIREBASE_API_KEY && FIREBASE_PROJECT_ID); }
 
@@ -72,6 +98,7 @@ async function firebaseFetch(url, method, body, token) {
         const code = String(raw).split(' ')[0].split(':')[0];
         const err = new Error(FRIENDLY_AUTH_ERRORS[code] || ('Something went wrong (' + raw + ').'));
         err.status = res.status;
+        err.fsStatus = json && json.error && json.error.status;   // e.g. FAILED_PRECONDITION / ABORTED (Firestore)
         throw err;
     }
     return json;
@@ -94,15 +121,24 @@ function adoptAuthResult(r, keepSyncInfo) {
     persistAccount();
 }
 
+// After the password is accepted, this device must also win the account's one-device lock. If another
+// device holds it the sign-in is cancelled (the session is thrown away again) and the message says so.
+async function takeAccountLockOrCancel() {
+    try { await lockedUpdate(() => lockFields(), true); }
+    catch (e) { account = null; persistAccount(); throw e; }
+}
 async function accountSignUp(email, password) {
     adoptAuthResult(await firebaseFetch(authUrl('signUp'), 'POST', { email, password, returnSecureToken: true }), false);
+    await takeAccountLockOrCancel();
 }
 async function accountSignIn(email, password) {
     adoptAuthResult(await firebaseFetch(authUrl('signInWithPassword'), 'POST', { email, password, returnSecureToken: true }), false);
+    await takeAccountLockOrCancel();
 }
 async function accountResetPassword(email) {
     await firebaseFetch(authUrl('sendOobCode'), 'POST', { requestType: 'PASSWORD_RESET', email });
 }
+// Local-only sign-out (used when the session is lost; nothing is sent to the cloud).
 function accountSignOut() {
     account = null;
     persistAccount();
@@ -127,30 +163,122 @@ function saveDocUrl() {
         '/databases/(default)/documents/saves/' + encodeURIComponent(account.uid);
 }
 
-// Reads the cloud save: { data: '<json text>', updatedAt: ms } or null when none exists yet.
-async function cloudRead() {
+// Reads the whole cloud document: the save plus the one-device lock. { exists:false, ... } when none yet.
+async function readCloudDoc() {
     const token = await getIdToken();
     try {
         const doc = await firebaseFetch(saveDocUrl(), 'GET', null, token);
         const f = doc.fields || {};
         return {
+            exists: true,
+            updateTime: doc.updateTime,
             data: f.data ? f.data.stringValue : null,
-            updatedAt: f.updatedAt ? parseInt(f.updatedAt.integerValue, 10) : 0
+            updatedAt: f.updatedAt ? parseInt(f.updatedAt.integerValue, 10) : 0,
+            deviceId: f.deviceId ? f.deviceId.stringValue : '',
+            lockAt: f.lockAt ? parseInt(f.lockAt.integerValue, 10) : 0
         };
     } catch (e) {
-        if (e.status === 404) return null;
+        if (e.status === 404) return { exists: false, updateTime: null, data: null, updatedAt: 0, deviceId: '', lockAt: 0 };
         throw e;
     }
 }
 
-async function cloudWrite(raw) {
+// Reads the cloud save: { data: '<json text>', updatedAt: ms } or null when none exists yet.
+async function cloudRead() {
+    const doc = await readCloudDoc();
+    return doc.exists ? { data: doc.data, updatedAt: doc.updatedAt } : null;
+}
+
+// 'free' (nobody, or abandoned) | 'mine' | 'other' (another device holds a fresh lock)
+function lockState(doc) {
+    if (!doc.deviceId) return 'free';
+    if (doc.deviceId === getDeviceId()) return 'mine';
+    if (Date.now() - doc.lockAt > LOCK_STALE_MS) return 'free';
+    return 'other';
+}
+function lockFields() {
+    return { deviceId: { stringValue: getDeviceId() }, lockAt: { integerValue: String(Date.now()) } };
+}
+function lockHeldError(doc) {
+    const mins = Math.max(1, Math.ceil((doc.lockAt + LOCK_STALE_MS - Date.now()) / 60000));
+    const e = new Error('This account is already signed in on another device.\n\nSign out there first, then try again. (If that device is off or offline, the account unlocks by itself in about ' + mins + ' min.)');
+    e.lockHeld = true;
+    return e;
+}
+function isPreconditionError(e) { return e && (e.fsStatus === 'FAILED_PRECONDITION' || e.fsStatus === 'ABORTED'); }
+
+// Writes only the given fields. Fails (FAILED_PRECONDITION) if the document changed since it was read,
+// so two devices can never both win the lock.
+async function patchCloudDoc(doc, fields) {
     const token = await getIdToken();
+    let url = saveDocUrl() + '?' + Object.keys(fields).map(n => 'updateMask.fieldPaths=' + n).join('&');
+    url += doc.exists ? '&currentDocument.updateTime=' + encodeURIComponent(doc.updateTime) : '&currentDocument.exists=false';
+    await firebaseFetch(url, 'PATCH', { fields }, token);
+}
+
+// Reads the document, checks the lock, then writes buildFields(doc) (which must include lockFields()).
+// signingIn=true: failing to get the lock just throws. signingIn=false (this device already was signed
+// in): finding another device's lock means this device lost the session, so it signs itself out first.
+async function lockedUpdate(buildFields, signingIn) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+        const doc = await readCloudDoc();
+        if (lockState(doc) === 'other') {
+            if (!signingIn) forceSignOut();
+            throw lockHeldError(doc);
+        }
+        try { await patchCloudDoc(doc, buildFields(doc)); return doc; }
+        catch (e) { if (!isPreconditionError(e)) throw e; /* someone wrote in between — re-read and retry */ }
+    }
+    throw new Error('The cloud was busy — try again in a moment.');
+}
+
+async function cloudWrite(raw) {
     const now = Date.now();
-    await firebaseFetch(saveDocUrl() + '?updateMask.fieldPaths=data&updateMask.fieldPaths=updatedAt', 'PATCH',
-        { fields: { data: { stringValue: raw }, updatedAt: { integerValue: String(now) } } }, token);
+    await lockedUpdate(() => Object.assign({ data: { stringValue: raw }, updatedAt: { integerValue: String(now) } }, lockFields()), false);
     account.lastUploadedRaw = raw;
     account.lastSyncAt = now;
+    lastLockTouch = now;
     persistAccount();
+}
+
+// Keeps the lock alive (and notices if another device took it) without uploading the save.
+let lastLockTouch = 0;
+async function cloudHeartbeat() {
+    await lockedUpdate(() => lockFields(), false);
+    lastLockTouch = Date.now();
+}
+
+// This device lost the account to another device: sign out locally (progress on this device is kept).
+function forceSignOut() {
+    if (!account) return;
+    accountSignOut();
+    closeSettings();
+    try {
+        showGameDialog({
+            message: 'You were signed out because this account was signed in on another device.\n\nYour progress on this device is kept. You can sign in again from ⚙️ Settings.',
+            okText: 'OK'
+        }, () => {});
+    } catch (e) { /* dialog helper not ready — the sign-out itself already happened */ }
+}
+
+// Sign out: upload the latest progress, release the lock, then restart the game from the progress kept
+// on this device. Needs internet to unlock the account for other devices right away; without it the
+// account simply unlocks by itself after LOCK_STALE_MS.
+async function accountSignOutAndReload() {
+    try { saveGameProgress(); } catch (e) { /* ignore */ }
+    const raw = readLocalSaveRaw();
+    try {
+        for (let attempt = 0; attempt < 3; attempt++) {
+            const doc = await readCloudDoc();
+            if (lockState(doc) !== 'mine') break;   // lost or already free: nothing to release
+            const fields = { deviceId: { stringValue: '' }, lockAt: { integerValue: '0' } };
+            if (raw && raw !== doc.data) { fields.data = { stringValue: raw }; fields.updatedAt = { integerValue: String(Date.now()) }; }
+            try { await patchCloudDoc(doc, fields); break; }
+            catch (e) { if (!isPreconditionError(e)) throw e; }
+        }
+    } catch (e) { console.warn('Could not release the account lock (offline?):', e.message); }
+    accountSignOut();
+    location.reload();
 }
 
 // ---- save helpers ----------------------------------------------------------
@@ -210,18 +338,27 @@ async function reconcileAfterSignIn(setStatus) {
 
 // ---- automatic upload ------------------------------------------------------
 let cloudUploadBusy = false;
-async function cloudAutoUpload() {
+// force=true (the 5-minute timer / app hidden or shown again): upload the save if it changed, otherwise
+// just refresh the lock. Visibility changes are throttled to LOCK_TOUCH_MIN_MS.
+async function cloudAutoUpload(force) {
     if (!account || !cloudConfigured() || cloudUploadBusy || saveDisabled) return;
     const raw = readLocalSaveRaw();
-    if (!raw || raw === account.lastUploadedRaw) return;
+    const changed = raw && raw !== account.lastUploadedRaw;
+    if (!changed && !force && Date.now() - lastLockTouch < LOCK_TOUCH_MIN_MS) return;
     cloudUploadBusy = true;
-    try { await cloudWrite(raw); } catch (e) { console.warn('Cloud auto-save failed:', e.message); }
+    try {
+        if (changed) await cloudWrite(raw);
+        else await cloudHeartbeat();
+    } catch (e) { console.warn('Cloud auto-save failed:', e.message); }   // a lost lock already signed this device out
     cloudUploadBusy = false;
 }
-setInterval(cloudAutoUpload, CLOUD_AUTOSAVE_MS);
+setInterval(() => cloudAutoUpload(true), CLOUD_AUTOSAVE_MS);
 document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { try { saveGameProgress(); } catch (e) { /* ignore */ } cloudAutoUpload(); }
+    if (document.hidden) { try { saveGameProgress(); } catch (e) { /* ignore */ } cloudAutoUpload(false); }
+    else cloudAutoUpload(false);   // coming back: notice right away if another device took the account
 });
+// Right after the game starts: confirm this device still holds the account (or re-take it if it went stale).
+if (account) setTimeout(() => cloudAutoUpload(true), 4000);
 
 // ---- UI: tiny DOM helpers --------------------------------------------------
 const ACCT_BTN_CSS = 'display:block; width:100%; border:none; border-radius:8px; padding:11px; margin-top:8px; font-family:monospace; font-size:14px; font-weight:bold; color:#fff; cursor:pointer;';
@@ -308,7 +445,7 @@ function openAccountScreen() {
 
     if (account) {
         acctText(card, 'Signed in as\n' + account.email, '#fff');
-        acctText(card, 'Last cloud save: ' + formatWhen(account.lastSyncAt) + '\nYour progress uploads automatically about every 5 minutes.');
+        acctText(card, 'Last cloud save: ' + formatWhen(account.lastSyncAt) + '\nYour progress uploads automatically about every 5 minutes.\nThis account can only be signed in on one device at a time — sign out here before signing in elsewhere.');
         card.appendChild(acctButton('☁️ Sync now (upload this device)', '#27ae60', () => run(async () => {
             saveGameProgress();
             await cloudWrite(readLocalSaveRaw());
@@ -325,9 +462,11 @@ function openAccountScreen() {
             setStatus('');
         })));
         card.appendChild(acctButton('Sign out', '#c0392b', () => {
-            showGameDialog({ message: 'Sign out? Your progress stays on this device but stops uploading.', okText: 'SIGN OUT', danger: true }, () => {
-                accountSignOut();
-                openAccountScreen();
+            showGameDialog({ message: 'Sign out?\n\nYour latest progress is uploaded, then the game restarts with the progress saved on this device. The account can then be signed in on another device.', okText: 'SIGN OUT', danger: true }, () => {
+                card.querySelectorAll('button').forEach(b => { b.disabled = true; });
+                setStatus('Signing out…');
+                status.style.color = '#f1c40f';
+                accountSignOutAndReload();
             });
         }));
         return;
