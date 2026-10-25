@@ -148,6 +148,12 @@ same size."):
 
 ---
 
+### 2026-10-24 (76) — Sharper pet portraits in MENU → PETS
+- **Cause of the blur:** each portrait was painted onto a 70x70-pixel canvas that the browser then stretched to 70 CSS px — on a phone with a 2-3x pixel density that is a tiny bitmap blown up 2-3x. On top of that the art was scaled down with smoothing OFF (nearest-neighbour), which makes big source images look jagged/noisy.
+- **ui.js `renderMiniPet()`:** the canvas backing store is now `70 x devicePixelRatio` (capped at 3x) with the context scaled to match (`setTransform`), so every existing drawing call (still written in 70x70 units) comes out at the screen's real resolution; CSS size is pinned at 70px. All 12 portrait draws now use `imageSmoothingEnabled = true` + `imageSmoothingQuality = 'high'` for a clean downscale. The locked "?" tile and the hand-drawn pets benefit too.
+- **Check:** Chromium at 3x pixel density with a stand-in 800px portrait — canvas is 210x210 shown at 70px, edges and fine lines crisp, no script errors. The real pet PNGs weren't available in the sandbox, so please eyeball the Pets tab on the phone. If a pet still looks soft, its source PNG is probably small — tell me which one.
+- Not changed: the pet detail pop-up and the in-world sprites.
+
 ### 2026-10-22 (75) — MENU tabs open full screen
 - PETS, BAG, TAMERS, SHOP, PERK TREE, TASKS, ACHIEVEMENTS, STATISTICS and HELP were inset cards (50px/20px margins) inside the play area, so the orange MENU and the game bars showed around them. They now fill the **whole screen**, fully opaque (`#141414`), no border/rounding, with top/bottom padding that clears notches/gesture bar (`env(safe-area-inset-*)`). Closing a tab still returns to the MENU underneath.
 - style.css: one override block at the END of the file ("MENU tabs open FULL SCREEN") sets `top/bottom/left/right: 0`, `border: none`, `border-radius: 0`, opaque background and safe-area padding for the nine overlays (the per-screen rules above it are untouched). `style.css?v=3.2`.

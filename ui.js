@@ -632,9 +632,16 @@ function renderMiniPet(pet, elementId) {
     if (!miniCanvas) return;
     const mctx = miniCanvas.getContext('2d');
     
-    // Hard canvas geometry reset completely flushes past painted layers clean
-    miniCanvas.width = 70;
-    miniCanvas.height = 70;
+    // Hard canvas geometry reset completely flushes past painted layers clean.
+    // The backing store is drawn at the screen's real pixel density (70 CSS px x devicePixelRatio) and the
+    // context is scaled to match, so everything below keeps drawing in plain 70x70 units but comes out sharp
+    // instead of a 70px bitmap stretched up (the old blur on high-resolution phone screens).
+    const dpr = Math.min(Math.max(window.devicePixelRatio || 1, 1), 3);
+    miniCanvas.width = Math.round(70 * dpr);
+    miniCanvas.height = Math.round(70 * dpr);
+    miniCanvas.style.width = '70px';
+    miniCanvas.style.height = '70px';
+    mctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     mctx.clearRect(0, 0, 70, 70);
     
     // Safety Fallback: Extract level safely, defaulting to 1 if undefined or missing
@@ -745,7 +752,7 @@ function renderMiniPet(pet, elementId) {
                 const scale = Math.min((70 - pad * 2) / portrait.width, (70 - pad * 2) / portrait.height);
                 const pw = portrait.width * scale, ph = portrait.height * scale;
                 const smoothing = mctx.imageSmoothingEnabled;
-                mctx.imageSmoothingEnabled = false;
+                mctx.imageSmoothingEnabled = true; mctx.imageSmoothingQuality = 'high';   // smooth downscale of the portrait art
                 mctx.drawImage(portrait, (70 - pw) / 2, 70 - pad - ph, pw, ph);
                 mctx.imageSmoothingEnabled = smoothing;
             } else {
@@ -762,7 +769,7 @@ function renderMiniPet(pet, elementId) {
                 const scale = Math.min((70 - pad * 2) / portrait.width, (70 - pad * 2) / portrait.height);
                 const pw = portrait.width * scale, ph = portrait.height * scale;
                 const smoothing = mctx.imageSmoothingEnabled;
-                mctx.imageSmoothingEnabled = false;
+                mctx.imageSmoothingEnabled = true; mctx.imageSmoothingQuality = 'high';   // smooth downscale of the portrait art
                 mctx.drawImage(portrait, (70 - pw) / 2, 70 - pad - ph, pw, ph);
                 mctx.imageSmoothingEnabled = smoothing;
             } else {
@@ -777,7 +784,7 @@ function renderMiniPet(pet, elementId) {
                 const scale = Math.min((70 - pad * 2) / portrait.width, (70 - pad * 2) / portrait.height);
                 const pw = portrait.width * scale, ph = portrait.height * scale;
                 const smoothing = mctx.imageSmoothingEnabled;
-                mctx.imageSmoothingEnabled = false;
+                mctx.imageSmoothingEnabled = true; mctx.imageSmoothingQuality = 'high';   // smooth downscale of the portrait art
                 mctx.drawImage(portrait, (70 - pw) / 2, 70 - pad - ph, pw, ph);
                 mctx.imageSmoothingEnabled = smoothing;
             } else {
@@ -791,7 +798,7 @@ function renderMiniPet(pet, elementId) {
                 const scale = Math.min((70 - pad * 2) / portrait.width, (70 - pad * 2) / portrait.height);
                 const pw = portrait.width * scale, ph = portrait.height * scale;
                 const smoothing = mctx.imageSmoothingEnabled;
-                mctx.imageSmoothingEnabled = false;
+                mctx.imageSmoothingEnabled = true; mctx.imageSmoothingQuality = 'high';   // smooth downscale of the portrait art
                 mctx.drawImage(portrait, (70 - pw) / 2, 70 - pad - ph, pw, ph);
                 mctx.imageSmoothingEnabled = smoothing;
             } else {
@@ -805,7 +812,7 @@ function renderMiniPet(pet, elementId) {
                 const scale = Math.min((70 - pad * 2) / portrait.width, (70 - pad * 2) / portrait.height);
                 const pw = portrait.width * scale, ph = portrait.height * scale;
                 const smoothing = mctx.imageSmoothingEnabled;
-                mctx.imageSmoothingEnabled = false;
+                mctx.imageSmoothingEnabled = true; mctx.imageSmoothingQuality = 'high';   // smooth downscale of the portrait art
                 mctx.drawImage(portrait, (70 - pw) / 2, 70 - pad - ph, pw, ph);
                 mctx.imageSmoothingEnabled = smoothing;
             } else {
@@ -824,7 +831,7 @@ function renderMiniPet(pet, elementId) {
                 const scale = Math.min((70 - pad * 2) / portrait.width, (70 - pad * 2) / portrait.height);
                 const pw = portrait.width * scale, ph = portrait.height * scale;
                 const smoothing = mctx.imageSmoothingEnabled;
-                mctx.imageSmoothingEnabled = false;
+                mctx.imageSmoothingEnabled = true; mctx.imageSmoothingQuality = 'high';   // smooth downscale of the portrait art
                 mctx.drawImage(portrait, (70 - pw) / 2, 70 - pad - ph, pw, ph);
                 mctx.imageSmoothingEnabled = smoothing;
             } else {
@@ -842,7 +849,7 @@ function renderMiniPet(pet, elementId) {
                 const scale = Math.min((70 - pad * 2) / portrait.width, (70 - pad * 2) / portrait.height);
                 const pw = portrait.width * scale, ph = portrait.height * scale;
                 const smoothing = mctx.imageSmoothingEnabled;
-                mctx.imageSmoothingEnabled = false;
+                mctx.imageSmoothingEnabled = true; mctx.imageSmoothingQuality = 'high';   // smooth downscale of the portrait art
                 mctx.drawImage(portrait, (70 - pw) / 2, 70 - pad - ph, pw, ph);
                 mctx.imageSmoothingEnabled = smoothing;
             } else {
@@ -859,7 +866,7 @@ function renderMiniPet(pet, elementId) {
                 const scale = Math.min((70 - pad * 2) / portrait.width, (70 - pad * 2) / portrait.height);
                 const pw = portrait.width * scale, ph = portrait.height * scale;
                 const smoothing = mctx.imageSmoothingEnabled;
-                mctx.imageSmoothingEnabled = false;
+                mctx.imageSmoothingEnabled = true; mctx.imageSmoothingQuality = 'high';   // smooth downscale of the portrait art
                 mctx.drawImage(portrait, (70 - pw) / 2, 70 - pad - ph, pw, ph);
                 mctx.imageSmoothingEnabled = smoothing;
             } else {
@@ -875,7 +882,7 @@ function renderMiniPet(pet, elementId) {
                 const scale = Math.min((70 - pad * 2) / portrait.width, (70 - pad * 2) / portrait.height);
                 const pw = portrait.width * scale, ph = portrait.height * scale;
                 const smoothing = mctx.imageSmoothingEnabled;
-                mctx.imageSmoothingEnabled = false;
+                mctx.imageSmoothingEnabled = true; mctx.imageSmoothingQuality = 'high';   // smooth downscale of the portrait art
                 mctx.drawImage(portrait, (70 - pw) / 2, 70 - pad - ph, pw, ph);
                 mctx.imageSmoothingEnabled = smoothing;
             } else {
@@ -889,7 +896,7 @@ function renderMiniPet(pet, elementId) {
                 const scale = Math.min((70 - pad * 2) / portrait.width, (70 - pad * 2) / portrait.height);
                 const pw = portrait.width * scale, ph = portrait.height * scale;
                 const smoothing = mctx.imageSmoothingEnabled;
-                mctx.imageSmoothingEnabled = false;
+                mctx.imageSmoothingEnabled = true; mctx.imageSmoothingQuality = 'high';   // smooth downscale of the portrait art
                 mctx.drawImage(portrait, (70 - pw) / 2, 70 - pad - ph, pw, ph);
                 mctx.imageSmoothingEnabled = smoothing;
             } else {
@@ -904,7 +911,7 @@ function renderMiniPet(pet, elementId) {
                 const scale = Math.min((70 - pad * 2) / portrait.width, (70 - pad * 2) / portrait.height);
                 const pw = portrait.width * scale, ph = portrait.height * scale;
                 const smoothing = mctx.imageSmoothingEnabled;
-                mctx.imageSmoothingEnabled = false;
+                mctx.imageSmoothingEnabled = true; mctx.imageSmoothingQuality = 'high';   // smooth downscale of the portrait art
                 mctx.drawImage(portrait, (70 - pw) / 2, 70 - pad - ph, pw, ph);
                 mctx.imageSmoothingEnabled = smoothing;
             } else {
@@ -923,7 +930,7 @@ function renderMiniPet(pet, elementId) {
                 const scale = Math.min((70 - pad * 2) / portrait.width, (70 - pad * 2) / portrait.height);
                 const pw = portrait.width * scale, ph = portrait.height * scale;
                 const smoothing = mctx.imageSmoothingEnabled;
-                mctx.imageSmoothingEnabled = false;
+                mctx.imageSmoothingEnabled = true; mctx.imageSmoothingQuality = 'high';   // smooth downscale of the portrait art
                 mctx.drawImage(portrait, (70 - pw) / 2, 70 - pad - ph, pw, ph);
                 mctx.imageSmoothingEnabled = smoothing;
             } else {
