@@ -753,7 +753,12 @@ function renderMiniPet(pet, elementId) {
                 const pw = portrait.width * scale, ph = portrait.height * scale;
                 const smoothing = mctx.imageSmoothingEnabled;
                 mctx.imageSmoothingEnabled = true; mctx.imageSmoothingQuality = 'high';   // smooth downscale of the portrait art
+                // Mirrored: the dog's portrait art faces left, but every other pet's portrait faces right.
+                mctx.save();
+                mctx.translate(70, 0);
+                mctx.scale(-1, 1);
                 mctx.drawImage(portrait, (70 - pw) / 2, 70 - pad - ph, pw, ph);
+                mctx.restore();
                 mctx.imageSmoothingEnabled = smoothing;
             } else {
                 drawPetSprite(mctx, 'dog', 'sit', 0, ox, oy, 1);

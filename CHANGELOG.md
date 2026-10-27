@@ -148,6 +148,11 @@ same size."):
 
 ---
 
+### 2026-10-26 (77) — Dog portrait faces the same way as the other pets
+- ui.js `renderMiniPet()` dog branch: the Codex portrait is now drawn **mirrored** (`translate(70,0)` + `scale(-1,1)` around the `drawImage`), because `assets/pets/dog/portrait.png` faces left while every other pet's portrait faces right. Only the Codex tile changed; the in-world dog sprite and its facing are untouched. If the dog image file itself is ever re-exported facing right, remove the mirror.
+- **Check:** 3x-density Chromium with a stand-in right-facing portrait — it now draws facing left in the tile, so the mirror is applied; no script errors.
+- **Open:** female elephant (`elephantBow`) and female bear (`bearFemale`) portraits still look soft after entry 76. They use the exact same drawing path as the sharp ones, so the likely cause is the source `portrait.png` files being low-resolution (a ~70px image can't be made sharp on a 3x screen). The sandbox has no copies of the pet PNGs, so the user was asked to send those two files; the fix is to re-export them at roughly 300x300 or larger (no code change needed, bump `PET_ASSET_VERSION` in entities.js when replaced).
+
 ### 2026-10-24 (76) — Sharper pet portraits in MENU → PETS
 - **Cause of the blur:** each portrait was painted onto a 70x70-pixel canvas that the browser then stretched to 70 CSS px — on a phone with a 2-3x pixel density that is a tiny bitmap blown up 2-3x. On top of that the art was scaled down with smoothing OFF (nearest-neighbour), which makes big source images look jagged/noisy.
 - **ui.js `renderMiniPet()`:** the canvas backing store is now `70 x devicePixelRatio` (capped at 3x) with the context scaled to match (`setTransform`), so every existing drawing call (still written in 70x70 units) comes out at the screen's real resolution; CSS size is pinned at 70px. All 12 portrait draws now use `imageSmoothingEnabled = true` + `imageSmoothingQuality = 'high'` for a clean downscale. The locked "?" tile and the hand-drawn pets benefit too.
