@@ -2109,6 +2109,7 @@ if (btnWipeSave) {
             }
             gameStats.lifetimeCoins = 0;      // lifetime totals (Statistics) restart too
             gameStats.lifetimeDiamonds = 0;
+            gameStats.lifetimeFood = 0; gameStats.lifetimeWater = 0; gameStats.lifetimeHoney = 0; gameStats.fishCaught = 0;
             shopBuffs.cake = 0;
             shopBuffs.wisdomPotion = 0;
             if (typeof region4Hive !== 'undefined' && region4Hive) region4Hive.honey = 0;
@@ -2469,6 +2470,7 @@ function renderAchievementsScreen(force) {
         html += `<div class="achCard">
         <div class="achCardTitle">${d.icon} ${escapeHtml(d.title)}</div>
         <div class="achCardDesc">${escapeHtml(d.desc)}</div>`;
+        if (!p.done && p.tier && p.tier.label) html += `<div class="achCardDesc" style="color:#f1c40f;">${escapeHtml(p.tier.label)}</div>`;
         if (p.done) {
             const last = d.tiers[d.tiers.length - 1].goal;
             html += `<div class="achProgressRow"><strong>${last}/${last}</strong><span class="achReward">✓ Complete</span></div>

@@ -129,6 +129,7 @@ function endFishing(caught, message) {
     fishMsgEl.textContent = message;
     if (caught) {
         inventory.fish += FISHING_FISH_PER_CATCH;
+        gameStats.fishCaught += FISHING_FISH_PER_CATCH;   // Go Fish achievement
         gainPlayerXP(FISHING_FISH_PER_CATCH);
         updateUI();
         saveGameProgress();

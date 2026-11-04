@@ -365,9 +365,9 @@ function addCoinsUnboosted(n) {
     try { inventory.coins += n; } finally { coinBoostSuspended = false; }
 }
 const inventory = {
-    food: 0,
-    water: 0,
-    honey: 0,
+    _food: 0,       // 🍪 / 💧 / 🍯 are accessors too (below): any INCREASE also feeds the lifetime totals used by achievements
+    _water: 0,
+    _honey: 0,
     fish: 0,
     _coins: 0,
     eggs: 0,
@@ -393,6 +393,12 @@ const inventory = {
         if (gain > 0 && !lifetimeTrackingPaused) gameStats.lifetimeCoins += gain;
         this._coins = v;
     },
+    get food() { return this._food; },
+    set food(v) { const g = v - this._food; if (g > 0 && !lifetimeTrackingPaused) gameStats.lifetimeFood += g; this._food = v; },
+    get water() { return this._water; },
+    set water(v) { const g = v - this._water; if (g > 0 && !lifetimeTrackingPaused) gameStats.lifetimeWater += g; this._water = v; },
+    get honey() { return this._honey; },
+    set honey(v) { const g = v - this._honey; if (g > 0 && !lifetimeTrackingPaused) gameStats.lifetimeHoney += g; this._honey = v; },
     get diamonds() { return this._diamonds; },
     set diamonds(v) {
         const gain = v - this._diamonds;
@@ -919,9 +925,39 @@ const SCHRODINGER_TIERS = [
     { goal: 70, reward: 15 }
 ];
 
+
+// ---- More achievements (2026-11-03 (80)). `tiers` rows are { goal, reward } as above; a row may also
+// carry `label` (extra line shown on the card) and its own `getCount()` when a ladder's rungs measure
+// different things (Pet Master: "N pets at level L").
+const mkTiers = (rows) => rows.map(r => ({ goal: r[0], reward: r[1] }));
+// Expansion: regions bought in the Shop (Regions 4-10 = 7 possible).
+const EXPANSION_TIERS = mkTiers([[1,1],[2,2],[3,2],[4,3],[5,4],[6,4],[7,5]]);
+// Lifetime food / water: 1 diamond per rung unless listed.
+const RESOURCE_GOALS = [100,500,1000,2000,5000,10000,15000,20000,25000,30000,40000,50000,75000,100000,150000,250000,500000,1000000];
+const RESOURCE_REWARDS = { 100000: 2, 150000: 3, 250000: 4, 500000: 5, 1000000: 10 };
+const FOOD_TIERS  = RESOURCE_GOALS.map(g => ({ goal: g, reward: RESOURCE_REWARDS[g] || 1 }));
+const WATER_TIERS = RESOURCE_GOALS.map(g => ({ goal: g, reward: RESOURCE_REWARDS[g] || 1 }));
+// Pet Master: [pets, level, reward]. "ALL" = every Codex pet.
+function countPetsAtLevel(lv) { return getCodexPets().filter(p => p.level >= lv).length; }
+const PET_MASTER_TIERS = [[1,10,1],[3,10,1],[3,20,3],[5,20,3],[5,30,5],[7,30,5],[9,30,5],[9,40,10],[11,40,10],[13,40,10],[13,50,10],[15,50,15],['all',50,25]]
+    .map(r => {
+        const lv = r[1], all = r[0] === 'all';
+        const t = { reward: r[2], label: all ? `ALL pets at Lv.${lv}` : `${r[0]} pet${r[0] > 1 ? 's' : ''} at Lv.${lv}`, getCount: () => countPetsAtLevel(lv) };
+        if (all) Object.defineProperty(t, 'goal', { get: () => getCodexPets().length || 17, enumerable: true });
+        else t.goal = r[0];
+        return t;
+    });
+// Go Fish: fish caught in the fishing mini-game only.
+const GO_FISH_TIERS = mkTiers([[1,1],[5,1],[20,2],[50,3],[100,5],[500,5],[1000,10]]);
+// Beekeeper: lifetime honey collected.
+const BEEKEEPER_TIERS = mkTiers([[50,1],[100,2],[500,3],[1000,4],[5000,4],[10000,5],[25000,5]]);
+// Completion: how many OTHER achievements are fully finished (every tier claimed).
+const COMPLETION_TIERS = mkTiers([[1,5],[2,5],[3,5],[4,5],[5,10],[6,10],[7,10],[8,10]]);
+
 // saved; playSeconds ticked by tickShopBuffs() below; lifetimeCoins/lifetimeDiamonds are fed by the
 // inventory.coins / inventory.diamonds setters (top of this file)
-const gameStats = { playSeconds: 0, catGuessesCorrect: 0, lifetimeCoins: 0, lifetimeDiamonds: 0 };
+const gameStats = { playSeconds: 0, catGuessesCorrect: 0, lifetimeCoins: 0, lifetimeDiamonds: 0,
+                    lifetimeFood: 0, lifetimeWater: 0, lifetimeHoney: 0, fishCaught: 0 };   // fishCaught = fish from the FISHING mini-game only
 
 // Every achievement in the game. To add one: add its tier table + a row here (title, description,
 // and getCount = how far along the player is); the Achievements/Statistics screens and the save
@@ -934,7 +970,28 @@ const ACHIEVEMENT_DEFS = [
       getCount: () => getTamedPetCount() },
     { id: 'schrodingersCat', icon: '🐱', title: "Schrodinger's Cat", tiers: SCHRODINGER_TIERS,
       desc: "Guess correctly in the cat's Dead or Alive mini game. Tap a completed level to claim it.",
-      getCount: () => gameStats.catGuessesCorrect }
+      getCount: () => gameStats.catGuessesCorrect },
+    { id: 'expansion', icon: '🗺️', title: 'Expansion', tiers: EXPANSION_TIERS,
+      desc: 'Unlock extra regions in the Shop. Tap a completed level to claim it.',
+      getCount: () => [4,5,6,7,8,9,10].filter(r => isRegionOwned(r)).length },
+    { id: 'worldHunger', icon: '🍪', title: 'World Hunger Begone', tiers: FOOD_TIERS,
+      desc: 'Collect food (lifetime total, spending it does not count).',
+      getCount: () => gameStats.lifetimeFood },
+    { id: 'hydration', icon: '💧', title: 'Hydration!', tiers: WATER_TIERS,
+      desc: 'Collect water (lifetime total, spending it does not count).',
+      getCount: () => gameStats.lifetimeWater },
+    { id: 'petMaster', icon: '👑', title: 'Pet Master', tiers: PET_MASTER_TIERS,
+      desc: 'Raise several pets to high levels.',
+      getCount: () => 0 },
+    { id: 'goFish', icon: '🎣', title: 'Go Fish', tiers: GO_FISH_TIERS,
+      desc: 'Catch fish yourself in the fishing mini-game (Region 5). Fish your bears catch do not count.',
+      getCount: () => gameStats.fishCaught },
+    { id: 'beekeeper', icon: '🍯', title: 'Beekeeper', tiers: BEEKEEPER_TIERS,
+      desc: 'Collect honey (lifetime total).',
+      getCount: () => gameStats.lifetimeHoney },
+    { id: 'completion', icon: '🏅', title: 'Completion', tiers: COMPLETION_TIERS,
+      desc: 'Fully complete other achievements (every level claimed).',
+      getCount: () => ACHIEVEMENT_DEFS.filter(d => d.id !== 'completion' && getAchievementProgress(d.id).done).length }
 ];
 const ACHIEVEMENT_TOTAL = ACHIEVEMENT_DEFS.length;
 
@@ -983,8 +1040,9 @@ function getAchievementDef(id) {
 function getAchievementProgress(id) {
     const def = getAchievementDef(id);
     if (!def) return null;
-    const count = Math.max(0, Math.floor(Number(def.getCount())) || 0);
     const claimed = Math.max(0, Math.min(def.tiers.length, Math.floor(Number(achievements[id].claimed)) || 0));
+    const cur = def.tiers[claimed] || null;
+    const count = Math.max(0, Math.floor(Number((cur && cur.getCount) ? cur.getCount() : def.getCount())) || 0);
     return { def: def, count: count, claimed: claimed, tier: def.tiers[claimed] || null, done: claimed >= def.tiers.length,
              claimable: claimed < def.tiers.length && count >= def.tiers[claimed].goal };
 }
@@ -1248,6 +1306,10 @@ function saveGameProgress() {
         stateMatrix.catGuessesCorrect = gameStats.catGuessesCorrect;
         stateMatrix.lifetimeCoins = gameStats.lifetimeCoins;
         stateMatrix.lifetimeDiamonds = gameStats.lifetimeDiamonds;
+        stateMatrix.lifetimeFood = gameStats.lifetimeFood;
+        stateMatrix.lifetimeWater = gameStats.lifetimeWater;
+        stateMatrix.lifetimeHoney = gameStats.lifetimeHoney;
+        stateMatrix.fishCaught = gameStats.fishCaught;
         stateMatrix.tasks = {
             slots: taskState.slots.map(s => ({ id: s.id, progress: s.progress, readyAt: s.readyAt })),
             tracked: taskState.tracked
@@ -1306,6 +1368,12 @@ function loadGameProgress() {
             const savedLifeDiamonds = Math.floor(Number(stateMatrix.lifetimeDiamonds));
             gameStats.lifetimeCoins = Math.max(isFinite(savedLifeCoins) && savedLifeCoins > 0 ? savedLifeCoins : 0, inventory.coins);
             gameStats.lifetimeDiamonds = Math.max(isFinite(savedLifeDiamonds) && savedLifeDiamonds > 0 ? savedLifeDiamonds : 0, inventory.diamonds);
+            // Food / water / honey / fish-caught totals (new in 2026-11-03 (80)): older saves start at what is held now.
+            const lifeNum = (v, floor) => { v = Math.floor(Number(v)); return Math.max(isFinite(v) && v > 0 ? v : 0, floor || 0); };
+            gameStats.lifetimeFood = lifeNum(stateMatrix.lifetimeFood, inventory.food);
+            gameStats.lifetimeWater = lifeNum(stateMatrix.lifetimeWater, inventory.water);
+            gameStats.lifetimeHoney = lifeNum(stateMatrix.lifetimeHoney, inventory.honey);
+            gameStats.fishCaught = lifeNum(stateMatrix.fishCaught, 0);
 
             if (typeof region4Hive !== 'undefined' && region4Hive) {
                 region4Hive.honey = stateMatrix.hiveHoney || 0;

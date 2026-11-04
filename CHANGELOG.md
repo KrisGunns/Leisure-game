@@ -152,6 +152,22 @@ same size."):
 
 ---
 
+### 2026-11-04 (80) — Six new achievements (Expansion, World Hunger Begone, Hydration!, Pet Master, Go Fish, Beekeeper) + Completion
+
+**Added, at the user's request** (full tier/reward lists given). All driven by the existing `ACHIEVEMENT_DEFS` ladder system (state.js); rewards are tap-to-claim like Animal Tamer.
+- **Expansion** 🗺️: regions 4-10 owned (7 tiers: 1/2/2/3/4/4/5 💎).
+- **World Hunger Begone** 🍪 / **Hydration!** 💧: lifetime food / water, 18 tiers (100 … 1,000,000; 1 💎 each, 100k=2, 150k=3, 250k=4, 500k=5, 1M=10).
+- **Pet Master** 👑: "N pets at Lv.L" (13 tiers, 1→25 💎; last tier = ALL Codex pets at Lv.50). Tiers can now carry their own `getCount()` and a `label` (shown in gold on the card); `getAchievementProgress` uses the current tier's count.
+- **Go Fish** 🎣: fish caught in the fishing mini-game only (`gameStats.fishCaught`, incremented in fishing.js; bear/pet fish don't count). 7 tiers.
+- **Beekeeper** 🍯: lifetime honey collected (7 tiers).
+- **Completion** 🏅: number of OTHER achievements fully finished (every tier claimed); 8 tiers (5 💎 each, tiers 5-8 = 10 💎).
+- `inventory.food/water/honey` are now accessor properties (like coins/diamonds): any increase adds to `gameStats.lifetimeFood/Water/Honey`; spending never lowers them; loading/wiping a save doesn't count. These totals and `fishCaught` are saved; older saves start at what the player holds now (fish-caught starts at 0). Wipe (ui.js dev reset) clears them.
+- Achievements total is now 9 (Statistics "x/9").
+
+Notes: the list ended with a second "Complete 3 Achievements" line — treated as a typo and ignored. "Complete N" means a whole achievement finished (all tiers claimed), the same rule Statistics already used.
+
+---
+
 ### 2026-11-03 (79) — Solid scenery, no spawns on feeders/trees, fishing mini-game, panda "Full!" + new payout, Region 10 tap-only
 
 **Changed, at the user's request** (long Region 3–10 list). 
