@@ -2295,6 +2295,7 @@ function getPetSprite(type, anim, index) {
 // any time an existing dog PNG's content changes without renaming the file, so every
 // visitor is forced to fetch the new bytes instead of whatever their browser/CDN cached.
 const PET_ASSET_VERSION = 'v16';
+const PANDA_FULL_FADE_MS = 800;   // how long the panda's "Full!" bubble takes to fade out
 const PET_IMAGE_PATHS = {
     dog: {
         // 2026-09-26: switched the dog to a SINGLE static image for every animation, at the
@@ -2597,6 +2598,9 @@ class Player {
         const startX = this.x;
         const startY = this.y;
 
+        // Region 10 (flower garden) is tap-only: the player does not walk around there at all.
+        if (currentRegion === GARDEN_REGION) { moveX = 0; moveY = 0; }
+
         this.x += moveX * this.speed * dt;
         this.y += moveY * this.speed * dt;
 
@@ -2606,6 +2610,12 @@ class Player {
         if (this.x + this.size > canvas.width - padding) this.x = canvas.width - padding - this.size;
         if (this.y + this.size > canvas.height - padding) this.y = canvas.height - padding - this.size;
         this.y = clampFeetY(this.y, this.size, currentRegion);   // fences / tree line (world.js getWalkLimits)
+        // Solid scenery (trees, lake, furniture - world.js getRegionObstacles): slide along it instead of entering.
+        if (moveX !== 0 || moveY !== 0) {
+            const free = resolvePlayerMove(startX, startY, this.x, this.y, this.size, currentRegion);
+            this.x = free.x; this.y = free.y;
+        }
+        unstickPlayer(this, currentRegion);   // arrived inside something (region change / resize)
 
         // Animation bookkeeping. Based on how far the player ACTUALLY moved (after the edge clamping
         // above), so pushing against a wall doesn't make the feet run on the spot.
@@ -2677,9 +2687,14 @@ class Item {
     constructor(type, region) {
         this.type = type;
         let padding = 26;
-        this.x = Math.random() * (canvas.width - padding * 2) + padding;
-        this.y = Math.random() * (canvas.height - padding * 2) + padding;
-        if (region) this.y = clampItemCentreY(this.y, region);   // never inside a fence / behind the tree line
+        // Re-roll until the spot is clear of the feeder box and of solid scenery (trees, lake, furniture - see
+        // isSpawnBlocked in world.js); gives up after 80 tries rather than looping forever.
+        for (let tries = 0; tries < 80; tries++) {
+            this.x = Math.random() * (canvas.width - padding * 2) + padding;
+            this.y = Math.random() * (canvas.height - padding * 2) + padding;
+            if (region) this.y = clampItemCentreY(this.y, region);   // never inside a fence / behind the tree line
+            if (!region || !isSpawnBlocked(region, this.x, this.y)) break;
+        }
     }
 
     draw() {
@@ -2717,10 +2732,13 @@ class Item {
 }
 
 class Flower {
-    constructor() {
+    constructor(region) {
         let padding = 26;
-        this.x = Math.random() * (canvas.width - padding * 2) + padding;
-        this.y = Math.random() * (canvas.height - padding * 2) + padding;
+        for (let tries = 0; tries < 80; tries++) {   // keep clear of the trees (isSpawnBlocked, world.js)
+            this.x = Math.random() * (canvas.width - padding * 2) + padding;
+            this.y = Math.random() * (canvas.height - padding * 2) + padding;
+            if (!region || !isSpawnBlocked(region, this.x, this.y)) break;
+        }
         this.isTargeted = false;
         this.size = 20;
     }
@@ -4438,6 +4456,22 @@ class Pet {
             const walking = this.trackSpriteMotion();
             drawPetSprite(ctx, 'panda', walking ? 'walk' : 'idle', walking ? Math.floor((this._spriteStep || 0) / PET_STEP_PIXELS) % 4 : Math.floor(Date.now() / 500) % 2, this.x, this.y, this.facing || 1);
 
+            // "Full!" bubble after a Bamboo Fever round of 20+ bamboo: held for 5 seconds, then fades out.
+            if (this.fullTextUntil && performance.now() < this.fullTextUntil + PANDA_FULL_FADE_MS) {
+                const left = this.fullTextUntil - performance.now();
+                const a = left >= 0 ? 1 : Math.max(0, 1 + left / PANDA_FULL_FADE_MS);
+                ctx.save();
+                ctx.globalAlpha = a;
+                ctx.font = 'bold 15px monospace';
+                ctx.textAlign = 'center';
+                ctx.lineWidth = 4;
+                ctx.lineJoin = 'round';
+                ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+                ctx.strokeText('Full!', this.x + this.size / 2, this.y - 32);
+                ctx.fillStyle = '#ffe14d';
+                ctx.fillText('Full!', this.x + this.size / 2, this.y - 32);
+                ctx.restore();
+            }
             if (this.state === 'full') {
                 ctx.font = '14px monospace';
                 ctx.textAlign = 'center';

@@ -286,6 +286,26 @@ body, html {
 }
 #plotActionBtn:active { background: #f48fb1; }
 
+/* Region 5 fishing button (fishing.js): appears at the lake edge / on the dock. Same slot as the other action buttons. */
+#fishBtn {
+    position: absolute;
+    bottom: 10px;
+    right: 20px;
+    left: auto !important;
+    width: 124px;
+    padding: 9px 6px;
+    font-size: 13px;
+    font-weight: bold;
+    text-align: center;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    background: #4aa3df;
+    border: 2px solid #1f6fa8;
+    color: #fff;
+    z-index: 100;
+}
+#fishBtn:active { background: #2f86c0; }
+
 
 
 

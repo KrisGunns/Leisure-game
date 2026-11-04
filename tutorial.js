@@ -31,13 +31,16 @@ const TUTORIAL_TIPS = [
         "Your cat froze and is flickering! 📦\n\nIt has climbed into Schrödinger's box. Walk up close to it (the button changes to PLAY), tap PLAY and guess: Dead or Alive? A right guess wins 10 🪙 coins. It only happens while you are in Region 1."
     ] },
     { id: 'mini_panda', icon: '🎍', title: 'Mini-game: Bamboo Fever', pages: [
-        "The panda wants bamboo! 🎍\n\nPick Play to start a 30-second round in Region 7: run around collecting the bamboo stalks (new ones keep appearing). Every 5 stalks earns 1 🪙 coin, and the panda naps afterwards. Pick Starve to skip the round — the panda just wanders off for a while."
+        "The panda wants bamboo! 🎍\n\nPick Play to start a 30-second round in Region 7: run around collecting the bamboo stalks (new ones keep appearing). Every 3 stalks earns 1 🪙 coin — and once you've collected 20 or more, a 'Full!' bubble pops up over the panda's head. The panda naps afterwards. Pick Starve to skip the round — the panda just wanders off for a while."
+    ] },
+    { id: 'mini_fishing', icon: '🎣', title: 'Mini-game: Fishing', pages: [
+        () => `Time to fish! 🎣\n\nStand at the edge of the lake — or on the sides or end of the wooden dock — and a 🎣 FISH button appears.\n\n• Tap anywhere to kick the hook upward; gravity pulls it back down.\n• The fish keeps swimming away. The algae-green patch around it is the catch zone.\n• Keep the hook inside the green for ${FISHING_HOLD_SECONDS} seconds to land a 🐟 fish. Leave the zone and your progress slowly drains.\n\nPress FISH again to start.`
     ] },
     { id: 'region_4', icon: '🐝', title: 'Region 4 — Beehive', pages: [
         () => `You unlocked the Hive and your first Bee! 🐝\n\nBees collect honey from flowers and carry it back to the hive. Stand near the hive and the GIVE button on the bottom bar turns into COLLECT — tap it to take the 🍯 honey stored there.`
     ] },
     { id: 'region_5', icon: '🐻', title: 'Region 5 — Bear Lake', pages: [
-        "Meet the bears! 🐻\n\nBears eat 🍯 honey (from your bees) instead of food and water. From Lv.5 they go fishing in the lake on their own and bring back 🐟 fish — sell fish in the Shop's Sell tab for coins."
+        "Meet the bears! 🐻\n\nBears eat 🍯 honey (from your bees) instead of food and water. From Lv.5 they go fishing in the lake on their own and bring back 🐟 fish — sell fish in the Shop's Sell tab for coins. You can't wade into the lake, but you can walk around it and out along the dock. Stand at the water's edge and tap 🎣 FISH to catch fish yourself."
     ] },
     { id: 'region_6', icon: '🐷', title: 'Region 6 — Pig Sty', pages: [
         "Meet the pigs! 🐷\n\nPigs gather food and water like your first pets. At higher levels they sometimes roll around in the mud patch in the middle of the sty — and pay you coins for it."
@@ -54,7 +57,7 @@ const TUTORIAL_TIPS = [
     ] },
     { id: 'region_10', icon: '🌸', title: 'Region 10 — Flower Garden', pages: [
         () => `Welcome to the Flower Garden! 🌸\n\nGrow hydrangeas on up to 12 plots. Every fully grown flower that is currently watered gives +${Math.round(GARDEN_BOOST * 100)}% coins from everything you earn AND makes your bees ${Math.round(GARDEN_BOOST * 100)}% faster — and the bonus stacks with every flower!`,
-        () => `🌱 Getting started\n\n1. Buy 🪴 Soil (1 use per bag) and 🌱 Flower Seeds in ☰ MENU → 🛒 SHOP → Buy.\n2. Walk onto a plot — one is free. Tap Fertilize: it uses 1 soil and 1 seed.\n3. Tap Water. Watering costs 💧 water from your supplies at the top of the screen.\n4. More plots cost 🪙 coins (${GARDEN_PLOT_PRICE_STEP}, ${GARDEN_PLOT_PRICE_STEP * 2}, ${GARDEN_PLOT_PRICE_STEP * 3}…) — walk onto a locked plot and tap Buy Plot.`,
+        () => `🌱 Getting started\n\n1. Buy 🪴 Soil (1 use per bag) and 🌱 Flower Seeds in ☰ MENU → 🛒 SHOP → Buy.\n2. Tap a plot (you don't walk here) — one is free. Then tap Fertilize: it uses 1 soil and 1 seed.\n3. Tap Water. Watering costs 💧 water from your supplies at the top of the screen.\n4. More plots cost 🪙 coins (${GARDEN_PLOT_PRICE_STEP}, ${GARDEN_PLOT_PRICE_STEP * 2}, ${GARDEN_PLOT_PRICE_STEP * 3}…) — tap a locked plot, then tap Buy Plot.`,
         () => `⏱️ Growing\n\n• Seed: needs ${GARDEN_STAGE_WATER[1]} 💧 → becomes a shoot after ${GARDEN_STAGE_SECONDS[1] / 60} min.\n• Shoot: needs ${GARDEN_STAGE_WATER[2]} 💧 → blossoms after ${GARDEN_STAGE_SECONDS[2] / 60} min.\n• Hydrangea: needs ${GARDEN_STAGE_WATER[3]} 💧 → stays watered for ${GARDEN_STAGE_SECONDS[3] / 60} min, then ${GARDEN_REWATER_COST} 💧 every ${GARDEN_STAGE_SECONDS[3] / 60} min.\nA pop-up tells you when flowers need water.`,
         () => `⚠️ Don't let it dry out\n\nOnce a hydrangea has bloomed and been watered, you have ${GARDEN_GRACE_SECONDS} seconds after it dries out to water it again — otherwise it withers and the plot goes back to hard clay. The bar under each plot shows the time left (blue) or the time before it withers (red). Timers only run while the game is open, so stock up on 💧 water before you visit!`
     ] }

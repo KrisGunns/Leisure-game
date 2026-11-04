@@ -85,6 +85,7 @@ function runGameFrame(timestamp) {
         checkCollisions();
         checkTutorialTriggers();   // perk-point / fully-grown-pet tips (tutorial.js)
         updateGardenButtons();   // Buy Plot / Fertilize / Water button (Region 10)
+        updateFishingButton();   // FISH button at the lake edge / dock (Region 5, fishing.js)
         if (isGardenBoostActive()) {
             const gb = Math.round(countWateredBlooms() * GARDEN_BOOST * 100);
             drawPetText(`🌸 Garden bonus: +${gb}% coins · bees +${gb}% faster`, canvas.width / 2, 64, { size: 10, color: '#ffd1e8' });
@@ -182,8 +183,12 @@ function runGameFrame(timestamp) {
             }
         });
 
-        player.draw();
-        drawHeldGlider();
+        // Region 10 is tap-only: the player is not in the garden at all.
+        if (currentRegion !== GARDEN_REGION) {
+            player.draw();
+            drawHeldGlider();
+        }
+        drawRegionForeground(currentRegion);   // Region 6: the bottom fence stands in front of the walkers' legs
 
         // Bird excursion fly-away/landing poof effects (world.js) — drawn last so they
         // sit on top of everything else in whichever region they were spawned in.
@@ -241,7 +246,7 @@ FOOD_WATER_REGIONS.forEach(r => {
 // starting item count (3 food + 3 water = 6 items), since bananas are Region 8's only
 // resource and need to carry that same "combined" quantity on their own.
 for (let i = 0; i < 6; i++) {
-    regionalItems[8].bananas.push(new Item('banana'));
+    regionalItems[8].bananas.push(new Item('banana', 8));
 }
 
 // Adds the Region 6 (Pig Sty) option to the region dropdown in JS, so no index.html

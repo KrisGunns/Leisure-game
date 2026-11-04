@@ -416,7 +416,7 @@ function bgBuildBackyard(c, W, H, r) {
     for (let i = 0; i < 8; i++) { c.fillStyle = '#573619'; c.fillRect((tx - 18 + i * 5) | 0, ty + 2, 1, 9); }
     // oak at the top-left, small bushes top-right
     bgFence(c, r, 0, 4, W, 38, { rail: '#7a5a3a', main: '#a47a4f', dark: '#7d5a38', light: '#c79d70', nail: '#3c2a1a' }, false);
-    bgTree(c, r, 46, 104, 104, { trunk: '#7a5230', trunkD: '#523520', trunkL: '#9a6e42', leafD: '#2a7036', leafM: '#3b9148', leafL: '#6fcc72' });
+    { const T = getBackdropTrees(3)[0]; bgTree(c, r, T.x, T.y, T.s, { trunk: '#7a5230', trunkD: '#523520', trunkL: '#9a6e42', leafD: '#2a7036', leafM: '#3b9148', leafL: '#6fcc72' }); }
     bgBush(c, r, W - 40, 72, 52, { leafD: '#2c7a3a', leafM: '#3d9a4a', leafL: '#63c46a', fruit: '#ff6f91' });
     bgRock(c, r, W * 0.3, H * 0.62, 14);
     bgLightPools(c, r, W, H, 6, 0.09, '255,255,210');
@@ -475,8 +475,8 @@ function bgBuildBeeYard(c, W, H, r) {
     // little stone path to the hive
     for (let i = 0; i < 6; i++) bgStone(c, r, region4Hive.x - 10 + i * 5 + (r() - 0.5) * 6, region4Hive.y + 52 + i * 30, 12, 7);
     // apple trees at the top corners
-    bgTree(c, r, 36, 66, 74, { trunk: '#7a5230', trunkD: '#523520', trunkL: '#9a6e42', leafD: '#2f7d3c', leafM: '#47a653', leafL: '#7ad680', fruit: '#ff9fbd' });
-    bgTree(c, r, W - 36, 56, 66, { trunk: '#7a5230', trunkD: '#523520', trunkL: '#9a6e42', leafD: '#2f7d3c', leafM: '#47a653', leafL: '#7ad680', fruit: '#fff0f5' });
+    { const T = getBackdropTrees(4)[0]; bgTree(c, r, T.x, T.y, T.s, { trunk: '#7a5230', trunkD: '#523520', trunkL: '#9a6e42', leafD: '#2f7d3c', leafM: '#47a653', leafL: '#7ad680', fruit: '#ff9fbd' }); }
+    { const T = getBackdropTrees(4)[1]; bgTree(c, r, T.x, T.y, T.s, { trunk: '#7a5230', trunkD: '#523520', trunkL: '#9a6e42', leafD: '#2f7d3c', leafM: '#47a653', leafL: '#7ad680', fruit: '#fff0f5' }); }
     bgRock(c, r, W * 0.12, H * 0.62, 14);
     bgDrawHive(c, region4Hive.x, region4Hive.y);
     bgLightPools(c, r, W, H, 7, 0.1, '255,255,200');
@@ -707,7 +707,7 @@ function bgBuildJungle(c, W, H, r) {
     for (let i = 0; i < 12; i++) { c.fillStyle = r() < 0.5 ? '#3a2616' : '#8a6038'; c.fillRect((lx - 40 + r() * 86) | 0, (ly - 6 + r() * 14) | 0, 4 + Math.floor(r() * 6), 1); }
     c.fillStyle = 'rgba(90,190,80,0.6)'; c.fillRect(lx - 20, ly - 9, 30, 3); c.fillRect(lx + 20, ly - 8, 22, 2);
     // trees (back to front) with vines
-    const trees = [[W * 0.5, 78, 94], [W * 0.14, 92, 108], [W * 0.88, 84, 100], [W * 0.3, 160, 80], [W * 0.78, H - 90, 84], [W * 0.1, H - 64, 76]];
+    const trees = getBackdropTrees(8).map(t => [t.x, t.y, t.s]);   // shared with the solid-tree list in world.js
     trees.sort((a, b) => a[1] - b[1]);
     trees.forEach(t => bgJungleTree(c, r, t[0], t[1], t[2]));
     bgLightPools(c, r, W, H, 8, 0.09, '200,255,170');
@@ -1044,6 +1044,16 @@ function drawRegionBackground(region) {
         }
     }
     return true;
+}
+
+// Drawn AFTER the pets and the player: the part of the scenery that must stand in front of them. Region 6's
+// bottom fence is repainted over the walkers, so their legs are hidden behind it instead of showing on top.
+function drawRegionForeground(region) {
+    if (region !== 6) return;
+    const cv = getRegionBackground(6);
+    if (!cv) return;
+    const y0 = canvas.height - 42;
+    ctx.drawImage(cv, 0, y0, canvas.width, 42, 0, y0, canvas.width, 42);
 }
 
 // Paint the regions in the background shortly after start-up (one every ~350ms), so the first

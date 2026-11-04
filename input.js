@@ -53,10 +53,38 @@ function placeJoystickAt(clientX, clientY) {
     joyContainer.style.bottom = 'auto';
 }
 
+// Region 10 tap tracking (see the touchstart handler below): a touch that goes down and comes up on the field
+// without sliding away is a tap on the garden.
+let gardenTap = null;
+function gardenTapAtClient(clientX, clientY) {
+    const rect = gameCanvasEl.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    tapGardenAt((clientX - rect.left) * canvas.width / rect.width, (clientY - rect.top) * canvas.height / rect.height);
+}
+const gameCanvasEl = document.getElementById('gameCanvas');
+window.addEventListener('touchend', (e) => {
+    if (!gardenTap) return;
+    const t = findTouchById(e.changedTouches, gardenTap.id);
+    if (!t) return;
+    const moved = Math.hypot(t.clientX - gardenTap.x, t.clientY - gardenTap.y);
+    gardenTap = null;
+    if (moved <= 14 && currentRegion === GARDEN_REGION) gardenTapAtClient(t.clientX, t.clientY);
+});
+window.addEventListener('touchcancel', () => { gardenTap = null; });
 if (joyArea) {
+    // Mouse (desktop testing): touch input never reaches this, because touchstart above calls preventDefault.
+    joyArea.addEventListener('mousedown', (e) => {
+        if (currentRegion === GARDEN_REGION && isJoystickSurface(e.target)) gardenTapAtClient(e.clientX, e.clientY);
+    });
     joyArea.addEventListener('touchstart', (e) => {
         if (!isJoystickSurface(e.target)) return; // a control's own touch — leave it alone
         e.preventDefault();
+        // Region 10 (flower garden) is tap-only: no joystick, a short tap selects a plot instead.
+        if (currentRegion === GARDEN_REGION) {
+            const t0 = e.changedTouches[0];
+            gardenTap = { id: t0.identifier, x: t0.clientX, y: t0.clientY };
+            return;
+        }
         if (joyActive) return; // already tracking a touch on the joystick, ignore any extra one
         const touch = e.changedTouches[0];
         joyActive = true;
@@ -304,6 +332,7 @@ function switchToRegion(selectedRegion) {
 
         if (selectedRegion === currentRegion) return true;   // already here
         currentRegion = selectedRegion;
+        if (typeof gardenSelected !== 'undefined') gardenSelected = -1;
         foods = regionalItems[currentRegion].foods;
         waters = regionalItems[currentRegion].waters;
         flowers = regionalItems[currentRegion].flowers;

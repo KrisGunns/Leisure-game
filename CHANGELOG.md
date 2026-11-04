@@ -19,6 +19,9 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 <script src="backgrounds.js"></script>
 <script src="input.js"></script>
 <script src="ui.js"></script>
+<script src="tutorial.js"></script>
+<script src="account.js"></script>
+<script src="fishing.js"></script>
 <script src="main.js"></script>
 ```
 
@@ -32,6 +35,7 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 | `ui.js` | `updateUI()`, `renderMiniPet()`, pet Codex overlay, settings/dev panel, pet renaming, bag overlay, bee-purchase button, whistle-picker overlay (`showWhistlePicker()`/`hideWhistlePicker()`), consolidated MENU overlay (`handleOpenMenu()`/`handleCloseMenu()`), **Shop screen** (`renderShop()`, `buyShopItem()`, `sellShopItem()`), **Perk Tree screen** (`renderPerkTree()`, `renderPerkDetail()`) | `state.js`, `entities.js`, `world.js` |
 | `main.js` | `gameLoop()` (render + update loop), startup sequence (`loadGameProgress()`, initial item spawns, `requestAnimationFrame` kickoff) | all of the above (loads last) |
 | `account.js` | Settings menu (⚙️) + ☁️ Account: email/password sign-in and cloud save (2026-10-04 (57)). Loaded after `tutorial.js`. |
+| `fishing.js` | Region 5 fishing mini-game + 🎣 FISH button (2026-11-03 (79)): `isNearWater()`, `updateFishingButton()`, `startFishing()`. Loaded after `account.js`, before `main.js`. |
 | `tutorial.js` | Tutorial/Help (2026-10-04 (54)): `TUTORIAL_TIPS` text, `showTutorial()` pop-ups, `checkTutorialTriggers()`, the ❓ HELP screen. Loaded after `ui.js`. |
 
 **Why this order works:** each file's *immediately-executing* top-level code (variable declarations, `new Pet(...)`, event listener registration) only references things defined in earlier-loaded files. Anything referenced "out of order" — like `state.js`'s `gainPlayerXP()` calling `ui.js`'s `updateUI()` — is inside a function body, which isn't actually run until later gameplay, by which point every file has finished loading.
@@ -147,6 +151,36 @@ same size."):
   hand-drawn canvas code (in both entities.js and ui.js) was removed.
 
 ---
+
+### 2026-11-03 (79) — Solid scenery, no spawns on feeders/trees, fishing mini-game, panda "Full!" + new payout, Region 10 tap-only
+
+**Changed, at the user's request** (long Region 3–10 list). 
+
+**Walking / blocking (world.js `getRegionObstacles`, `resolvePlayerMove`, `unstickPlayer`; entities.js `Player.update`):**
+- Solid now (feet-based collision, slide along edges): Region 3 big oak; Region 4 two trees; Region 5 lake water (walk around it, dock stays walkable); Region 8 all jungle trees; Region 9 both tree pots/canopies, desk, chair, beanbag/ball (bottom right) and basket (bottom left). Region 9's bed is NOT blocked.
+- Trees come from the shared `getBackdropTrees(region)` list so the painted tree and its collision shape can never drift apart.
+- Region 6: new `drawRegionForeground()` (backgrounds.js, called from main.js after the walkers) re-draws the bottom fence strip on top of the player/pets, so legs are hidden behind it.
+- Region 10 is tap-only: the player is hidden and cannot move; tap a plot to select it, then use the Fertilize/Water/Buy buttons (input.js `gardenTap`, world.js `tapGardenAt`/`gardenSelected`).
+
+**Spawning:** `isSpawnBlocked()` (world.js) — Item/Flower constructors re-roll up to 80 times. Nothing spawns on any feeder box (all regions) or on the trees/water/furniture above (banana seeding in Region 8 uses it too).
+
+**Fishing (new `claude/fishing.js`, `#fishBtn` in index.html/style.css):** stand at the lake edge or beside / at the end of the dock in Region 5 and a 🎣 FISH button appears. Full-screen overlay with an ocean-blue bar, hook and fish; tap anywhere (or Space/E) to kick the hook up, gravity pulls it down. An algae-green zone surrounds the fish; keeping the hook inside for `FISHING_HOLD_SECONDS` (3) catches it (+1 🐟, +1 XP). Progress drains at half speed outside the zone; 40 s limit; "Give up" button. First use shows the new `mini_fishing` tutorial tip, then press FISH again. Tunables are the `FISHING_*` constants at the top of fishing.js.
+
+**Panda (Bamboo Fever):** payout is now 1 🪙 per 3 bamboo (`BAMBOO_PER_COIN`, was 5); finishing with 20+ bamboo shows a "Full!" text above the panda's head that fades after 5 s (`fullTextUntil`, Panda draw in entities.js).
+
+**Tutorial:** panda tip updated, `mini_fishing` added, Region 5 tip mentions fishing/lake, Region 10 tips say "tap a plot".
+
+**Assumptions (tell me if wrong):** Region 3 "walk on top of it" read as a typo → blocked; Region 9 "basket or the ball" → both blocked; fishing reward 1 fish + 1 XP.
+
+**Phone test advised:** tap feel of the fishing bar, collision sliding with the joystick, and tapping garden plots in Region 10.
+
+---
+
+### 2026-10-27 (78) — Sharper female elephant + female bear portraits (new image files)
+- The two portraits the user sent are only **184x160 (elephantBow)** and **174x160 (bearFemale)** pixels, which is slightly BELOW the ~186 device pixels the Pets tile needs on a 3x phone, so the browser had to enlarge them (soft). Rebuilt both as **552x480 / 522x480** files: 3x Lanczos upscale (premultiplied alpha, so no dark fringes) + a mild unsharp mask. Drawn back down in the tile they have clean, crisp edges; it cannot add detail that isn't in the original art, so a genuinely higher-resolution original would still look best.
+- New files to drop into the game folder (same names, overwrite): `assets/pets/elephantBow/portrait.png`, `assets/pets/bearFemale/portrait.png`.
+- entities.js: `PET_ASSET_VERSION` `v15` → `v16` so phones/browsers re-download the changed images instead of using their cached copies.
+- **Check:** 3x-density Chromium, old vs new file through the real `renderMiniPet()` — new one visibly crisper (fur edges, bow, face); no script errors. Other pets' portraits not touched (they were already sharp enough).
 
 ### 2026-10-26 (77) — Dog portrait faces the same way as the other pets
 - ui.js `renderMiniPet()` dog branch: the Codex portrait is now drawn **mirrored** (`translate(70,0)` + `scale(-1,1)` around the `drawImage`), because `assets/pets/dog/portrait.png` faces left while every other pet's portrait faces right. Only the Codex tile changed; the in-world dog sprite and its facing are untouched. If the dog image file itself is ever re-exported facing right, remove the mirror.

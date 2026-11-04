@@ -109,6 +109,125 @@ function clampItemCentreY(y, region) {
     if (l.maxFeet !== undefined && y > l.maxFeet - 10) y = l.maxFeet - 10;
     return y;
 }
+
+// ------------------------------------------------------------------
+// SOLID SCENERY (player only) + RESOURCE-FREE ZONES.
+// getRegionObstacles(region) lists the things the PLAYER cannot walk onto, as ellipses/rects in canvas
+// coordinates, derived from the very same numbers the background art is painted with (the tree list below is
+// shared with backgrounds.js; the lake from getLakeShape(); the Region 9 furniture from getBedroomLayout()).
+// Collision is tested on the player's FEET (three points across the sprite's width), like the fences, so the
+// head/body can still overlap a trunk in the 3/4 view. Resources (food, water, bananas, flowers) are kept off
+// every obstacle AND off the feeder box in every region (isSpawnBlocked, used by the Item/Flower constructors).
+// Pets are not restricted by any of this.
+// ------------------------------------------------------------------
+function getBackdropTrees(region) {
+    const W = canvas.width, H = canvas.height;
+    if (region === 3) return [ { x: 46, y: 104, s: 104, kind: 'oak' } ];
+    if (region === 4) return [ { x: 36, y: 66, s: 74, kind: 'oak' }, { x: W - 36, y: 56, s: 66, kind: 'oak' } ];
+    if (region === 8) return [ [W * 0.5, 78, 94], [W * 0.14, 92, 108], [W * 0.88, 84, 100], [W * 0.3, 160, 80], [W * 0.78, H - 90, 84], [W * 0.1, H - 64, 76] ]
+        .map(t => ({ x: t[0], y: t[1], s: t[2], kind: 'jungle' }));
+    return [];
+}
+function treeObstacleShapes(t) {
+    if (t.kind === 'jungle') {
+        const tw = Math.max(9, t.s * 0.17), th = t.s * 0.6, cy = t.y - th - t.s * 0.1;
+        return [ { t: 'e', cx: t.x, cy: cy + t.s * 0.1, rx: t.s * 0.44, ry: t.s * 0.27 },
+                 { t: 'r', x: t.x - tw * 1.1, y: t.y - th, w: tw * 2.2, h: th + 4 } ];
+    }
+    const tw = Math.max(5, Math.round(t.s * 0.15)), th = Math.round(t.s * 0.55), cy = t.y - th - t.s * 0.13;
+    return [ { t: 'e', cx: t.x, cy: cy, rx: t.s * 0.44, ry: t.s * 0.36 },
+             { t: 'r', x: t.x - tw / 2 - 3, y: t.y - th, w: tw + 6, h: th + 4 } ];
+}
+// The wooden dock in Region 5: the one strip of the lake the player may walk on (also where fishing starts).
+function getLakeDock() {
+    const L = getLakeShape();
+    return { x: L.cx - 17, y: L.cy - L.ry - 12, w: 34, h: L.ry + 18 };
+}
+let obstacleCache = { W: 0, H: 0, byRegion: {} };
+function getRegionObstacles(region) {
+    const W = canvas.width, H = canvas.height;
+    if (obstacleCache.W !== W || obstacleCache.H !== H) obstacleCache = { W: W, H: H, byRegion: {} };
+    if (obstacleCache.byRegion[region]) return obstacleCache.byRegion[region];
+    let list = [];
+    if (region === 3 || region === 4 || region === 8) {
+        getBackdropTrees(region).forEach(t => { list = list.concat(treeObstacleShapes(t)); });
+    } else if (region === 5) {
+        const L = getLakeShape(), d = getLakeDock();
+        list.push({ t: 'e', cx: L.cx, cy: L.cy, rx: L.rx * 0.96, ry: L.ry * 0.9, except: d, water: true });
+    } else if (region === 9) {
+        const B = getBedroomLayout();
+        B.trees.forEach(t => {
+            const R = t.canopyR, trunkTop = t.baseY - t.potH - t.trunkH;
+            list.push({ t: 'r', x: t.x - 20 * t.k, y: trunkTop, w: 40 * t.k, h: t.baseY - trunkTop + 3 });
+            list.push({ t: 'e', cx: t.x, cy: trunkTop - R * 0.55, rx: R * 1.3, ry: R * 1.0 });
+        });
+        const d = B.desk, chairW = 34, chairX = d.x + d.w / 2 - chairW / 2, chairY = d.y + d.h + 6;
+        list.push({ t: 'r', x: d.x, y: d.y, w: d.w, h: d.h });                       // desk
+        list.push({ t: 'r', x: chairX, y: chairY - 2, w: chairW, h: 34 });            // chair
+        list.push({ t: 'e', cx: W * 0.8, cy: H * 0.88 + 8, rx: 36, ry: 26 });         // beanbag / ball (bottom right)
+        list.push({ t: 'r', x: W * 0.2 - 27, y: H * 0.9 - 14, w: 54, h: 34 });        // toy basket (bottom left)
+    }
+    obstacleCache.byRegion[region] = list;
+    return list;
+}
+function pointInObstacle(o, px, py, pad) {
+    pad = pad || 0;
+    let hit;
+    if (o.t === 'e') {
+        const dx = (px - o.cx) / (o.rx + pad), dy = (py - o.cy) / (o.ry + pad);
+        hit = dx * dx + dy * dy <= 1;
+    } else {
+        hit = px >= o.x - pad && px <= o.x + o.w + pad && py >= o.y - pad && py <= o.y + o.h + pad;
+    }
+    if (hit && o.except && px >= o.except.x && px <= o.except.x + o.except.w && py >= o.except.y && py <= o.except.y + o.except.h) hit = false;
+    return hit;
+}
+// Is the player's standing spot (feet centre fx, fy) inside solid scenery?
+function isFeetBlocked(region, fx, fy) {
+    const list = getRegionObstacles(region);
+    for (let i = 0; i < list.length; i++) {
+        const o = list[i];
+        if (pointInObstacle(o, fx - 8, fy, 0) || pointInObstacle(o, fx, fy, 0) || pointInObstacle(o, fx + 8, fy, 0)) return true;
+    }
+    return false;
+}
+// Moves the player from (sx, sy) to (nx, ny) without entering scenery: tries the full move, then each axis on
+// its own (so walking into a tree slides along it). Returns {x, y}.
+function resolvePlayerMove(sx, sy, nx, ny, size, region) {
+    if (!getRegionObstacles(region).length) return { x: nx, y: ny };
+    const blocked = (x, y) => isFeetBlocked(region, x + size / 2, y + size);
+    if (!blocked(nx, ny)) return { x: nx, y: ny };
+    if (!blocked(nx, sy)) return { x: nx, y: sy };
+    if (!blocked(sx, ny)) return { x: sx, y: ny };
+    return { x: sx, y: sy };
+}
+// If the player ends up inside scenery (arriving from another region, a resized screen), nudge them to the
+// nearest free spot.
+function unstickPlayer(p, region) {
+    if (!getRegionObstacles(region).length) return;
+    const size = p.size;
+    const blocked = (x, y) => isFeetBlocked(region, x + size / 2, y + size);
+    if (!blocked(p.x, p.y)) return;
+    for (let rad = 4; rad <= 320; rad += 4) {
+        for (let k = 0; k < 24; k++) {
+            const a = k / 24 * Math.PI * 2, x = p.x + Math.cos(a) * rad, y = p.y + Math.sin(a) * rad;
+            if (x < 0 || y < 0 || x + size > canvas.width || y + size > canvas.height) continue;
+            if (clampFeetY(y, size, region) !== y) continue;
+            if (!blocked(x, y)) { p.x = x; p.y = y; return; }
+        }
+    }
+}
+// Where nothing may spawn: the feeder box (every region that has one), plus all solid scenery.
+function isSpawnBlocked(region, x, y) {
+    if (hasFeeder(region)) {
+        const sp = getFeederSpot(region);
+        if (x > sp.x - 46 && x < sp.x + 46 && y > sp.y - 36 && y < sp.y + 30) return true;
+    }
+    const list = getRegionObstacles(region);
+    for (let i = 0; i < list.length; i++) if (pointInObstacle(list[i], x, y, 14)) return true;
+    return false;
+}
+
 // Which region a pet is in right now (gliders carry it; the others are listed in petsByRegion).
 function getPetRegion(p) {
     if (p.type === 'glider') return p.regionNow;
@@ -241,6 +360,9 @@ function drawRegionFX() {
 // only tracks the actual collectible bamboo stalks on the map and the running count
 // during an active 30s round — deliberately NOT persisted across a reload, same
 // simplification approach as the bird's excursion state.
+const BAMBOO_PER_COIN = 3;            // every 3 bamboo collected pays 1 gold coin
+const BAMBOO_FULL_MIN = 20;           // collect at least this many and the panda shows "Full!"
+const BAMBOO_FULL_TEXT_MS = 5000;     // how long "Full!" stays before it starts to fade
 let bambooFever = { active: false, timer: 0, collected: 0, panda: null };
 let bambooItems = [];
 
@@ -293,7 +415,7 @@ function updateBambooFever(dt) {
     if (bambooFever.timer <= 0) {
         bambooFever.active = false;
         bambooItems = [];
-        let coinsEarned = Math.floor(bambooFever.collected / 5 * getCharacterBonuses(character.level).coin + 1e-9);   // Riches applies
+        let coinsEarned = Math.floor(bambooFever.collected / BAMBOO_PER_COIN * getCharacterBonuses(character.level).coin + 1e-9);   // Riches applies
         inventory.coins += coinsEarned;
         if (typeof showBambooResultToast === 'function') showBambooResultToast(bambooFever.collected, coinsEarned);
         // The panda only actually goes to sleep (the 'full' state, 💤) now that the
@@ -303,6 +425,8 @@ function updateBambooFever(dt) {
             if (coinsEarned > 0) {
                 spawnCoinPopup(bambooFever.panda.homeRegion || 7, bambooFever.panda.x + bambooFever.panda.size / 2, bambooFever.panda.y, coinsEarned);
             }
+            // 20+ bamboo: a "Full!" bubble over the panda's head for 5 seconds (then it fades) - see Pet.draw().
+            if (bambooFever.collected >= BAMBOO_FULL_MIN) bambooFever.panda.fullTextUntil = performance.now() + BAMBOO_FULL_TEXT_MS;
             bambooFever.panda.state = 'full';
             bambooFever.panda.stateTimer = 20.0;
             bambooFever.panda = null;
@@ -1395,20 +1519,24 @@ function waterGardenPlot(i) {
     return true;
 }
 
-// Which plot the player is standing at (nearest within reach), or -1. Region 10 only.
+// Region 10 is tap-only: the player does not walk there. Tapping a plot SELECTS it (highlight + status text
+// over it + the Buy Plot / Fertilize / Water button); tapping anywhere else clears the selection.
+let gardenSelected = -1;
 function getActiveGardenPlot() {
     if (currentRegion !== GARDEN_REGION) return -1;
+    return (gardenSelected >= 0 && gardenSelected < GARDEN_PLOT_COUNT) ? gardenSelected : -1;
+}
+// Called with a point in canvas coordinates (input.js converts from screen coordinates).
+function tapGardenAt(x, y) {
+    if (currentRegion !== GARDEN_REGION) return;
     const L = getGardenLayout();
-    const px = player.x + player.size / 2, py = player.y + player.size / 2;
-    let best = -1, bestD = Infinity;
+    let hit = -1;
     for (let i = 0; i < L.plots.length; i++) {
-        const r = L.plots[i];
-        const reach = 18;
-        if (px < r.x - reach || px > r.x + r.s + reach || py < r.y - reach || py > r.y + r.s + reach) continue;
-        const d = Math.hypot(px - (r.x + r.s / 2), py - (r.y + r.s / 2));
-        if (d < bestD) { bestD = d; best = i; }
+        const r = L.plots[i], m = 8;
+        if (x >= r.x - m && x <= r.x + r.s + m && y >= r.y - m && y <= r.y + r.s + 14) { hit = i; break; }
     }
-    return best;
+    gardenSelected = (hit === gardenSelected) ? -1 : hit;   // tapping the selected plot again deselects it
+    updateGardenButtons();
 }
 
 // What the action button should offer for plot i: { kind, label } or null.
@@ -1850,7 +1978,7 @@ function processSpawns(dt) {
     } else {
         regionRefillTimers[4] -= dt;
         if (regionRefillTimers[4] <= 0) {
-            while (flowerPool.length < 12) flowerPool.push(new Flower());
+            while (flowerPool.length < 12) flowerPool.push(new Flower(4));
             regionRefillTimers[4] = undefined;
         }
     }
@@ -1886,7 +2014,7 @@ function processSpawns(dt) {
     } else {
         regionRefillTimers[8] -= dt;
         if (regionRefillTimers[8] <= 0) {
-            while (bananaPool.length < 10) bananaPool.push(new Item('banana'));
+            while (bananaPool.length < 10) bananaPool.push(new Item('banana', 8));
             regionRefillTimers[8] = undefined;
         }
     }
