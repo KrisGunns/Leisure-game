@@ -16,32 +16,87 @@ function onThemeChanged() {
 
 const CHRISTMAS_OVERLAY_CACHE = {};
 
-// Snow lying on the ground: a cool tint, soft drifts, scattered patches, a white frost rim. Painted once.
-function christmasSnowGround(c, W, H, r) {
+// Is a snow patch centred at (x, y) with half-width rx resting on open ground (not on a tree / the lake water)?
+function christmasPatchOk(region, x, y, rx) {
+    if (y < 78) return false;                                       // the back fence / wall band: nothing lies there
+    if (typeof getRegionObstacles !== 'function') return true;
+    const list = getRegionObstacles(region);
+    for (let i = 0; i < list.length; i++) {
+        const o = list[i];
+        if (pointInObstacle(o, x, y, 8) || pointInObstacle(o, x - rx, y, 4) || pointInObstacle(o, x + rx, y, 4)) return false;
+    }
+    return true;
+}
+// A snow cap sitting ON TOP of a tree crown, plus a little drift round the trunk foot.
+function christmasTreeSnow(c, region, r) {
+    if (typeof getBackdropTrees !== 'function') return;
+    getBackdropTrees(region).forEach(t => {
+        const crown = treeObstacleShapes(t)[0];
+        const cx = crown.cx, cy = crown.cy - crown.ry * 0.38, rx = crown.rx * 0.82, ry = crown.ry * 0.5;
+        c.save();
+        c.beginPath(); c.ellipse(crown.cx, crown.cy, crown.rx, crown.ry, 0, 0, Math.PI * 2); c.clip();     // snow only where the leaves are
+        c.fillStyle = 'rgba(120,150,190,0.35)'; c.beginPath(); c.ellipse(cx + 2, cy + 3, rx, ry, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = 'rgba(250,253,255,0.96)'; c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); c.fill();
+        for (let i = 0; i < 6; i++) { c.beginPath(); c.ellipse(cx + (r() - 0.5) * rx * 1.4, cy + (r() - 0.2) * ry * 1.2, rx * 0.25, ry * 0.3, 0, 0, Math.PI * 2); c.fill(); }
+        c.restore();
+        const fx = t.x, fy = t.y + 2, w = Math.max(14, t.s * 0.28);
+        c.fillStyle = 'rgba(120,150,190,0.3)'; c.beginPath(); c.ellipse(fx + 2, fy + 3, w, w * 0.32, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = 'rgba(250,253,255,0.95)'; c.beginPath(); c.ellipse(fx, fy, w, w * 0.3, 0, 0, Math.PI * 2); c.fill();
+    });
+}
+// Snow lying on the ground: a cool tint, soft flat patches that only rest on open ground, tree caps. Painted once.
+function christmasSnowGround(c, W, H, r, region) {
     c.fillStyle = 'rgba(205,225,255,0.16)'; c.fillRect(0, 0, W, H);
-    for (let i = 0; i < 26; i++) {
-        const x = r() * W, y = r() * H, rx = 22 + r() * 46, ry = 7 + r() * 14;
-        c.fillStyle = 'rgba(120,150,190,0.22)'; c.beginPath(); c.ellipse(x + 2, y + 3, rx, ry, 0, 0, Math.PI * 2); c.fill();
-        c.fillStyle = 'rgba(250,253,255,0.88)'; c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); c.fill();
-        c.fillStyle = 'rgba(255,255,255,0.95)'; c.beginPath(); c.ellipse(x - rx * 0.15, y - ry * 0.25, rx * 0.6, ry * 0.5, 0, 0, Math.PI * 2); c.fill();
+    let placed = 0;
+    for (let tries = 0; tries < 400 && placed < 22; tries++) {
+        const x = r() * W, y = 78 + r() * (H - 78), rx = 14 + r() * 26, ry = rx * (0.22 + r() * 0.1);
+        if (!christmasPatchOk(region, x, y, rx)) continue;
+        placed++;
+        c.fillStyle = 'rgba(120,150,190,0.25)'; c.beginPath(); c.ellipse(x + 2, y + 2, rx, ry, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = 'rgba(250,253,255,0.92)'; c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = 'rgba(255,255,255,0.95)'; c.beginPath(); c.ellipse(x - rx * 0.12, y - ry * 0.2, rx * 0.6, ry * 0.55, 0, 0, Math.PI * 2); c.fill();
     }
-    for (let i = 0; i < 120; i++) { c.fillStyle = 'rgba(255,255,255,0.8)'; c.fillRect((r() * W) | 0, (r() * H) | 0, 2, 1); }
-    // heavy drifts along the bottom and the top edge
+    for (let i = 0; i < 160; i++) { const x = (r() * W) | 0, y = (78 + r() * (H - 78)) | 0; if (christmasPatchOk(region, x, y, 1)) { c.fillStyle = 'rgba(255,255,255,0.85)'; c.fillRect(x, y, 2, 1); } }
+    // drifts along the bottom edge (the ground), none along the top
     for (let x = -20; x < W + 30; x += 26) {
-        const h = 10 + r() * 12;
+        const h = 8 + r() * 9;
         c.fillStyle = 'rgba(250,253,255,0.95)'; c.beginPath(); c.ellipse(x, H, 30, h, 0, Math.PI, 0); c.fill();
-        c.fillStyle = 'rgba(255,255,255,0.8)'; c.beginPath(); c.ellipse(x, 0, 30, h * 0.6, 0, 0, Math.PI); c.fill();
     }
+    christmasTreeSnow(c, region, r);
     const g = c.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.45, W / 2, H / 2, Math.max(W, H) * 0.75);
-    g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(235,245,255,0.35)');
+    g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(235,245,255,0.3)');
     c.fillStyle = g; c.fillRect(0, 0, W, H);
+}
+// Region 5: the lake is frozen. Ice over the water (the dock stays visible), cracks, shine and a snowy rim.
+function christmasFreezeLake(c) {
+    const L = getLakeShape(), d = getLakeDock();
+    c.save();
+    c.beginPath(); c.rect(0, 0, canvas.width, canvas.height); c.rect(d.x, d.y, d.w, d.h);
+    c.clip('evenodd');
+    const g = c.createLinearGradient(L.cx - L.rx, L.cy - L.ry, L.cx + L.rx * 0.6, L.cy + L.ry);
+    g.addColorStop(0, '#e9f8ff'); g.addColorStop(0.5, '#bfe4f5'); g.addColorStop(1, '#8cc4e0');
+    c.fillStyle = g; c.beginPath(); c.ellipse(L.cx, L.cy, L.rx * 1.02, L.ry * 1.02, 0, 0, Math.PI * 2); c.fill();
+    c.clip();
+    const r = bgRng(555);
+    c.strokeStyle = 'rgba(255,255,255,0.8)'; c.lineWidth = 1;
+    for (let i = 0; i < 9; i++) {
+        let x = L.cx + (r() - 0.5) * L.rx * 1.6, y = L.cy + (r() - 0.5) * L.ry * 1.6;
+        c.beginPath(); c.moveTo(x, y);
+        for (let k = 0; k < 4; k++) { x += (r() - 0.5) * 34; y += (r() - 0.5) * 18; c.lineTo(x, y); }
+        c.stroke();
+    }
+    c.strokeStyle = 'rgba(90,150,190,0.45)';
+    for (let i = 0; i < 6; i++) { const x = L.cx + (r() - 0.5) * L.rx * 1.5, y = L.cy + (r() - 0.5) * L.ry * 1.5; c.beginPath(); c.moveTo(x, y); c.lineTo(x + (r() - 0.5) * 40, y + (r() - 0.5) * 16); c.stroke(); }
+    for (let i = 0; i < 5; i++) { c.fillStyle = 'rgba(255,255,255,0.55)'; const x = L.cx + (r() - 0.5) * L.rx * 1.4, y = L.cy + (r() - 0.5) * L.ry * 1.3; c.beginPath(); c.ellipse(x, y, 14 + r() * 14, 3, -0.3, 0, Math.PI * 2); c.fill(); }
+    c.restore();
+    c.strokeStyle = 'rgba(250,253,255,0.95)'; c.lineWidth = 4; c.beginPath(); c.ellipse(L.cx, L.cy, L.rx * 1.02, L.ry * 1.02, 0, 0, Math.PI * 2); c.stroke();
 }
 // A transparent canvas holding the snow for one region (used on top of regions 1-8 backgrounds and the garden).
 function getChristmasOverlay(region) {
     const W = canvas.width, H = canvas.height, hit = CHRISTMAS_OVERLAY_CACHE[region];
     if (hit && hit.w === W && hit.h === H) return hit.cv;
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
-    christmasSnowGround(cv.getContext('2d'), W, H, bgRng(region * 131 + 7));
+    christmasSnowGround(cv.getContext('2d'), W, H, bgRng(region * 131 + 7), region);
     CHRISTMAS_OVERLAY_CACHE[region] = { w: W, h: H, cv: cv };
     return cv;
 }

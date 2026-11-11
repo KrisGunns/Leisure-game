@@ -152,8 +152,9 @@ function getRegionObstacles(region) {
     if (region === 3 || region === 4 || region === 8) {
         getBackdropTrees(region).forEach(t => { list = list.concat(treeObstacleShapes(t)); });
     } else if (region === 5) {
+        // Christmas theme: the lake is frozen solid, so the whole lake can be walked on (no obstacle at all).
         const L = getLakeShape(), d = getLakeDock();
-        list.push({ t: 'e', cx: L.cx, cy: L.cy, rx: L.rx * 0.96, ry: L.ry * 0.9, except: d, water: true });
+        if (!(typeof isChristmas === 'function' && isChristmas())) list.push({ t: 'e', cx: L.cx, cy: L.cy, rx: L.rx * 0.96, ry: L.ry * 0.9, except: d, water: true });
     } else if (region === 9) {
         const B = getBedroomLayout();
         B.trees.forEach(t => {

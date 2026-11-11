@@ -1024,7 +1024,7 @@ function getRegionBackground(region) {
     const cv = document.createElement('canvas');
     cv.width = W; cv.height = H;
     const c = cv.getContext('2d');
-    try { build(c, W, H, bgRng(region * 7919 + 13)); if (isChristmas() && region !== 9) c.drawImage(getChristmasOverlay(region), 0, 0); }
+    try { build(c, W, H, bgRng(region * 7919 + 13)); if (isChristmas() && region !== 9) { if (region === 5) christmasFreezeLake(c); c.drawImage(getChristmasOverlay(region), 0, 0); } }
     catch (err) { console.error('Background for region ' + region + ' failed:', err); c.fillStyle = '#3a7a3a'; c.fillRect(0, 0, W, H); }
     REGION_BG_CACHE[region] = { w: W, h: H, cv: cv };
     return cv;

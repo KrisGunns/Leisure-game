@@ -1729,3 +1729,12 @@ approach feeling fragile:
 
 **Follow-up (83c), at the user's request:** (1) `.boneLabel` outline was a `-webkit-text-stroke` (miter joins on the font's overlapping contours = jagged on phones); now a ring of 48 `text-shadow` offsets in `em` units (smooth, scales with size), with `text-shadow:none` on the `::after` fill layer. (2) Bone font sizes cut ~15% (buttons 30→25px, MENU 44→37, window titles 34→29). (3) **Pets button was unreachable**: `#menuButtonList` used `justify-content:center`, which pushes the first items above the scroll area when the list is taller than the screen; now `flex-start` (+ slightly smaller button padding). (4) Tasks colour lightened (grey gradient). Files: `style.css`, `index.html` (`style.css?v=3.6`).
 
+### 2026-11-11 (84) — Frozen lake, snow placement, pixel-art Nutcracker
+
+**Changed, at the user's request:**
+- **Region 5 under the Christmas theme:** the lake is frozen (`christmasFreezeLake()`: ice gradient, cracks, shine, snowy rim; the dock stays visible) and the water obstacle is removed in `getRegionObstacles()` (world.js) when `isChristmas()`, so the player can walk across it. Fishing is unchanged.
+- **Snow placement** (`christmas.js`): ground patches are now small and flat, and are only placed on open ground (`christmasPatchOk`: not in the back fence band y<78, not inside tree/other obstacle shapes). Regions 3, 4, 8 get snow caps clipped to the tree crowns plus a small drift at each trunk foot. No drifts along the top edge any more.
+- **Nutcracker redrawn as a 16x24 pixel sprite** in the same format as the boy and girl (`PLAYER_PALETTE_NUTCRACKER` / `PLAYER_FRAMES_NUTCRACKER` in `nutcracker.js`; 2 idle frames incl. a blink, 4 walk frames, shared walk cycle). **To revert to the image-sheet version set `NUTCRACKER_PIXEL = false`** at the top of `nutcracker.js` (the sheet code is untouched).
+
+Files: `world.js`, `claude/christmas.js`, `claude/backgrounds.js`, `claude/nutcracker.js`, `CHANGELOG.md`.
+
