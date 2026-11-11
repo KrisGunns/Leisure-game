@@ -1386,7 +1386,7 @@ let lastTamersSig = null;
 let lastCharBonusSig = null;
 let lastCharPerksSig = null;
 function updateCharacterScreen() {
-    const tamersSig = character.model === 'male' ? 'male' : 'female';
+    const tamersSig = character.model + '|' + (isExtraOwned('tamer_nutcracker') ? 'n' : '');
     const nameDisplay = document.getElementById('characterNameDisplay');
     const levelValue = document.getElementById('characterLevelValue');
     const bonusList = document.getElementById('characterBonusList');
@@ -1402,23 +1402,24 @@ function updateCharacterScreen() {
     // just draws with the other sprite set.
     const tamersList = document.getElementById('characterTamersList');
     if (tamersList && typeof getPlayerSprite === 'function' && typeof PLAYER_MODELS !== 'undefined' && tamersSig !== lastTamersSig) {
-        lastTamersSig = character.model === 'male' ? 'male' : 'female';
+        lastTamersSig = tamersSig;
         while (tamersList.firstChild) tamersList.removeChild(tamersList.firstChild);
-        const currentModel = character.model === 'male' ? 'male' : 'female';
-        const TAMER_LABELS = { female: 'Girl', male: 'Boy' };
-        Object.keys(PLAYER_MODELS).forEach(modelKey => {
+        const currentModel = isTamerModelAvailable(character.model) ? character.model : 'female';
+        const TAMER_LABELS = { female: 'Girl', male: 'Boy', nutcracker: 'Nutcracker' };
+        Object.keys(PLAYER_MODELS).filter(isTamerModelAvailable).forEach(modelKey => {
             const selected = modelKey === currentModel;
             const card = document.createElement('div');
             card.className = 'tamerCard' + (selected ? ' tamerCardSelected' : '');
 
             const canvas = document.createElement('canvas');
             canvas.width = 48;
-            canvas.height = 48;
+            canvas.height = 60;     // tall enough for the Nutcracker (55 px)
             canvas.className = 'tamerCanvasView';
             const tctx = canvas.getContext('2d');
             tctx.imageSmoothingEnabled = false;
             const sprite = getPlayerSprite('idle', 0, modelKey);
-            tctx.drawImage(sprite, Math.round((48 - sprite.width) / 2), 48 - sprite.height - 1);
+            tctx.imageSmoothingEnabled = !!(PLAYER_MODELS[modelKey] && PLAYER_MODELS[modelKey].custom);
+            tctx.drawImage(sprite, Math.round((48 - sprite.width) / 2), 60 - sprite.height - 2);
             card.appendChild(canvas);
 
             const label = document.createElement('div');
@@ -1540,6 +1541,7 @@ const shopTabSell = document.getElementById('shopTabSell');
 const shopTabUnlockables = document.getElementById('shopTabUnlockables');
 
 let shopTab = 'buy';
+let shopSubTab = 'regions';   // inside Unlockables: 'regions' | 'pets' | 'themes' | 'tamers'
 let shopRenderedSignature = '';
 let shopRenderedTab = null;
 
@@ -1555,7 +1557,7 @@ function getShopSignature() {
     // to "Owned" as soon as something is bought.
     return [shopTab, inventory.coins, inventory.diamonds, inventory.eggs, inventory.fish, inventory.soil, inventory.seeds,
             isShopBuffActive('cake'), isShopBuffActive('wisdomPotion'),
-            Object.keys(unlockedIds).sort().join(',')].join('|');
+            Object.keys(unlockedIds).sort().join(','), shopSubTab, Object.keys(extraUnlocks).sort().join(','), activeTheme].join('|');
 }
 
 function refreshShopIfChanged() {
@@ -1736,34 +1738,53 @@ function renderShop() {
             shopContent.appendChild(row);
         });
     } else if (shopTab === 'unlockables') {
-        // Grouped by region. Regions 1-3 are open from the start, so they only get a plain
-        // "Region N" heading (no "starts with ..." blurb — the player can just see the pet
-        // rows below it) and the pets sold for them; Regions 4-9 are themselves for sale,
-        // followed by any extra pet sold for that region.
-        for (let r = 1; r <= 10; r++) {
-            if (r <= 3) {
-                let heading = document.createElement('div');
-                heading.className = 'shopSectionHeading';
-                heading.textContent = `Region ${r}`;
-                shopContent.appendChild(heading);
-            }
-            UNLOCKABLES.filter(u => u.region === r).forEach(u => {
-                let owned = isUnlockOwned(u.id);
-                let reason = getUnlockableBlockReason(u);
-                let shortBy = u.cost - inventory.coins;
-                let meta;
-                if (owned) meta = '✅ Owned';
-                else if (reason === 'region') meta = `🔒 Unlock Region ${u.region} first · 🪙 ${u.cost}`;
-                else meta = shortBy > 0 ? `🪙 ${u.cost} (need ${shortBy} more)` : `🪙 ${u.cost}`;
+        // A second row of tabs: Regions | Pets | Themes | Tamers. Regions and pets cost coins; themes and tamers cost diamonds.
+        const sub = document.createElement('div');
+        sub.className = 'shopSubTabs';
+        [['regions', 'Regions'], ['pets', 'Pets'], ['themes', 'Themes'], ['tamers', 'Tamers']].forEach(([id, label]) => {
+            const b = document.createElement('button');
+            b.className = 'shopSubTab' + (shopSubTab === id ? ' shopSubTabActive' : '');
+            b.textContent = label;
+            b.addEventListener('click', () => { shopSubTab = id; renderShop(); });
+            sub.appendChild(b);
+        });
+        shopContent.appendChild(sub);
 
-                let btn = owned
-                    ? makeShopButton('Owned', 'shopActionBtnActive', true, null)
-                    : makeShopButton('Buy', '', reason !== null, () => buyShopUnlockable(u));
-                let row = makeShopRow(u.icon, u.name, u.desc, meta, [btn], null);
-                if (owned) row.classList.add('shopRowOwned');
-                if (u.kind === 'pet' && r > 3) row.classList.add('shopRowSub');
-                shopContent.appendChild(row);
-            });
+        const coinRow = (u, withRegionTag) => {
+            const owned = isUnlockOwned(u.id);
+            const reason = getUnlockableBlockReason(u);
+            const shortBy = u.cost - inventory.coins;
+            let meta;
+            if (owned) meta = '✅ Owned';
+            else if (reason === 'region') meta = `🔒 Unlock Region ${u.region} first · 🪙 ${u.cost}`;
+            else meta = shortBy > 0 ? `🪙 ${u.cost} (need ${shortBy} more)` : `🪙 ${u.cost}`;
+            if (withRegionTag && !owned && reason !== 'region') meta = `Region ${u.region} · ` + meta;
+            const btn = owned ? makeShopButton('Owned', 'shopActionBtnActive', true, null)
+                : makeShopButton('Buy', '', reason !== null, () => buyShopUnlockable(u));
+            const row = makeShopRow(u.icon, u.name, u.desc, meta, [btn], null);
+            if (owned) row.classList.add('shopRowOwned');
+            return row;
+        };
+        const diamondRow = (kind, item, ownedHint) => {
+            const owned = isExtraOwned(kind + '_' + item.id);
+            const shortBy = item.costDiamonds - inventory.diamonds;
+            let meta;
+            if (owned) meta = '✅ Owned · ' + ownedHint;
+            else meta = shortBy > 0 ? `💎 ${item.costDiamonds} (need ${shortBy} more)` : `💎 ${item.costDiamonds}`;
+            const btn = owned ? makeShopButton('Owned', 'shopActionBtnActive', true, null)
+                : makeShopButton('Buy', '', shortBy > 0, () => { if (buyShopExtra(kind, item)) { showInfoToast(`${item.icon} ${item.name} unlocked!`); updateUI(); renderShop(); } });
+            const row = makeShopRow(item.icon, item.name, item.desc, meta, [btn], null);
+            if (owned) row.classList.add('shopRowOwned');
+            return row;
+        };
+        if (shopSubTab === 'regions') {
+            UNLOCKABLES.filter(u => u.kind === 'region').forEach(u => shopContent.appendChild(coinRow(u, false)));
+        } else if (shopSubTab === 'pets') {
+            UNLOCKABLES.filter(u => u.kind === 'pet').forEach(u => shopContent.appendChild(coinRow(u, true)));
+        } else if (shopSubTab === 'themes') {
+            SHOP_THEMES.forEach(t => shopContent.appendChild(diamondRow('theme', t, 'equip it from the Bag')));
+        } else {
+            SHOP_TAMERS.forEach(t => shopContent.appendChild(diamondRow('tamer', t, 'pick him on the Tamers screen')));
         }
     } else {
         // Only things the player actually has show up here; with nothing to sell, a short
@@ -1798,6 +1819,7 @@ function renderShop() {
 const handleOpenShop = (e) => {
     if (e) e.preventDefault();
     shopTab = 'buy';
+    shopSubTab = 'regions';
     renderShop();
     if (shopOverlay) shopOverlay.style.display = 'flex';
 };
@@ -2131,6 +2153,8 @@ if (btnWipeSave) {
             }
 
             Object.keys(unlockedIds).forEach(id => { delete unlockedIds[id]; });
+            Object.keys(extraUnlocks).forEach(id => { delete extraUnlocks[id]; });
+            activeTheme = 'none';
 
             if (typeof gliderPets !== 'undefined') {
                 gliderPets.forEach(g => {
@@ -2274,9 +2298,27 @@ bindGliderRename('btnRenameGlider2', 'inputGlider2', 1); // Miss Glider
     }
 })();
 
+// Themes the player owns, as tiles under the item grid ("Classic" = no theme). Tapping a tile equips it.
+function renderBagThemes() {
+    const section = document.getElementById('bagThemesSection'), grid = document.getElementById('bagThemesGrid');
+    if (!section || !grid) return;
+    const owned = SHOP_THEMES.filter(t => isThemeOwned(t.id));
+    section.style.display = owned.length ? '' : 'none';
+    while (grid.firstChild) grid.removeChild(grid.firstChild);
+    const options = [{ id: 'none', icon: '🌳', name: 'Classic' }].concat(owned);
+    options.forEach(t => {
+        const tile = document.createElement('div');
+        tile.className = 'bagItemRow bagTile bagThemeTile' + (activeTheme === t.id ? ' bagThemeEquipped' : '');
+        tile.innerHTML = `<div class="bagTileIcon">${t.icon}</div><span class="bagTileName">${escapeHtml(t.name)}</span><span class="bagThemeState">${activeTheme === t.id ? 'EQUIPPED' : ''}</span>`;
+        tile.addEventListener('click', () => { if (activeTheme !== t.id) { setActiveTheme(t.id); renderBagThemes(); } });
+        grid.appendChild(tile);
+    });
+}
+
 const handleOpenBag = (e) => {
     if (e) e.preventDefault();
     updateUI(); // Refreshes your item quantities right before displaying the card
+    renderBagThemes();
     if (bagOverlay) bagOverlay.style.display = 'flex';
 };
 
@@ -2469,7 +2511,7 @@ function renderAchievementsScreen(force) {
     progresses.forEach(p => {
         const d = p.def;
         html += `<div class="achCard">
-        <div class="achCardTitle">${d.icon} ${escapeHtml(d.title)}</div>
+        <div class="achCardTitle">${escapeHtml(d.title)}</div>
         <div class="achCardDesc">${escapeHtml(d.desc)}</div>`;
         if (!p.done && p.tier && p.tier.label) html += `<div class="achCardDesc" style="color:#f1c40f;">${escapeHtml(p.tier.label)}</div>`;
         if (p.done) {
@@ -2657,8 +2699,8 @@ function areTasksUnlocked() {
 function updateTasksMenuLabel() {
     const btn = document.getElementById('openTasksBtn');
     if (!btn) return;
-    const label = areTasksUnlocked() ? '📋 TASKS' : '🔒 TASKS';
-    if (btn.textContent !== label) btn.textContent = label;
+    // (no emoji any more: a locked Tasks button is just shown dimmed with a small padlock after the word)
+    btn.classList.toggle('menuBtnLocked', !areTasksUnlocked());
 }
 updateTasksMenuLabel();
 

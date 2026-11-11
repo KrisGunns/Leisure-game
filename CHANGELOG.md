@@ -17,11 +17,14 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 <script src="entities.js"></script>
 <script src="world.js"></script>
 <script src="backgrounds.js"></script>
+<script src="christmas.js"></script>
 <script src="input.js"></script>
 <script src="ui.js"></script>
 <script src="tutorial.js"></script>
 <script src="account.js"></script>
 <script src="fishing.js"></script>
+<script src="updater.js"></script>
+<script src="nutcracker.js"></script>
 <script src="main.js"></script>
 ```
 
@@ -36,6 +39,9 @@ The game was originally one `game.js` file; it's now split into 6 files that mus
 | `main.js` | `gameLoop()` (render + update loop), startup sequence (`loadGameProgress()`, initial item spawns, `requestAnimationFrame` kickoff) | all of the above (loads last) |
 | `account.js` | Settings menu (⚙️) + ☁️ Account: email/password sign-in and cloud save (2026-10-04 (57)). Loaded after `tutorial.js`. |
 | `fishing.js` | Region 5 fishing mini-game + 🎣 FISH button (2026-11-03 (79)): `isNearWater()`, `updateFishingButton()`, `startFishing()`. Loaded after `account.js`, before `main.js`. |
+| `christmas.js` | Christmas theme (2026-11-11 (83)): `isChristmas()`, `onThemeChanged()`, snow overlays, Region 9 tree/train/ornament/light painters, falling snow + blinking bulbs. Loaded after `backgrounds.js`. |
+| `updater.js` | ⚙️ Settings > 🔄 Check for updates (testing) (83). Wraps `openSettingsMenu()`. |
+| `nutcracker.js` | Nutcracker tamer: embedded sprite sheet + `PLAYER_MODELS.nutcracker` (83). |
 | `tutorial.js` | Tutorial/Help (2026-10-04 (54)): `TUTORIAL_TIPS` text, `showTutorial()` pop-ups, `checkTutorialTriggers()`, the ❓ HELP screen. Loaded after `ui.js`. |
 
 **Why this order works:** each file's *immediately-executing* top-level code (variable declarations, `new Pet(...)`, event listener registration) only references things defined in earlier-loaded files. Anything referenced "out of order" — like `state.js`'s `gainPlayerXP()` calling `ui.js`'s `updateUI()` — is inside a function body, which isn't actually run until later gameplay, by which point every file has finished loading.
@@ -1702,3 +1708,19 @@ approach feeling fragile:
 - The dog/elephant/squirrel/chicken foraging code has a repetitive `if level >= 20/10/5/else` pattern (~70 lines) that could collapse into a lookup table. Correct as-is, just verbose — deferred to avoid bundling a risky refactor into a bug-fix pass.
 - The `bagOverlay`/`openBagBtn`/`bagClose` implicit-global quirk described above.
 - The region-lock alert (`"Region locked!..."`) still uses blocking `alert()`. Lower risk than the level-up one since it's a single click, not a held interaction, but worth revisiting for consistency.
+
+---
+
+### 2026-11-11 (83) — Update button, bone-font menu, Shop tabs, Christmas theme, Nutcracker tamer, Bag grid
+
+**Changed, at the user's request:**
+- **Settings > 🔄 Check for updates (testing)** (`updater.js`): fetches every file index.html loads (plus the font) and compares the browser's cached copy with what the site serves now. If any differ it lists them and **Update now** refreshes the cache and reloads (save untouched). In the Android app it just explains that updates come with a new APK. `account.js` was not edited: updater.js wraps `openSettingsMenu()`.
+- **Emojis removed** from achievement names (cards + toast) and from all menu buttons. Menu words use the new bone-shaped font **JallBone** (`JallBone.ttf`, generated here, because Bonezkul/web fonts could not be downloaded) via `.boneLabel` (outline text + gradient fill). Colours: Menu white/grey, Pets light brown, Bag crimson, Tamers light blue, Shop grey, Perk Tree green, Tasks black, Achievements gold, Statistics blue/yellow/green/red, Help red. Bottom-bar buttons stay white with the same font. In-window headers (e.g. "PETS") still have their emoji.
+- **Shop > Unlockables** now has sub-tabs **Regions / Pets / Themes / Tamers** (`shopSubTab`). New diamond purchases: theme **Christmas** (1 💎) and tamer **Nutcracker** (1 💎). Saved as `stateMatrix.extraUnlocks` + `activeTheme` (reset by the dev wipe).
+- **Bag** items are now a grid of square tiles; a **Themes** section appears once a theme is owned (Classic + owned themes, tap to equip).
+- **Christmas theme** (`christmas.js`): snow on the ground + falling snow in every region except 9 (incl. garden R10); Region 9: sugar-glider trees become Christmas trees with ornaments/star/gifts, a toy train replaces the beanbag (same footprint, so collision is unchanged), blinking light string, hanging ornaments, wreath, stockings. Background caches are cleared when the theme changes.
+- **Nutcracker tamer** (`nutcracker.js`): 4 idle + 4 walk frames from the supplied sheet, selectable on the Tamers screen once bought. `Player.draw` now supports image-based models of any size.
+
+**Tested** (Playwright 390x780): menu/bar fonts, shop tabs, buying both items, bag grid + equip, themed R1/R6/R9/R10, Nutcracker select/idle/walk frames, save/load, updater (no-change / changed / update-now).
+
+**Phone test advised:** loading cover & bottom-bar font fit, Nutcracker size, snow performance on a low-end phone.

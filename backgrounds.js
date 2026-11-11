@@ -963,6 +963,7 @@ function bgBedroomTree(c, r, t) {
     c.strokeStyle = '#5a3818'; c.lineWidth = 1.5; c.beginPath(); c.ellipse(t.hollowX, t.hollowY, t.hollowRX + 2.5, t.hollowRY + 2.5, 0, 0, Math.PI * 2); c.stroke();
     c.fillStyle = 'rgba(190,140,80,0.45)'; c.fillRect(t.hollowX - t.hollowRX * 0.7, t.hollowY + t.hollowRY * 0.65, t.hollowRX * 1.4, 1);
     // canopy: smooth plastic-looking spheres with highlights
+    if (isChristmas()) { christmasTreeCanopy(c, r, t, trunkTop); return; }
     const R = t.canopyR, cy = trunkTop - R * 0.45;
     const blobs = [[-0.72, 0.28, 0.66], [0.72, 0.28, 0.66], [0, -0.12, 1], [-0.42, -0.5, 0.6], [0.44, -0.5, 0.6]];
     blobs.forEach(([ox, oy, sc]) => bgSphere(c, t.x + ox * R, cy + oy * R, R * sc, '#7fe08c', '#3fa851', '#1f6a31'));
@@ -978,10 +979,13 @@ function bgBuildBedroom(c, W, H, r) {
     bgBedroomRug(c, r, W, H);
     // floor clutter in the lower part of the room
     const by = H * 0.88;
+    if (isChristmas()) christmasTrain(c, W, H);                          // Christmas: a toy train set instead of the beanbag
+    else {
     bgShadow(c, W * 0.8 + 4, by + 22, 40, 9, 0.28);                     // beanbag
     bgSphere(c, W * 0.8, by, 30, '#7fd6cf', '#3fb0a8', '#217a74');
     bgSphere(c, W * 0.8 + 4, by - 10, 22, '#9de6df', '#4fc2b9', '#2a8c84');
     c.strokeStyle = 'rgba(20,90,85,0.5)'; c.lineWidth = 1; c.beginPath(); c.moveTo(W * 0.8 - 20, by - 4); c.quadraticCurveTo(W * 0.8, by - 18, W * 0.8 + 22, by - 6); c.stroke();
+    }
     const kx = W * 0.2, ky = H * 0.9;                                  // toy basket
     bgShadow(c, kx + 3, ky + 20, 28, 7, 0.28);
     ['#e8613c', '#4a90d9', '#f7c53d'].forEach((col, i) => { c.fillStyle = col; c.fillRect(kx - 14 + i * 10, ky - 14 - (i % 2) * 5, 8, 8); c.fillStyle = 'rgba(255,255,255,0.35)'; c.fillRect(kx - 14 + i * 10, ky - 14 - (i % 2) * 5, 8, 2); });
@@ -998,6 +1002,7 @@ function bgBuildBedroom(c, W, H, r) {
     bgBedroomBed(c, r, L.bed);
     bgBedroomDesk(c, r, L.desk);
     L.trees.slice().sort((a, b) => a.baseY - b.baseY).forEach(t => bgBedroomTree(c, r, t));
+    if (isChristmas()) christmasBedroomDecor(c, r, W, H, wallH);
     bgLightPools(c, r, W, H, 4, 0.08, '255,248,210');
     bgVignette(c, W, H, 0.2);
 }
@@ -1019,7 +1024,7 @@ function getRegionBackground(region) {
     const cv = document.createElement('canvas');
     cv.width = W; cv.height = H;
     const c = cv.getContext('2d');
-    try { build(c, W, H, bgRng(region * 7919 + 13)); }
+    try { build(c, W, H, bgRng(region * 7919 + 13)); if (isChristmas() && region !== 9) c.drawImage(getChristmasOverlay(region), 0, 0); }
     catch (err) { console.error('Background for region ' + region + ' failed:', err); c.fillStyle = '#3a7a3a'; c.fillRect(0, 0, W, H); }
     REGION_BG_CACHE[region] = { w: W, h: H, cv: cv };
     return cv;
@@ -1049,6 +1054,7 @@ function drawRegionBackground(region) {
 // Drawn AFTER the pets and the player: the part of the scenery that must stand in front of them. Region 6's
 // bottom fence is repainted over the walkers, so their legs are hidden behind it instead of showing on top.
 function drawRegionForeground(region) {
+    drawChristmasForeground(region);
     if (region !== 6) return;
     const cv = getRegionBackground(6);
     if (!cv) return;

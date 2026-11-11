@@ -69,6 +69,7 @@ function runGameFrame(timestamp) {
             // Flower garden: lawn, hedge, meadow flowers and the raised bed with the 12 plots
             // (world.js). Plots are part of the ground, so they are drawn here, under the pets.
             drawGardenBackground();
+            if (isChristmas()) ctx.drawImage(getChristmasOverlay(10), 0, 0);
             drawGardenPlots();
         }
 

@@ -393,6 +393,10 @@ const PLAYER_MODELS = {
 const playerSpriteCache = {};
 function getPlayerSprite(kind, index, model) {
     const modelKey = PLAYER_MODELS[model] ? model : 'female';
+    if (PLAYER_MODELS[modelKey].custom) {      // image-based model (the Nutcracker, nutcracker.js): until its sheet has loaded show the boy
+        const img = PLAYER_MODELS[modelKey].getSprite(kind, index);
+        return img || getPlayerSprite(kind, index % 2, 'male');
+    }
     const key = modelKey + ':' + kind + index;
     if (playerSpriteCache[key]) return playerSpriteCache[key];
     const { palette, frames } = PLAYER_MODELS[modelKey];
@@ -2656,26 +2660,30 @@ class Player {
             sprite = getPlayerSprite('walk', step, this.model);
             if (step % 2 === 1) bob = -PLAYER_SPRITE_SCALE;
         } else {
-            sprite = getPlayerSprite('idle', Math.floor(this.idleTime / PLAYER_WAVE_SECONDS) % 2, this.model);
+            const mdl = PLAYER_MODELS[this.model];
+            const idleCount = (mdl && mdl.custom) ? mdl.idleFrames : 2;
+            sprite = getPlayerSprite('idle', Math.floor(this.idleTime / (idleCount > 2 ? PLAYER_WAVE_SECONDS * 0.8 : PLAYER_WAVE_SECONDS)) % idleCount, this.model);
         }
 
         // The sprite is centred on the 32 x 32 hitbox (so it stands 8px taller above and 8px below it),
         // snapped to whole pixels to keep the pixel art crisp.
-        const dx = Math.round(this.x + this.size / 2 - w / 2);
-        const dy = Math.round(this.y + this.size / 2 - h / 2) + bob;
+        // (A custom-size sprite — the Nutcracker — is centred on the same spot and stands on the same ground line.)
+        const sw = sprite.width, sh = sprite.height;
+        const dx = Math.round(this.x + this.size / 2 - sw / 2);
+        const dy = Math.round(this.y + this.size / 2 - h / 2) + h - sh + bob;
 
         // Soft ground shadow under the feet — helps the white dress stand out on light ground.
         ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
         ctx.beginPath();
-        ctx.ellipse(dx + w / 2, Math.round(this.y + this.size / 2 - h / 2) + h - 1, 12, 3.5, 0, 0, Math.PI * 2);
+        ctx.ellipse(dx + sw / 2, Math.round(this.y + this.size / 2 - h / 2) + h - 1, 12, 3.5, 0, 0, Math.PI * 2);
         ctx.fill();
 
         const smoothing = ctx.imageSmoothingEnabled;
-        ctx.imageSmoothingEnabled = false;
+        ctx.imageSmoothingEnabled = !!(PLAYER_MODELS[this.model] && PLAYER_MODELS[this.model].custom);   // pixel-crisp for the 2 original models
         if (this.moving && this.facing < 0) {
             // The walk frames face right; mirror them for walking left.
             ctx.save();
-            ctx.translate(dx + w, dy);
+            ctx.translate(dx + sw, dy);
             ctx.scale(-1, 1);
             ctx.drawImage(sprite, 0, 0);
             ctx.restore();

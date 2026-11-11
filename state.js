@@ -729,6 +729,44 @@ function getUnlockableBlockReason(u) {
     return null;
 }
 
+// ------------------------------------------------------------------
+// SHOP EXTRAS bought with DIAMONDS (2026-11-11 (83)): game THEMES (bought in the shop, equipped from the Bag) and extra
+// TAMERS (bought in the shop, picked on the Tamers screen). They are kept apart from UNLOCKABLES (which cost coins and
+// belong to regions / pets). Ownership is saved as `extraUnlocks` ('theme_<id>' / 'tamer_<id>'), the equipped theme as
+// `activeTheme`. A new theme / tamer = one new row here (+ its art).
+// ------------------------------------------------------------------
+const SHOP_THEMES = [
+    { id: 'christmas', icon: '🎄', name: 'Christmas', costDiamonds: 1,
+      desc: 'A Christmas makeover for the whole game: snow falling in every region (except the bedroom), festive scenery, Christmas trees, lights, ornaments and a toy train. Equip it from the Bag.' }
+];
+const SHOP_TAMERS = [
+    { id: 'nutcracker', icon: '💂', name: 'Nutcracker', costDiamonds: 1,
+      desc: 'A classic wooden Nutcracker soldier as your tamer. Pick him on the Tamers screen (Menu → Tamers).' }
+];
+const extraUnlocks = {};
+let activeTheme = 'none';        // 'none' or a SHOP_THEMES id (always one the player owns)
+function isExtraOwned(key) { return !!extraUnlocks[key]; }
+function isThemeOwned(id) { return isExtraOwned('theme_' + id); }
+function isTamerModelAvailable(model) {
+    return model === 'female' || model === 'male' || (model === 'nutcracker' && isExtraOwned('tamer_nutcracker'));
+}
+function buyShopExtra(kind, item) {
+    const key = kind + '_' + item.id;
+    if (extraUnlocks[key] || inventory.diamonds < item.costDiamonds) return false;
+    inventory.diamonds -= item.costDiamonds;
+    extraUnlocks[key] = true;
+    saveGameProgress();
+    return true;
+}
+// Equips a theme ('none' = the normal look). Backgrounds are cached per theme, so the caches are dropped here.
+function setActiveTheme(id) {
+    if (id !== 'none' && !isThemeOwned(id)) return false;
+    activeTheme = id;
+    if (typeof onThemeChanged === 'function') onThemeChanged();
+    saveGameProgress();
+    return true;
+}
+
 function buyUnlockable(id) {
     const u = getUnlockable(id);
     if (getUnlockableBlockReason(u) !== null) return false;
@@ -1070,7 +1108,7 @@ function claimAchievementTier(id) {
     inventory.diamonds += p.tier.reward;
     achievements[id].claimed = p.claimed + 1;
     saveGameProgress();
-    showAchievementToast(`🏆 ${p.def.title} ${p.tier.goal}/${p.tier.goal}  +${p.tier.reward} 💎`);
+    showAchievementToast(`${p.def.title} ${p.tier.goal}/${p.tier.goal}  +${p.tier.reward} 💎`);
     updateUI();
     return p.tier.reward;
 }
@@ -1272,6 +1310,8 @@ function saveGameProgress() {
 
         // Which regions / shop pets the player has bought (see UNLOCKABLES).
         stateMatrix.unlocks = Object.keys(unlockedIds).filter(id => unlockedIds[id]);
+        stateMatrix.extraUnlocks = Object.keys(extraUnlocks).filter(k => extraUnlocks[k]);
+        stateMatrix.activeTheme = activeTheme;
 
         // Sugar gliders (Region 9) live in their own list, `gliderPets` (world.js), NOT in
         // petsByRegion — they get carried between regions, and keeping them out of the
@@ -1397,6 +1437,14 @@ function loadGameProgress() {
         });
 
         guard('character', () => {
+            // Diamond purchases (themes / tamers) — restored BEFORE the character so a saved Nutcracker model is still valid.
+            if (Array.isArray(stateMatrix.extraUnlocks)) {
+                stateMatrix.extraUnlocks.forEach(k => {
+                    if (typeof k === 'string' && (SHOP_THEMES.some(t => 'theme_' + t.id === k) || SHOP_TAMERS.some(t => 'tamer_' + t.id === k))) extraUnlocks[k] = true;
+                });
+            }
+            activeTheme = (typeof stateMatrix.activeTheme === 'string' && SHOP_THEMES.some(t => t.id === stateMatrix.activeTheme) && isThemeOwned(stateMatrix.activeTheme)) ? stateMatrix.activeTheme : 'none';
+
             // FIXED: Fully restore and link Character Level and XP to the HUD on page load
             if (stateMatrix.characterData) {
                 const rawChar = (stateMatrix.characterData && typeof stateMatrix.characterData === 'object') ? stateMatrix.characterData : {};
@@ -1405,7 +1453,7 @@ function loadGameProgress() {
                 character.xp = cleanSavedNum(rawChar.xp, 0, 1e12, 0);
                 if (rawChar.perkPoints !== undefined) character.perkPoints = Math.floor(cleanSavedNum(rawChar.perkPoints, 0, 100000, 0));
                 character.name = cleanSavedName(rawChar.name, 'Player'); // older saves predate the name field
-                if (character.model !== 'male') character.model = 'female'; // older saves predate the model field
+                if (!isTamerModelAvailable(character.model)) character.model = 'female'; // older saves predate the model field; an unowned tamer falls back to the girl
                 if (typeof player !== 'undefined') player.model = character.model; // keep the on-screen sprite in sync
                 normalizeCharacterPerks();                       // older saves predate the perk tree
             

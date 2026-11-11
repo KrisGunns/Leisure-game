@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Just a little leisure</title>
-    <link rel="stylesheet" href="style.css?v=3.3">
+    <link rel="stylesheet" href="style.css?v=3.5">
 </head>
 <body>
     <div id="bootCover" style="position:fixed; inset:0; z-index:99999; background:#1e272e; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#f1c40f; font-family:monospace; text-align:center;">
@@ -58,18 +58,24 @@
         <!-- Repositioned & Cleaned Inventory Storage Overlay Sheet -->
     <div id="bagOverlay" class="modalOverlay" style="display: none;">
         <div class="modalHeader">
-            <h2>🎒 INVENTORY</h2>
+            <h2>🎒 BAG</h2>
             <button id="bagClose" class="modalCloseBtn">X</button>
         </div>
         <div id="bagContentList">
-            <div class="bagItemRow"><span>🪙 Gold Coins:</span><strong id="bagCoins">0</strong></div>
-            <div class="bagItemRow"><span>🥚 Eggs:</span><strong id="bagEggs">0</strong></div>
-            <div class="bagItemRow"><span>🍯 Wild Honey:</span><strong id="bagHoney">0</strong></div>
-            <div class="bagItemRow"><span>🐟 Fish:</span><strong id="bagFish">0</strong></div>
-            <div class="bagItemRow"><span>🍌 Bananas:</span><strong id="bagBananas">0</strong></div>
-            <div class="bagItemRow"><span>🪴 Soil (uses):</span><strong id="bagSoil">0</strong></div>
-            <div class="bagItemRow"><span>🌱 Flower Seeds:</span><strong id="bagSeeds">0</strong></div>
-            <div class="bagItemRow"><span>💎 Diamonds:</span><strong id="bagDiamonds">0</strong></div>
+            <div class="bagGrid">
+                <div class="bagItemRow bagTile"><div class="bagTileIcon">🪙</div><strong id="bagCoins">0</strong><span class="bagTileName">Gold Coins</span></div>
+                <div class="bagItemRow bagTile"><div class="bagTileIcon">🥚</div><strong id="bagEggs">0</strong><span class="bagTileName">Eggs</span></div>
+                <div class="bagItemRow bagTile"><div class="bagTileIcon">🍯</div><strong id="bagHoney">0</strong><span class="bagTileName">Wild Honey</span></div>
+                <div class="bagItemRow bagTile"><div class="bagTileIcon">🐟</div><strong id="bagFish">0</strong><span class="bagTileName">Fish</span></div>
+                <div class="bagItemRow bagTile"><div class="bagTileIcon">🍌</div><strong id="bagBananas">0</strong><span class="bagTileName">Bananas</span></div>
+                <div class="bagItemRow bagTile"><div class="bagTileIcon">🪴</div><strong id="bagSoil">0</strong><span class="bagTileName">Soil (uses)</span></div>
+                <div class="bagItemRow bagTile"><div class="bagTileIcon">🌱</div><strong id="bagSeeds">0</strong><span class="bagTileName">Flower Seeds</span></div>
+                <div class="bagItemRow bagTile"><div class="bagTileIcon">💎</div><strong id="bagDiamonds">0</strong><span class="bagTileName">Diamonds</span></div>
+            </div>
+            <div id="bagThemesSection" style="display: none;">
+                <div class="bagHeading">THEMES <small>(tap one to equip it)</small></div>
+                <div id="bagThemesGrid" class="bagGrid"></div>
+            </div>
         </div>
     </div>
 
@@ -446,19 +452,19 @@
 
         <div id="menuOverlay" style="display: none;">
             <div id="menuHeader">
-                <h2>☰ MENU</h2>
+                <h2><span class="boneLabel" data-text="MENU" style="--bone-fill: linear-gradient(180deg,#ffffff 25%,#9aa3ad); --bone-outline: #1d2a44;">MENU</span></h2>
                 <button id="menuClose">X</button>
             </div>
             <div id="menuButtonList">
-                <button id="openCodexBtn" class="menuBtn">🐾 PETS</button>
-                <button id="openBagBtn" class="menuBtn">🎒 BAG</button>
-                <button id="openCharacterBtn" class="menuBtn">🧑 TAMERS</button>
-                <button id="openShopBtn" class="menuBtn">🛒 SHOP</button>
-                <button id="openPerkTreeBtn" class="menuBtn">🌳 PERK TREE</button>
-                <button id="openTasksBtn" class="menuBtn">📋 TASKS</button>
-                <button id="openAchievementsBtn" class="menuBtn">🏆 ACHIEVEMENTS</button>
-                <button id="openStatsBtn" class="menuBtn">📊 STATISTICS</button>
-                <button id="openHelpBtn" class="menuBtn">❓ HELP</button>
+                <button id="openCodexBtn" class="menuBtn"><span class="boneLabel" data-text="PETS" style="--bone-fill: linear-gradient(180deg,#f0cfa6 20%,#c58f5a);">PETS</span></button>
+                <button id="openBagBtn" class="menuBtn"><span class="boneLabel" data-text="BAG" style="--bone-fill: linear-gradient(180deg,#ff5a7a 15%,#b3122f);">BAG</span></button>
+                <button id="openCharacterBtn" class="menuBtn"><span class="boneLabel" data-text="TAMERS" style="--bone-fill: linear-gradient(180deg,#d4f1ff 20%,#6cc3f5);">TAMERS</span></button>
+                <button id="openShopBtn" class="menuBtn"><span class="boneLabel" data-text="SHOP" style="--bone-fill: linear-gradient(180deg,#e4e7ea 20%,#8b939b);">SHOP</span></button>
+                <button id="openPerkTreeBtn" class="menuBtn"><span class="boneLabel" data-text="PERK TREE" style="--bone-fill: linear-gradient(180deg,#8dec7e 15%,#2a9a3a);">PERK TREE</span></button>
+                <button id="openTasksBtn" class="menuBtn"><span class="boneLabel" data-text="TASKS" style="--bone-fill: linear-gradient(180deg,#4a4a4a 20%,#050505);">TASKS</span></button>
+                <button id="openAchievementsBtn" class="menuBtn"><span class="boneLabel" data-text="ACHIEVEMENTS" style="--bone-fill: linear-gradient(180deg,#fff0a0 15%,#e6a800);">ACHIEVEMENTS</span></button>
+                <button id="openStatsBtn" class="menuBtn"><span class="boneLabel" data-text="STATISTICS" style="--bone-fill: linear-gradient(90deg,#3d8bff 0%,#ffd93a 36%,#3ddc6a 66%,#ff4d4d 100%);">STATISTICS</span></button>
+                <button id="openHelpBtn" class="menuBtn"><span class="boneLabel" data-text="HELP" style="--bone-fill: linear-gradient(180deg,#ff7b7b 15%,#d11a1a);">HELP</span></button>
             </div>
         </div>
     </div>
@@ -475,11 +481,14 @@
     <script src="entities.js"></script>
     <script src="world.js"></script>
     <script src="backgrounds.js"></script>
+    <script src="christmas.js"></script>
     <script src="input.js"></script>
     <script src="ui.js"></script>
     <script src="tutorial.js"></script>
     <script src="account.js"></script>
     <script src="fishing.js"></script>
+    <script src="updater.js"></script>
+    <script src="nutcracker.js"></script>
     <script src="main.js"></script>
 </body>
 </html>
