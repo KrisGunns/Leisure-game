@@ -1285,15 +1285,24 @@ body, html {
 .menuBtn.menuBtnLocked { filter: grayscale(0.85) brightness(0.8); }
 .menuBtn.menuBtnLocked::after { content: ' 🔒'; font-size: 16px; }
 
-/* The always-visible bottom-bar buttons: same font, plain white lettering with a dark outline (colours of the buttons unchanged). */
-.barBtn {
+/* The always-visible bottom-bar buttons: same font, white lettering with a smooth dark outline (a ring of em-sized
+   text-shadows, like .boneLabel) and a size that fits every label (7-letter ones like DEPOSIT / COLLECT / WHISTLE fit). */
+.barBtn, #openMenuBtn, #openRegionsBtn, #interactBtn, #giveAuxBtn, #whistleBtn {
     font-family: 'JallBone', 'Arial Black', Impact, sans-serif;
     font-weight: normal;
+    font-size: 16px;
     letter-spacing: 0;
+    white-space: nowrap;
     color: #fff;
-    text-shadow: -1.5px -1.5px 0 #1b1b2a, 1.5px -1.5px 0 #1b1b2a, -1.5px 1.5px 0 #1b1b2a, 1.5px 1.5px 0 #1b1b2a, 0 2px 0 #1b1b2a;
+    text-shadow: 0.100em 0.000em 0 #1b1b2a, 0.097em 0.022em 0 #1b1b2a, 0.090em 0.043em 0 #1b1b2a, 0.078em 0.062em 0 #1b1b2a, 0.062em 0.078em 0 #1b1b2a, 0.043em 0.090em 0 #1b1b2a, 0.022em 0.097em 0 #1b1b2a, 0.000em 0.100em 0 #1b1b2a, -0.022em 0.097em 0 #1b1b2a, -0.043em 0.090em 0 #1b1b2a, -0.062em 0.078em 0 #1b1b2a, -0.078em 0.062em 0 #1b1b2a, -0.090em 0.043em 0 #1b1b2a, -0.097em 0.022em 0 #1b1b2a, -0.100em 0.000em 0 #1b1b2a, -0.097em -0.022em 0 #1b1b2a, -0.090em -0.043em 0 #1b1b2a, -0.078em -0.062em 0 #1b1b2a, -0.062em -0.078em 0 #1b1b2a, -0.043em -0.090em 0 #1b1b2a, -0.022em -0.097em 0 #1b1b2a, -0.000em -0.100em 0 #1b1b2a, 0.022em -0.097em 0 #1b1b2a, 0.043em -0.090em 0 #1b1b2a, 0.062em -0.078em 0 #1b1b2a, 0.078em -0.062em 0 #1b1b2a, 0.090em -0.043em 0 #1b1b2a, 0.097em -0.022em 0 #1b1b2a, 0.060em 0.000em 0 #1b1b2a, 0.057em 0.019em 0 #1b1b2a, 0.049em 0.035em 0 #1b1b2a, 0.035em 0.049em 0 #1b1b2a, 0.019em 0.057em 0 #1b1b2a, 0.000em 0.060em 0 #1b1b2a, -0.019em 0.057em 0 #1b1b2a, -0.035em 0.049em 0 #1b1b2a, -0.049em 0.035em 0 #1b1b2a, -0.057em 0.019em 0 #1b1b2a, -0.060em 0.000em 0 #1b1b2a, -0.057em -0.019em 0 #1b1b2a, -0.049em -0.035em 0 #1b1b2a, -0.035em -0.049em 0 #1b1b2a, -0.019em -0.057em 0 #1b1b2a, -0.000em -0.060em 0 #1b1b2a, 0.019em -0.057em 0 #1b1b2a, 0.035em -0.049em 0 #1b1b2a, 0.049em -0.035em 0 #1b1b2a, 0.057em -0.019em 0 #1b1b2a, 0 0.12em 0 #1b1b2a;
 }
+#interactBtn.longLabel, #giveAuxBtn.longLabel { font-size: 13px; }
 
+/* Top bar: food/water on the left, the level badge truly centred, settings on the right. */
+#topBar { display: grid !important; grid-template-columns: 1fr auto 1fr; justify-content: normal; }
+#topBar > .hudResourceBlock { justify-self: start; padding-left: 12px; }
+#topBar > #playerLevelBadge { justify-self: center; position: relative; }
+#topBar > div:last-child { justify-self: end; padding-right: 12px; }
 
 /* ---------------- BAG: items in a grid of tiles, themes underneath ---------------- */
 #bagContentList { display: block; overflow-y: auto; -webkit-overflow-scrolling: touch; gap: 0; }
@@ -1330,3 +1339,4 @@ body, html {
 
 #menuButtonList { justify-content: flex-start !important; }
 .menuBtn { padding: 12px 10px !important; }
+#whistleBtn, #openRegionsBtn { font-size: 15px; }

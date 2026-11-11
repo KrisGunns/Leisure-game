@@ -583,11 +583,13 @@ function updateUI() {
         if (gliderMode === 'take') interactBtn.textContent = 'TAKE';
         else if (gliderMode === 'drop') interactBtn.textContent = 'DROP';
         else interactBtn.textContent = giveLabel;
+        interactBtn.classList.toggle('longLabel', interactBtn.textContent.length >= 7);
 
         const giveAuxBtn = document.getElementById('giveAuxBtn');
         if (giveAuxBtn) {
             giveAuxBtn.classList.toggle('auxShown', gliderMode !== 'normal');
             giveAuxBtn.textContent = (gliderMode === 'normal') ? '' : giveLabel;
+            giveAuxBtn.classList.toggle('longLabel', giveAuxBtn.textContent.length >= 7);
         }
     }
 
