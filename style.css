@@ -393,7 +393,7 @@ body, html {
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;   /* 'center' cut off the top buttons (Pets/Bag) when the list was taller than the screen */
     gap: 18px;
     padding-bottom: 40px;
 }
@@ -1257,14 +1257,12 @@ body, html {
     position: relative;
     display: inline-block;
     font-family: 'JallBone', 'Arial Black', Impact, sans-serif;
-    font-size: 30px;
+    font-size: 25px;
     font-weight: normal;
     line-height: 1.15;
     letter-spacing: 1px;
     color: var(--bone-outline);
-    -webkit-text-stroke: 8px var(--bone-outline);
-    paint-order: stroke fill;
-    filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.28));
+    text-shadow: 0.085em 0.000em 0 var(--bone-outline), 0.083em 0.019em 0 var(--bone-outline), 0.077em 0.037em 0 var(--bone-outline), 0.066em 0.053em 0 var(--bone-outline), 0.053em 0.066em 0 var(--bone-outline), 0.037em 0.077em 0 var(--bone-outline), 0.019em 0.083em 0 var(--bone-outline), 0.000em 0.085em 0 var(--bone-outline), -0.019em 0.083em 0 var(--bone-outline), -0.037em 0.077em 0 var(--bone-outline), -0.053em 0.066em 0 var(--bone-outline), -0.066em 0.053em 0 var(--bone-outline), -0.077em 0.037em 0 var(--bone-outline), -0.083em 0.019em 0 var(--bone-outline), -0.085em 0.000em 0 var(--bone-outline), -0.083em -0.019em 0 var(--bone-outline), -0.077em -0.037em 0 var(--bone-outline), -0.066em -0.053em 0 var(--bone-outline), -0.053em -0.066em 0 var(--bone-outline), -0.037em -0.077em 0 var(--bone-outline), -0.019em -0.083em 0 var(--bone-outline), -0.000em -0.085em 0 var(--bone-outline), 0.019em -0.083em 0 var(--bone-outline), 0.037em -0.077em 0 var(--bone-outline), 0.053em -0.066em 0 var(--bone-outline), 0.066em -0.053em 0 var(--bone-outline), 0.077em -0.037em 0 var(--bone-outline), 0.083em -0.019em 0 var(--bone-outline), 0.050em 0.000em 0 var(--bone-outline), 0.048em 0.015em 0 var(--bone-outline), 0.040em 0.029em 0 var(--bone-outline), 0.029em 0.040em 0 var(--bone-outline), 0.015em 0.048em 0 var(--bone-outline), 0.000em 0.050em 0 var(--bone-outline), -0.015em 0.048em 0 var(--bone-outline), -0.029em 0.040em 0 var(--bone-outline), -0.040em 0.029em 0 var(--bone-outline), -0.048em 0.015em 0 var(--bone-outline), -0.050em 0.000em 0 var(--bone-outline), -0.048em -0.015em 0 var(--bone-outline), -0.040em -0.029em 0 var(--bone-outline), -0.029em -0.040em 0 var(--bone-outline), -0.015em -0.048em 0 var(--bone-outline), -0.000em -0.050em 0 var(--bone-outline), 0.015em -0.048em 0 var(--bone-outline), 0.029em -0.040em 0 var(--bone-outline), 0.040em -0.029em 0 var(--bone-outline), 0.048em -0.015em 0 var(--bone-outline), 0 0.1em 0 rgba(0,0,0,0.28);
     white-space: nowrap;
 }
 .boneLabel::after {
@@ -1273,6 +1271,7 @@ body, html {
     left: 0;
     top: 0;
     -webkit-text-stroke: 0;
+    text-shadow: none;
     color: transparent;
     background: var(--bone-fill);
     -webkit-background-clip: text;
@@ -1280,7 +1279,7 @@ body, html {
     -webkit-text-fill-color: transparent;
 }
 #menuHeader h2 { margin: 0; }
-#menuHeader .boneLabel { font-size: 44px; }
+#menuHeader .boneLabel { font-size: 37px; }
 .menuBtn { padding: 16px 10px !important; }
 .menuBtn .boneLabel { pointer-events: none; }
 .menuBtn.menuBtnLocked { filter: grayscale(0.85) brightness(0.8); }
@@ -1327,4 +1326,7 @@ body, html {
 .shopSubTab.shopSubTabActive { color: #141414; background: #f1c40f; border-color: #f1c40f; }
 
 /* window titles in the bone font */
-.boneLabel.winTitle { font-size: 34px; letter-spacing: 1px; }
+.boneLabel.winTitle { font-size: 29px; letter-spacing: 1px; }
+
+#menuButtonList { justify-content: flex-start !important; }
+.menuBtn { padding: 12px 10px !important; }
