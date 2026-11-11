@@ -2486,7 +2486,9 @@ function getPetImage(type, anim, index) {
         // fallback model on screen for the whole session. onload clears the failed flag again.
         img._t0 = Date.now();
         img._failCount = 0;
-        img.onload = () => { img._failed = false; };
+        // decode() makes the browser decode the PNG on a background thread now, instead of on the main thread the first time
+        // it is drawn (a big portrait decoded mid-game is a visible hitch on a phone).
+        img.onload = () => { img._failed = false; if (img.decode) img.decode().catch(() => {}); };
         img.onerror = () => {
             img._failed = true;
             img._failCount++;

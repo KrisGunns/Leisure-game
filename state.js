@@ -649,7 +649,7 @@ const SELL_ITEMS = [
 // timed buffs: buying adds `gives` units to `inventory[key]`. A bag of soil is 1 charge.
 const SHOP_SUPPLIES = [
     { key: 'soil',  icon: '🪴', name: 'Bag of Soil',   cost: 200, gives: 1, desc: '1 use — each use turns one garden plot in Region 10 from hard clay into soil.' },
-    { key: 'seeds', icon: '🌱', name: 'Flower Seed',   cost: 300, gives: 1, desc: 'One hydrangea seed. Planted when you fertilize a plot in Region 10.' }
+    { key: 'seeds', icon: '🌱', name: 'Flower Seed',   cost: 300, gives: 1, desc: 'A mystery flower seed. Planted when you fertilize a plot in Region 10 — it can grow a Hydrangea, Tulip, Sunflower, Rose, Orchid or even a Golden Lily!' }
 ];
 
 // Selling gold in the shop: this much gold buys exactly 1 diamond.
@@ -690,7 +690,7 @@ const UNLOCKABLES = [
     { id: 'region_9',        kind: 'region', region: 9, icon: '🛏️', name: 'Region 9 — Bedroom',    cost: 2500, desc: 'Unlocks Region 9 and comes with the Sugar Glider, already tamed at Lv1.' },
     { id: 'pet_missGlider',  kind: 'pet',    region: 9, icon: '🎀', name: 'Miss Glider',  cost: 1750, desc: 'A second sugar glider with a red bow, already tamed at Lv1.' },
 
-    { id: 'region_10',       kind: 'region', region: 10, icon: '🌸', name: 'Region 10 — Flower Garden', cost: 5000, desc: 'Unlocks Region 10 with your first garden plot. Grow hydrangeas (soil + seeds from the Buy tab, plus lots of water) for +10% coins and +10% bee speed per watered flower (stacks). Gliders cannot be dropped here.' }
+    { id: 'region_10',       kind: 'region', region: 10, icon: '🌸', name: 'Region 10 — Flower Garden', cost: 5000, desc: 'Unlocks Region 10 with your first garden plot. Grow flowers (soil + seeds from the Buy tab, plus lots of water) for +10% coins and +10% bee speed per watered flower (stacks), or pick them to sell. Gliders cannot be dropped here.' }
 ];
 
 // Which unlockables the player owns: id -> true. Empty at the start of a new game.
@@ -952,6 +952,8 @@ const GO_FISH_TIERS = mkTiers([[1,1],[5,1],[20,2],[50,3],[100,5],[500,5],[1000,1
 // Beekeeper: lifetime honey collected.
 const BEEKEEPER_TIERS = mkTiers([[50,1],[100,2],[500,3],[1000,4],[5000,4],[10000,5],[25000,5]]);
 // Completion: how many OTHER achievements are fully finished (every tier claimed).
+// Master Gardener: different flower types picked (sold) at least once.
+const GARDENER_TIERS = mkTiers([[1,1],[2,1],[3,2],[4,3],[5,4],[6,5]]);
 const COMPLETION_TIERS = mkTiers([[1,5],[2,5],[3,5],[4,5],[5,10],[6,10],[7,10],[8,10]]);
 
 // saved; playSeconds ticked by tickShopBuffs() below; lifetimeCoins/lifetimeDiamonds are fed by the
@@ -989,6 +991,9 @@ const ACHIEVEMENT_DEFS = [
     { id: 'beekeeper', icon: '🍯', title: 'Beekeeper', tiers: BEEKEEPER_TIERS,
       desc: 'Collect honey (lifetime total).',
       getCount: () => gameStats.lifetimeHoney },
+    { id: 'gardener', icon: '🌸', title: 'Master Gardener', tiers: GARDENER_TIERS,
+      desc: 'Pick (sell) every kind of flower at least once in Region 10: Hydrangea, Tulip, Sunflower, Rose, Orchid and Golden Lily.',
+      getCount: () => (typeof countFlowerTypesCollected === 'function') ? countFlowerTypesCollected() : 0 },
     { id: 'completion', icon: '🏅', title: 'Completion', tiers: COMPLETION_TIERS,
       desc: 'Fully complete other achievements (every level claimed).',
       getCount: () => ACHIEVEMENT_DEFS.filter(d => d.id !== 'completion' && getAchievementProgress(d.id).done).length }
@@ -1296,8 +1301,9 @@ function saveGameProgress() {
         if (typeof gardenPlots !== 'undefined' && Array.isArray(gardenPlots)) {
             stateMatrix.gardenData = gardenPlots.map(p => ({
                 owned: !!p.owned, soil: !!p.soil, stage: p.stage, watered: !!p.watered,
-                timer: p.timer, grace: p.grace, matured: !!p.matured
+                timer: p.timer, grace: p.grace, matured: !!p.matured, type: p.type || null
             }));
+            stateMatrix.gardenCollection = Object.assign({}, gardenCollection);
         }
 
         stateMatrix.achievements = {};
@@ -1660,8 +1666,12 @@ function loadGameProgress() {
                 } else {
                     p.grace = null;
                 }
+                p.type = (p.stage >= 1) ? (FLOWER_TYPES.some(t => t.id === sv.type) ? sv.type : 'hydrangea') : null;   // older saves only grew hydrangeas
                 p.warned = false;
             });
+            if (stateMatrix.gardenCollection && typeof stateMatrix.gardenCollection === 'object') {
+                FLOWER_TYPES.forEach(t => { const n = Math.floor(Number(stateMatrix.gardenCollection[t.id])); gardenCollection[t.id] = (isFinite(n) && n > 0) ? n : 0; });
+            }
         });
 
         if (failedSections.length) {

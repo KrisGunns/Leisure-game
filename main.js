@@ -37,12 +37,14 @@ function runGameFrame(timestamp) {
     if (!lastTime) lastTime = timestamp;
     let elapsed = timestamp - lastTime;
 
-    if (elapsed >= frameInterval) {
+    // (a 2 ms tolerance: on a 60 Hz screen the timestamps jitter around 16.67 ms, and a frame that arrives at
+    // 16.5 ms used to be SKIPPED, so the next one ran 33 ms later — visible as uneven, stuttery movement)
+    if (elapsed >= frameInterval - 2) {
         let dt = (prevFrameTs ? (timestamp - prevFrameTs) : elapsed) / 1000;
         prevFrameTs = timestamp;
         
         // FIXED: Re-calculated clean animation interval steps
-        lastTime = timestamp - (elapsed % frameInterval);
+        lastTime = timestamp - (elapsed >= frameInterval ? elapsed % frameInterval : 0);
         
         // FIXED: Strict time step delta ceiling cap boundary! 
         // This physically prevents browser alert freezes or lag spikes from accelerating your pet action loops.
@@ -302,4 +304,38 @@ if (regionSelector && typeof currentRegion !== 'undefined') {
 // (The joystick is floating now — it stays hidden until the player touches the field; see input.js.)
 if (document.getElementById('interactBtn')) document.getElementById('interactBtn').style.display = 'flex';
 
-requestAnimationFrame(gameLoop);
+// ---- Start-up: a short "Loading..." cover (index.html #bootCover) hides the heavy one-off work —
+// waiting for the screen size to settle (phones fire resize events at launch), then painting every
+// owned region's background once — so the game itself starts smooth instead of freezing in bursts.
+let gameLoopStarted = false;
+function startGameLoop() {
+    if (gameLoopStarted) return;
+    gameLoopStarted = true;
+    const cover = document.getElementById('bootCover');
+    if (cover) {
+        cover.style.transition = 'opacity 0.25s';
+        cover.style.opacity = '0';
+        setTimeout(() => { cover.style.display = 'none'; }, 300);
+    }
+    lastTime = 0; prevFrameTs = 0;
+    requestAnimationFrame(gameLoop);
+}
+(function bootSequence() {
+    const status = document.getElementById('bootStatus');
+    setTimeout(startGameLoop, 7000);   // safety net: never stay on the cover if something below stalls
+    // 1) wait (max ~1.2 s) until the canvas size has stayed the same for 250 ms
+    let lastW = -1, lastH = -1, stableSince = performance.now(), waited = 0;
+    function waitForLayout() {
+        resizeCanvas();
+        if (canvas.width !== lastW || canvas.height !== lastH) { lastW = canvas.width; lastH = canvas.height; stableSince = performance.now(); }
+        waited += 60;
+        if (performance.now() - stableSince >= 250 || waited >= 1200) warm();
+        else setTimeout(waitForLayout, 60);
+    }
+    // 2) paint the backgrounds
+    function warm() {
+        if (typeof warmRegionBackgrounds !== 'function') { startGameLoop(); return; }
+        warmRegionBackgrounds((n, total) => { if (status) status.textContent = 'Loading… ' + n + '/' + total; }, startGameLoop);
+    }
+    waitForLayout();
+})();

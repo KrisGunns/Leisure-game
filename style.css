@@ -306,6 +306,26 @@ body, html {
 }
 #fishBtn:active { background: #2f86c0; }
 
+/* Region 10: "Pick (+X)" sells the selected, fully grown flower. Sits above the Water / Fertilize button. */
+#plotPickBtn {
+    position: absolute;
+    bottom: 58px;
+    right: 20px;
+    left: auto !important;
+    width: 124px;
+    padding: 9px 6px;
+    font-size: 13px;
+    font-weight: bold;
+    text-align: center;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    background: #f4b400;
+    border: 2px solid #b88700;
+    color: #fff;
+    z-index: 100;
+}
+#plotPickBtn:active { background: #d99e00; }
+
 
 
 

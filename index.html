@@ -7,6 +7,11 @@
     <link rel="stylesheet" href="style.css?v=3.3">
 </head>
 <body>
+    <div id="bootCover" style="position:fixed; inset:0; z-index:99999; background:#1e272e; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#f1c40f; font-family:monospace; text-align:center;">
+        <div style="font-size:22px; font-weight:bold;">Just a Little Leisure</div>
+        <div id="bootStatus" style="font-size:13px; margin-top:12px; color:#bdc3c7;">Loading…</div>
+    </div>
+    <script>setTimeout(function(){var c=document.getElementById('bootCover'); if(c) c.style.display='none';}, 9000);</script>
     <div id="gameContainer">
         <!-- Pinned Core Actionable Resource Top Bar View -->
 <!-- Stacked Core Actionable Resource Top Bar View -->

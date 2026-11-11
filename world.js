@@ -1277,8 +1277,10 @@ function resizeCanvas() {
     if (w < 100) w = window.innerWidth > 100 ? window.innerWidth : 400;
     if (h < 100) h = window.innerHeight > 100 ? window.innerHeight : 600;
     const oldW = canvas.width, oldH = canvas.height;
-    canvas.width = w;
-    canvas.height = h;
+    // Only touch the size when it really changed: assigning canvas.width (even to the same value) re-allocates
+    // and clears the canvas, and Android WebViews fire several resize events right at launch.
+    if (canvas.width !== w) canvas.width = w;
+    if (canvas.height !== h) canvas.height = h;
     // Items, pets and the player keep their relative place when the screen resizes or rotates
     // (they used to stay at their old pixel positions, possibly off-screen).
     if (canvasSizedOnce && oldW > 0 && oldH > 0 && (oldW !== w || oldH !== h)) rescaleWorld(w / oldW, h / oldH);
@@ -1399,8 +1401,32 @@ const GARDEN_STAGE_SECONDS = { 1: 120, 2: 240, 3: 600 };    // how long a wateri
 const GARDEN_GRACE_SECONDS = 60;                             // thirsty bloom dies after this long
 const GARDEN_BOOST = 0.10;                                   // +10% coins and +10% bee speed PER watered bloom (stacks)
 
+// ---- Flower types (2026-11-11 (81)). A seed grows into a RANDOM type, rolled when the plot is fertilized and
+// revealed when it blooms. All types give the same coin / bee boost while watered; they differ in what picking
+// (selling) them pays. `weight` = relative chance. Common ones pay coins, the rare ones pay diamonds (1 diamond is
+// worth ~GOLD_PER_DIAMOND coins in the shop). Retune freely: edit a row, or add a row + a drawer in drawFlowerBloom().
+const FLOWER_TYPES = [
+    { id: 'hydrangea', name: 'Hydrangea',   rarity: 'Common',    weight: 40, coins: 400,  diamonds: 0 },
+    { id: 'tulip',     name: 'Tulip',       rarity: 'Common',    weight: 25, coins: 600,  diamonds: 0 },
+    { id: 'sunflower', name: 'Sunflower',   rarity: 'Uncommon',  weight: 15, coins: 900,  diamonds: 0 },
+    { id: 'rose',      name: 'Rose',        rarity: 'Rare',      weight: 10, coins: 0,    diamonds: 1 },
+    { id: 'orchid',    name: 'Orchid',      rarity: 'Epic',      weight: 6,  coins: 0,    diamonds: 2 },
+    { id: 'lily',      name: 'Golden Lily', rarity: 'Legendary', weight: 2,  coins: 0,    diamonds: 5 }
+];
+function getFlowerType(id) { return FLOWER_TYPES.find(t => t.id === id) || FLOWER_TYPES[0]; }
+function rollFlowerType() {
+    const total = FLOWER_TYPES.reduce((a, t) => a + t.weight, 0);
+    let r = Math.random() * total;
+    for (const t of FLOWER_TYPES) { r -= t.weight; if (r < 0) return t.id; }
+    return FLOWER_TYPES[0].id;
+}
+function flowerRewardText(t) { return t.diamonds > 0 ? `${t.diamonds}💎` : `${t.coins}🪙`; }
+// How many times each type has been picked (saved) — drives the Master Gardener achievement.
+const gardenCollection = {};
+function countFlowerTypesCollected() { return FLOWER_TYPES.filter(t => gardenCollection[t.id] > 0).length; }
+
 function createGardenPlot() {
-    return { owned: false, soil: false, stage: 0, watered: false, timer: 0, grace: null, matured: false, warned: false };
+    return { owned: false, soil: false, stage: 0, watered: false, timer: 0, grace: null, matured: false, warned: false, type: null };
 }
 const gardenPlots = [];
 for (let i = 0; i < GARDEN_PLOT_COUNT; i++) gardenPlots.push(createGardenPlot());
@@ -1470,7 +1496,7 @@ function tickGarden() {
             }
         }
     }
-    if (died) { gardenNotify('🥀 A hydrangea withered away — its plot is back to hard clay.'); saveGameProgress(); }
+    if (died) { gardenNotify('🥀 A flower withered away — its plot is back to hard clay.'); saveGameProgress(); }
     else if (needsWater || dying) {
         gardenNotify(dying && !needsWater ? '⚠️ A flower is about to wither — water your flowers in Region 10!' : '💧 Your flowers need water! Water them in Region 10.');
         saveGameProgress();
@@ -1496,6 +1522,7 @@ function fertilizeGardenPlot(i) {
     inventory.soil -= 1;
     inventory.seeds -= 1;
     p.soil = true;
+    p.type = rollFlowerType();
     p.stage = 1;
     p.watered = false;
     p.timer = 0;
@@ -1557,7 +1584,7 @@ function getGardenPlotStatus(i) {
     const p = gardenPlots[i];
     if (!isGardenPlotOwned(i)) return 'Locked plot';
     if (p.stage === 0) return 'Hard clay';
-    const name = p.stage === 1 ? 'Seed' : (p.stage === 2 ? 'Shoot' : 'Hydrangea');
+    const name = p.stage === 1 ? 'Seed' : (p.stage === 2 ? 'Shoot' : getFlowerType(p.type).name);
     if (p.watered) return `${name} · ${p.stage === 3 ? 'watered' : 'growing'} ${formatGardenTime(p.timer)}`;
     if (p.stage === 3 && p.matured && p.grace !== null) return `${name} · thirsty! ${formatGardenTime(p.grace)}`;
     return `${name} · needs water`;
@@ -1704,6 +1731,120 @@ function drawHydrangea(c, cx, baseY, s, pal, state, seed, t) {
     });
 }
 
+
+// ---- the other flowers. Same contract as drawHydrangea: (c, cx, baseY, s, state, seed, t), state 'watered' (vivid,
+// swaying) or 'thirsty' (pale, drooping). `i` (seed) picks a colour variant so neighbouring plots differ.
+function gardenStem(c, cx, baseY, s, headX, headY, thirsty, wide) {
+    c.strokeStyle = thirsty ? '#8a9a52' : '#3f8f3a';
+    c.lineWidth = Math.max(2, s * (wide ? 0.08 : 0.055));
+    c.beginPath(); c.moveTo(cx, baseY); c.quadraticCurveTo(cx + (headX - cx) * 0.2, baseY - s * 0.28, headX, headY); c.stroke();
+}
+function gardenLeaves(c, cx, baseY, s, thirsty, droop, long) {
+    c.fillStyle = thirsty ? '#9aa060' : '#4caf50';
+    const lw = s * (long ? 0.27 : 0.2), lh = s * (long ? 0.06 : 0.1);
+    c.beginPath(); c.ellipse(cx - s * 0.2, baseY - s * 0.2 + droop * 0.6, lw, lh, thirsty ? 0.7 : -0.5, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(cx + s * 0.2, baseY - s * 0.22 + droop * 0.6, lw, lh, thirsty ? -0.7 : 0.5, 0, Math.PI * 2); c.fill();
+}
+const GARDEN_TULIP_COLORS = [['#d32f2f', '#ff8a80'], ['#f9a825', '#ffe082'], ['#8e24aa', '#e1bee7'], ['#ec407a', '#f8bbd0']];
+const GARDEN_ROSE_COLORS = [['#b71c1c', '#e53935', '#7f0000'], ['#d81b60', '#f06292', '#880e4f'], ['#eceff1', '#ffffff', '#b0bec5'], ['#f9a825', '#ffd54f', '#c77800']];
+
+function drawFlowerBloom(c, type, cx, baseY, s, state, i, t) {
+    const thirsty = state === 'thirsty';
+    if (type === 'hydrangea') { drawHydrangea(c, cx, baseY, s, GARDEN_HYDRANGEA_COLORS[i % GARDEN_HYDRANGEA_COLORS.length], state, i, t); return; }
+    const sway = thirsty ? 0 : Math.sin(t * 1.6 + i) * s * 0.025;
+    const droop = thirsty ? s * 0.1 : 0;
+    c.save();
+    if (thirsty) c.globalAlpha = 0.72;
+    if (type === 'tulip') {
+        const pal = GARDEN_TULIP_COLORS[i % GARDEN_TULIP_COLORS.length], hx = cx + sway, hy = baseY - s * 0.55 + droop;
+        gardenStem(c, cx, baseY, s, hx, hy + s * 0.06, thirsty, false);
+        gardenLeaves(c, cx, baseY, s, thirsty, droop, true);
+        const w = s * 0.17, h = s * 0.26;
+        c.fillStyle = thirsty ? '#b9a9b2' : pal[0];                                  // back petals
+        c.beginPath(); c.ellipse(hx - w * 0.55, hy, w * 0.7, h, -0.18, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.ellipse(hx + w * 0.55, hy, w * 0.7, h, 0.18, 0, Math.PI * 2); c.fill();
+        c.fillStyle = thirsty ? '#d1c4cc' : pal[1];                                  // front petal
+        c.beginPath(); c.moveTo(hx - w * 0.9, hy + h * 0.55); c.quadraticCurveTo(hx - w, hy - h * 0.5, hx, hy - h * 1.15);
+        c.quadraticCurveTo(hx + w, hy - h * 0.5, hx + w * 0.9, hy + h * 0.55); c.quadraticCurveTo(hx, hy + h * 0.95, hx - w * 0.9, hy + h * 0.55); c.fill();
+        c.strokeStyle = 'rgba(0,0,0,0.18)'; c.lineWidth = 1;
+        c.beginPath(); c.moveTo(hx, hy - h * 1.05); c.lineTo(hx, hy + h * 0.7); c.stroke();
+    } else if (type === 'sunflower') {
+        const hx = cx + sway, hy = baseY - s * 0.56 + droop * 1.4, R = s * 0.27;
+        gardenStem(c, cx, baseY, s, hx, hy + R * 0.5, thirsty, true);
+        gardenLeaves(c, cx, baseY, s, thirsty, droop, false);
+        for (let ring = 0; ring < 2; ring++) {
+            c.fillStyle = thirsty ? (ring ? '#d8cf9a' : '#c9bf84') : (ring ? '#ffd600' : '#ffab00');
+            const n = 12;
+            for (let k = 0; k < n; k++) {
+                const a = k / n * Math.PI * 2 + ring * (Math.PI / n);
+                c.save(); c.translate(hx, hy); c.rotate(a);
+                c.beginPath(); c.ellipse(R * (ring ? 0.82 : 0.9), 0, R * 0.34, R * 0.15, 0, 0, Math.PI * 2); c.fill();
+                c.restore();
+            }
+        }
+        c.fillStyle = thirsty ? '#7a6a55' : '#5d3a1a'; c.beginPath(); c.arc(hx, hy, R * 0.5, 0, Math.PI * 2); c.fill();
+        c.fillStyle = thirsty ? '#8f7f6a' : '#7a4f24';
+        for (let k = 0; k < 9; k++) { const a = k * 2.4, r = R * 0.34 * Math.sqrt((k + 1) / 9); c.fillRect(hx + Math.cos(a) * r - 1, hy + Math.sin(a) * r - 1, 2, 2); }
+    } else if (type === 'rose') {
+        const pal = GARDEN_ROSE_COLORS[i % GARDEN_ROSE_COLORS.length], hx = cx + sway, hy = baseY - s * 0.52 + droop, R = s * 0.2;
+        gardenStem(c, cx, baseY, s, hx, hy + R * 0.6, thirsty, false);
+        gardenLeaves(c, cx, baseY, s, thirsty, droop, false);
+        c.fillStyle = thirsty ? '#7a8a4a' : '#2e7d32';                               // thorns
+        c.fillRect(cx - s * 0.05, baseY - s * 0.14, 2, 2); c.fillRect(cx + s * 0.03, baseY - s * 0.3, 2, 2);
+        c.fillStyle = thirsty ? '#7a8a4a' : '#388e3c';                               // sepals
+        c.beginPath(); c.ellipse(hx, hy + R * 0.72, R * 0.8, R * 0.22, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = thirsty ? '#b8a0a4' : pal[0]; c.beginPath(); c.arc(hx, hy, R, 0, Math.PI * 2); c.fill();
+        c.fillStyle = thirsty ? '#cbb6ba' : pal[1]; c.beginPath(); c.arc(hx, hy - R * 0.05, R * 0.72, 0, Math.PI * 2); c.fill();
+        c.strokeStyle = thirsty ? '#8a7478' : pal[2]; c.lineWidth = Math.max(1, s * 0.022);
+        c.beginPath(); c.arc(hx, hy, R * 0.5, 0.3, Math.PI * 1.6); c.stroke();
+        c.beginPath(); c.arc(hx + R * 0.05, hy, R * 0.26, Math.PI, Math.PI * 2.6); c.stroke();
+        c.beginPath(); c.arc(hx, hy, R * 0.88, Math.PI * 0.9, Math.PI * 1.5); c.stroke();
+    } else if (type === 'orchid') {
+        const hx = cx + sway, tipY = baseY - s * 0.72 + droop;
+        c.strokeStyle = thirsty ? '#8a9a52' : '#3f8f3a'; c.lineWidth = Math.max(2, s * 0.045);
+        c.beginPath(); c.moveTo(cx, baseY); c.quadraticCurveTo(cx - s * 0.05, baseY - s * 0.5, hx + s * 0.16, tipY + s * 0.08); c.stroke();
+        gardenLeaves(c, cx, baseY, s, thirsty, droop, true);
+        const blossom = (bx, by, r, k) => {
+            c.fillStyle = thirsty ? '#cdbfd1' : '#e1bee7';
+            for (let q = 0; q < 5; q++) {
+                const a = -Math.PI / 2 + q * Math.PI * 2 / 5;
+                c.beginPath(); c.ellipse(bx + Math.cos(a) * r * 0.62, by + Math.sin(a) * r * 0.62, r * 0.52, r * 0.3, a, 0, Math.PI * 2); c.fill();
+            }
+            c.fillStyle = thirsty ? '#a98bb0' : '#ab47bc'; c.beginPath(); c.ellipse(bx, by + r * 0.2, r * 0.3, r * 0.4, 0, 0, Math.PI * 2); c.fill();
+            c.fillStyle = thirsty ? '#e8dc9a' : '#ffeb3b'; c.beginPath(); c.arc(bx, by - r * 0.08, r * 0.14, 0, Math.PI * 2); c.fill();
+        };
+        blossom(hx + s * 0.16, tipY + s * 0.04, s * 0.15, 0);
+        blossom(hx + s * 0.03, tipY + s * 0.24, s * 0.17, 1);
+        blossom(hx - s * 0.06, tipY + s * 0.46, s * 0.15, 2);
+    } else if (type === 'lily') {
+        const hx = cx + sway, hy = baseY - s * 0.54 + droop, R = s * 0.3;
+        gardenStem(c, cx, baseY, s, hx, hy + R * 0.3, thirsty, false);
+        gardenLeaves(c, cx, baseY, s, thirsty, droop, true);
+        if (!thirsty) {                                                              // soft golden glow
+            const g = c.createRadialGradient(hx, hy, R * 0.2, hx, hy, R * 1.5);
+            g.addColorStop(0, 'rgba(255,230,120,0.55)'); g.addColorStop(1, 'rgba(255,230,120,0)');
+            c.fillStyle = g; c.beginPath(); c.arc(hx, hy, R * 1.5, 0, Math.PI * 2); c.fill();
+        }
+        for (let k = 0; k < 6; k++) {
+            const a = -Math.PI / 2 + k * Math.PI / 3;
+            c.save(); c.translate(hx, hy); c.rotate(a);
+            c.fillStyle = thirsty ? '#d9c98a' : (k % 2 ? '#ffca28' : '#ffd54f');
+            c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(R * 0.55, -R * 0.38, R * 1.1, 0); c.quadraticCurveTo(R * 0.55, R * 0.38, 0, 0); c.fill();
+            c.strokeStyle = 'rgba(160,100,0,0.45)'; c.lineWidth = 1; c.beginPath(); c.moveTo(R * 0.1, 0); c.lineTo(R * 0.9, 0); c.stroke();
+            c.restore();
+        }
+        c.fillStyle = thirsty ? '#b59a62' : '#e65100';
+        for (let k = 0; k < 5; k++) { const a = k * 1.256; c.beginPath(); c.arc(hx + Math.cos(a) * R * 0.2, hy + Math.sin(a) * R * 0.2, Math.max(1.4, s * 0.025), 0, Math.PI * 2); c.fill(); }
+    }
+    c.restore();
+    if (!thirsty && (type === 'rose' || type === 'orchid' || type === 'lily')) {   // rare flowers twinkle
+        const ph = (t * 0.9 + i * 0.53) % 1, tw = Math.sin(ph * Math.PI);
+        c.fillStyle = 'rgba(255,255,255,' + (0.9 * tw).toFixed(2) + ')';
+        const tx = cx + Math.cos(i * 2.1) * s * 0.28, ty = baseY - s * 0.62 - Math.sin(i * 1.3) * s * 0.1;
+        c.fillRect(tx - 1, ty - 4, 2, 8); c.fillRect(tx - 4, ty - 1, 8, 2);
+    }
+}
+
 function drawGardenPlots() {
     const c = ctx, L = getGardenLayout(), t = performance.now() / 1000;
     const active = getActiveGardenPlot();
@@ -1755,7 +1896,7 @@ function drawGardenPlots() {
             c.beginPath(); c.ellipse(cx - s * 0.13, r.y + s * 0.42, s * 0.14, s * 0.07, -0.6, 0, Math.PI * 2); c.fill();
             c.beginPath(); c.ellipse(cx + s * 0.13, r.y + s * 0.38, s * 0.14, s * 0.07, 0.6, 0, Math.PI * 2); c.fill();
         } else if (p.stage === 3) {                                        // hydrangea
-            drawHydrangea(c, cx, baseY, s, GARDEN_HYDRANGEA_COLORS[i % GARDEN_HYDRANGEA_COLORS.length], p.watered ? 'watered' : 'thirsty', i, t);
+            drawFlowerBloom(c, p.type || 'hydrangea', cx, baseY, s, p.watered ? 'watered' : 'thirsty', i, t);
             if (p.watered) {                                               // little sparkle
                 c.fillStyle = 'rgba(180,225,255,0.9)';
                 const sp = (t * 0.8 + i * 0.37) % 1;
@@ -1788,9 +1929,60 @@ function drawGardenPlots() {
     }
 }
 
+// Picking (selling) a fully grown flower: only once it has been watered at full bloom at least once
+// (p.matured). Pays coins or diamonds by type (coins WITHOUT the garden boost, like shop sales), logs the type for
+// the Master Gardener achievement, and returns the plot to hard clay (the plot stays yours; soil + seed are needed again).
+function canPickGardenFlower(i) {
+    const p = gardenPlots[i];
+    return !!p && isGardenPlotOwned(i) && p.stage === 3 && p.matured;
+}
+function pickGardenFlower(i) {
+    if (!canPickGardenFlower(i)) return false;
+    const p = gardenPlots[i], t = getFlowerType(p.type);
+    gardenPlots[i] = createGardenPlot();
+    gardenPlots[i].owned = p.owned;
+    if (t.coins > 0) addCoinsUnboosted(t.coins);
+    if (t.diamonds > 0) inventory.diamonds += t.diamonds;
+    gardenCollection[t.id] = (gardenCollection[t.id] || 0) + 1;
+    if (typeof showAchievementToast === 'function') showAchievementToast(`🌸 Picked a ${t.name}!  +${flowerRewardText(t)}`);
+    saveGameProgress();
+    updateUI();
+    return true;
+}
+function askPickGardenFlower() {
+    const i = getActiveGardenPlot();
+    if (!canPickGardenFlower(i)) return;
+    const t = getFlowerType(gardenPlots[i].type);
+    const msg = `Pick this ${t.name} (${t.rarity}) and sell it for ${flowerRewardText(t)}?\n\nThe plot goes back to hard clay and you lose this flower's bonus.`;
+    if (typeof showGameDialog === 'function') showGameDialog({ message: msg, okText: 'PICK' }, () => { pickGardenFlower(i); updateGardenButtons(); });
+    else { pickGardenFlower(i); updateGardenButtons(); }
+}
+
 // ---- the action button (index.html #plotActionBtn), shown above the whistle button while the
 // player stands at a plot that has something to offer: Buy Plot / Fertilize / Water ----
+function ensurePickButton() {
+    let b = document.getElementById('plotPickBtn');
+    if (b) return b;
+    const wrap = document.getElementById('canvasWrapper');
+    if (!wrap) return null;
+    b = document.createElement('button');
+    b.id = 'plotPickBtn';
+    b.className = 'utilBtn';
+    b.style.display = 'none';
+    wrap.appendChild(b);
+    addTap(b, (e) => { if (e && e.preventDefault) e.preventDefault(); askPickGardenFlower(); });
+    return b;
+}
 function updateGardenButtons() {
+    const pick = ensurePickButton();
+    if (pick) {
+        const pi = getActiveGardenPlot();
+        if (pi >= 0 && canPickGardenFlower(pi)) {
+            const label = `Pick (+${flowerRewardText(getFlowerType(gardenPlots[pi].type))})`;
+            if (pick.style.display !== 'block') pick.style.display = 'block';
+            if (pick.textContent !== label) pick.textContent = label;
+        } else if (pick.style.display !== 'none') pick.style.display = 'none';
+    }
     const btn = document.getElementById('plotActionBtn');
     if (!btn) return;
     const i = getActiveGardenPlot();

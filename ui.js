@@ -2106,6 +2106,7 @@ if (btnWipeSave) {
             Object.keys(tutorialSeen).forEach(id => { delete tutorialSeen[id]; });
             if (typeof gardenPlots !== 'undefined') {
                 for (let gi = 0; gi < gardenPlots.length; gi++) gardenPlots[gi] = createGardenPlot();
+                FLOWER_TYPES.forEach(t => { gardenCollection[t.id] = 0; });
             }
             gameStats.lifetimeCoins = 0;      // lifetime totals (Statistics) restart too
             gameStats.lifetimeDiamonds = 0;

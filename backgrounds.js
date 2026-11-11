@@ -1056,15 +1056,24 @@ function drawRegionForeground(region) {
     ctx.drawImage(cv, 0, y0, canvas.width, 42, 0, y0, canvas.width, 42);
 }
 
-// Paint the regions in the background shortly after start-up (one every ~350ms), so the first
-// visit to a region or the first opening of the Regions window never stutters on a slow phone.
-(function prewarmBackgrounds() {
-    let n = 1;
+// Paints the cached backgrounds of every region the player owns (the current one first), ONE per
+// timer tick so the page can repaint in between. Called from main.js during the start-up cover
+// ("Loading..."), so the 25-250 ms each build takes on a phone happens while nothing is moving instead
+// of as repeated freezes during play (the old version prewarmed one region every 350 ms right after
+// the game started, which showed up as the game sticking for several seconds on launch).
+// onProgress(done, total) is called after each region, done() when finished.
+function warmRegionBackgrounds(onProgress, done) {
+    const list = [];
+    const add = (n) => { if (n >= 1 && n <= 9 && list.indexOf(n) === -1 && (typeof isRegionUnlocked !== 'function' || isRegionUnlocked(n))) list.push(n); };
+    add(currentRegion);
+    for (let n = 1; n <= 9; n++) add(n);
+    let k = 0;
     function step() {
-        if (n > 9) return;
-        try { getRegionBackground(n); } catch (e) { /* the real draw will report it */ }
-        n++;
-        setTimeout(step, 350);
+        if (k >= list.length) { if (done) done(); return; }
+        try { getRegionBackground(list[k]); } catch (e) { /* the real draw will report it */ }
+        k++;
+        if (onProgress) onProgress(k, list.length);
+        setTimeout(step, 16);
     }
-    setTimeout(step, 1200);
-})();
+    step();
+}

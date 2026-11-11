@@ -152,6 +152,28 @@ same size."):
 
 ---
 
+### 2026-11-11 (81) — Flower variety + selling (Region 10), Master Gardener achievement, start-up stutter fix
+
+**Flowers (world.js, state.js, tutorial.js, style.css):**
+- New `FLOWER_TYPES` table (one row per type: `weight` = chance, `coins` / `diamonds` = sell value). Hydrangea (common, 40) 400🪙, Tulip (common, 25) 600🪙, Sunflower (uncommon, 15) 900🪙, Rose (rare, 10) 1💎, Orchid (epic, 6) 2💎, Golden Lily (legendary, 2) 5💎. Tune any row freely.
+- A seed grows a RANDOM type, rolled in `fertilizeGardenPlot()` (`p.type`) and revealed when the plot reaches the bloom stage (seed / shoot look the same). All types give the same +10% coin / bee boost while watered. Saves from before this treat every planted flower as a hydrangea.
+- New drawers `drawFlowerBloom()` (tulip, sunflower, rose, orchid, golden lily + the existing hydrangea), each with watered (vivid, swaying) and thirsty (pale, drooping) looks; rare ones twinkle.
+- New **Pick (+reward)** button (`#plotPickBtn`, created in JS, sits above the Water/Fertilize button): appears for a fully grown flower that has been watered at full bloom at least once. Asks to confirm, pays coins (WITHOUT the garden boost, like shop sales) or diamonds, and returns the plot to hard clay (plot stays owned; soil + seed needed again). Picking removes that flower's bonus.
+- Shop seed text updated ("mystery seed"); Region 10 tutorial gets a "Flower types & selling" page.
+- **Master Gardener** achievement 🌸: pick each of the 6 types at least once (6 tiers: 1/1/2/3/4/5 💎). `gardenCollection` (picks per type) is saved. Achievements total is now 10. (Completion still tops out at 8 as specified.)
+
+**Start-up stutter on the phone (main.js, backgrounds.js, world.js, entities.js, index.html):**
+- Cause: the old `prewarmBackgrounds()` painted one region's cached background every 350 ms starting 1.2 s after launch. Each build takes ~25-30 ms on a PC (100+ ms on a phone) and blocks the game, so the game froze in bursts for several seconds. Android also fires resize events at launch, which throw the cached backgrounds away.
+- Fix: a short "Loading…" cover (`#bootCover` in index.html). `bootSequence()` waits (max ~1.2 s) for the canvas size to stop changing, then `warmRegionBackgrounds()` paints every OWNED region's background (current region first, one per timer tick), then the cover fades and the game loop starts. In a 4x-throttled test the periodic 110-280 ms freezes after start-up are gone (only the covered ones remain).
+- `resizeCanvas()` no longer re-assigns `canvas.width/height` when the size is unchanged (that re-allocated + cleared the canvas on every resize event).
+- Frame pacing: the 60 fps throttle now has a 2 ms tolerance. Before, on a 60 Hz phone a frame arriving at 16.5 ms was skipped and the next ran 33 ms later (uneven, "stepping" movement).
+- Pet images call `decode()` as soon as they load, so a big portrait isn't decoded on the main thread the first time it is drawn.
+- Backgrounds of regions bought later (or after a rotation / resize) are still built the first time they're needed (one short hitch).
+
+**Phone test advised:** launch the APK and watch the first ~10 seconds for stutter; check the button layout in Region 10 (Pick sits above Water/Fertilize) and the "Loading…" cover length.
+
+---
+
 ### 2026-11-04 (80) — Six new achievements (Expansion, World Hunger Begone, Hydration!, Pet Master, Go Fish, Beekeeper) + Completion
 
 **Added, at the user's request** (full tier/reward lists given). All driven by the existing `ACHIEVEMENT_DEFS` ladder system (state.js); rewards are tap-to-claim like Animal Tamer.
