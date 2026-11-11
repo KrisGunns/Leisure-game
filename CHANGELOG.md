@@ -1724,3 +1724,6 @@ approach feeling fragile:
 **Tested** (Playwright 390x780): menu/bar fonts, shop tabs, buying both items, bag grid + equip, themed R1/R6/R9/R10, Nutcracker select/idle/walk frames, save/load, updater (no-change / changed / update-now).
 
 **Phone test advised:** loading cover & bottom-bar font fit, Nutcracker size, snow performance on a low-end phone.
+
+**Follow-up (83b), at the user's request:** the emojis in the window titles (Bag, Tamers, Shop, Perk Tree, Achievements, Statistics, Help, Tasks, Pets Codex) were removed too. All titles, plus REGIONS, now use the bone font (`.boneLabel.winTitle`, 34px) in the same colours as their menu buttons (Pets brown, Bag crimson, Tamers light blue, Shop grey, Perk Tree green, Tasks black with a light outline so it shows on the dark window, Achievements gold, Statistics multicolour, Help red, Regions cyan). Files: `index.html`, `style.css`.
+
