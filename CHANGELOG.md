@@ -152,6 +152,12 @@ same size."):
 
 ---
 
+### 2026-11-11 (82) — Completion now covers every other achievement
+
+Completion gets a final level: complete ALL the other achievements (currently 9) for 10 💎, the same as the level before. Its goal follows `ACHIEVEMENT_DEFS.length - 1`, so a future achievement raises it automatically (state.js `COMPLETION_TIERS`). Completion stays at 9 levels: 5,5,5,5,10,10,10,10,10 💎.
+
+---
+
 ### 2026-11-11 (81) — Flower variety + selling (Region 10), Master Gardener achievement, start-up stutter fix
 
 **Flowers (world.js, state.js, tutorial.js, style.css):**

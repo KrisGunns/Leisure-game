@@ -955,6 +955,8 @@ const BEEKEEPER_TIERS = mkTiers([[50,1],[100,2],[500,3],[1000,4],[5000,4],[10000
 // Master Gardener: different flower types picked (sold) at least once.
 const GARDENER_TIERS = mkTiers([[1,1],[2,1],[3,2],[4,3],[5,4],[6,5]]);
 const COMPLETION_TIERS = mkTiers([[1,5],[2,5],[3,5],[4,5],[5,10],[6,10],[7,10],[8,10]]);
+// Last level = ALL the other achievements (follows the list, so adding an achievement later raises it); pays the same as the level before.
+COMPLETION_TIERS.push(Object.defineProperty({ reward: 10 }, 'goal', { get: () => ACHIEVEMENT_DEFS.length - 1, enumerable: true }));
 
 // saved; playSeconds ticked by tickShopBuffs() below; lifetimeCoins/lifetimeDiamonds are fed by the
 // inventory.coins / inventory.diamonds setters (top of this file)
