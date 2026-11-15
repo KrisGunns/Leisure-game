@@ -1742,3 +1742,7 @@ Files: `world.js`, `claude/christmas.js`, `claude/backgrounds.js`, `claude/nutcr
 
 **Changed, at the user's request:** bottom-bar labels now have the same smooth em-sized text-shadow outline as the menu (no more jagged 1.5px offsets); all bar buttons use 15-16px, and 7+ letter labels on the main action button (DEPOSIT / COLLECT) get `.longLabel` (13px, toggled in `updateUI()`), so DEPOSIT fits. Top bar: the 🍪/💧 emojis before Food/Water were removed, and it is now a 3-column grid (resources left, level badge exactly centred, settings right). Files: `style.css` (`?v=3.7`), `index.html`, `ui.js`.
 
+### 2026-11-14 (86) — Bottom bar with five buttons
+
+When the blue GIVE button appears beside TAKE / DROP (sugar gliders, Region 9) the bar now gets class `fiveButtons` (set in `updateUI()`), and `style.css` shrinks the lettering to 11.5px (10.5px for 7+ letter labels) so REGIONS / WHISTLE fit. Files: `ui.js`, `style.css` (`?v=3.8`), `index.html`.
+

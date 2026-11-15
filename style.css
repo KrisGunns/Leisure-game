@@ -1340,3 +1340,7 @@ body, html {
 #menuButtonList { justify-content: flex-start !important; }
 .menuBtn { padding: 12px 10px !important; }
 #whistleBtn, #openRegionsBtn { font-size: 15px; }
+
+/* Five buttons in the bar (blue GIVE showing next to TAKE / DROP): every button is narrower, so the lettering shrinks. */
+#bottomBar.fiveButtons .barBtn { font-size: 11.5px !important; padding: 0 1px; }
+#bottomBar.fiveButtons #interactBtn.longLabel, #bottomBar.fiveButtons #giveAuxBtn.longLabel { font-size: 10.5px !important; }

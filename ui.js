@@ -588,6 +588,7 @@ function updateUI() {
         const giveAuxBtn = document.getElementById('giveAuxBtn');
         if (giveAuxBtn) {
             giveAuxBtn.classList.toggle('auxShown', gliderMode !== 'normal');
+            const bb = document.getElementById('bottomBar'); if (bb) bb.classList.toggle('fiveButtons', gliderMode !== 'normal');
             giveAuxBtn.textContent = (gliderMode === 'normal') ? '' : giveLabel;
             giveAuxBtn.classList.toggle('longLabel', giveAuxBtn.textContent.length >= 7);
         }
