@@ -1746,3 +1746,19 @@ Files: `world.js`, `claude/christmas.js`, `claude/backgrounds.js`, `claude/nutcr
 
 When the blue GIVE button appears beside TAKE / DROP (sugar gliders, Region 9) the bar now gets class `fiveButtons` (set in `updateUI()`), and `style.css` shrinks the lettering to 11.5px (10.5px for 7+ letter labels) so REGIONS / WHISTLE fit. Files: `ui.js`, `style.css` (`?v=3.8`), `index.html`.
 
+### 2026-11-20 (87) — Wisdom Potion +200%
+
+`getXPMultiplier()` (state.js) is now x3 while the Wisdom Potion is active (was x1.5); shop text reads "Increases the exp the character gains by 200% (triple)". Price (500) and duration (3 min) unchanged. Note: this speeds up character levels / the Perk Tree for anyone who uses the potion; the balance simulation does not model the potion, so its numbers are unaffected. File: `state.js`.
+
+
+### 2026-11-20 (88) — Pet level cap simulation, pixel Region 10, helper Drone
+
+**Simulation only (not in the game):** pets capped at the player's level. All pets Lv50: 27:12 -> 37:55 (active, no flowers), 19:37 -> 30:09 (12 flowers); casual 27:43 -> 46:50 / 20:07 -> 39:09. Details in `balance/LEVEL_CAP_SIMULATION.md`; `sim2.js`/`run2.js` take `CAP=1`.
+
+**Region 10 redo:** the garden ground is now a cached pixel-style background (`bgBuildGarden` in `backgrounds.js`, registered as region 10; speckled lawn, blades, clover, meadow flowers, flagstones, leafy hedge, plank-framed bed with corner posts) like regions 1-9. `main.js` blits it with `drawRegionBackground(10)` (the Christmas overlay is applied by the cache) and still draws the 12 live plots per frame. The old per-frame `drawGardenBackground()` in `world.js` is now unused.
+
+**Drone (new `drone.js`):** left-side DRONE button (appears once any pet reaches Lv50, saved). Tap = 5 minutes of flight (placeholder: `DRONE_AD_HOOK()` is where the rewarded ad goes later); button shows the countdown. The drone works through regions 1,2,3,5,6,7,8,9,10 in turn, even off-screen: fills feeder boxes from the player's food (up to capacity), collects Region 3 eggs (egg + 1 XP + Easter task, like the player), waters thirsty (matured, unwatered) blooms from the player's water. Drawn as a pixel sprite when it is in the region you are viewing. Time left is saved (`stateMatrix.drone`). Hooks: `tickShopBuffs` -> `tickDrone`, `main.js` -> `drawDrone`. Files: `drone.js`, `index.html`, `style.css` (`?v=3.9`), `state.js`, `main.js`, `backgrounds.js`.
+
+### 2026-11-20 (89) — Top-left HUD: smaller drone icon + buff icons
+
+The drone button is now just a small pixel icon (no "DRONE" word; the 5:00 countdown shows under it only while flying). It lives in a new top-left stack `#leftHud` that moves down automatically under the tracked-task text when a task is tracked. Running shop buffs (Cake, Wisdom Potion) show in the same stack as icon + time only (`updateLeftHud()` in `drone.js`). The shop no longer shows the countdown for those buffs (it says "Active"). Files: `drone.js`, `index.html`, `style.css` (`?v=4.0`), `ui.js`.
