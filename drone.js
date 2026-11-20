@@ -87,7 +87,28 @@ function droneFinishJob(j) {
 }
 
 // ---- per-frame brain (real-time dt from tickShopBuffs) ----------------------------------------
+// Top-left stack (#leftHud): sits under the tracked-task text if there is one, then the drone icon, then one chip
+// (icon + time left) per running shop buff (Cake, Wisdom Potion).
+function updateLeftHud() {
+    const hud = document.getElementById('leftHud');
+    if (!hud) return;
+    const t = document.getElementById('trackedTaskBox');
+    const top = (t && t.style.display !== 'none' && t.offsetHeight) ? (t.offsetTop + t.offsetHeight + 6) : 6;
+    const topPx = top + 'px';
+    if (hud.style.top !== topPx) hud.style.top = topPx;
+    const box = document.getElementById('buffHud');
+    if (!box) return;
+    const parts = SHOP_ITEMS.filter(i => isShopBuffActive(i.id)).map(i => i.icon + ' ' + formatBuffTime(shopBuffs[i.id]));
+    const sig = parts.join('|');
+    if (box.dataset.sig === sig) return;
+    box.dataset.sig = sig;
+    box.innerHTML = '';
+    parts.forEach(p => { const d = document.createElement('div'); d.className = 'buffChip'; d.textContent = p; box.appendChild(d); });
+}
+
 function tickDrone(dt) {
+    drone.hudT = (drone.hudT || 0) - dt;
+    if (drone.hudT <= 0) { drone.hudT = 0.2; updateLeftHud(); }
     drone.rotor += dt * 40;
     if (!drone.unlocked) { drone.scan -= dt; if (drone.scan <= 0) { drone.scan = 2; droneCheckUnlock(); } return; }
     if (!droneActive()) return;
@@ -160,8 +181,8 @@ function updateDroneButton() {
     if (!b) return;
     b.style.display = drone.unlocked ? 'flex' : 'none';
     const l = document.getElementById('droneBtnLabel');
-    const txt = droneActive() ? formatBuffTime(drone.time) : 'DRONE';
-    if (l && l.textContent !== txt) { l.textContent = txt; l.setAttribute('data-text', txt); }
+    const txt = droneActive() ? formatBuffTime(drone.time) : '';       // icon alone while idle; the time only while flying
+    if (l && l.textContent !== txt) { l.textContent = txt; l.style.display = txt ? 'block' : 'none'; }
     b.classList.toggle('active', droneActive());
 }
 function initDroneButton() {

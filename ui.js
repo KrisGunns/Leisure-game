@@ -1572,7 +1572,7 @@ function refreshShopIfChanged() {
 function updateShopTimers() {
     if (!shopContent) return;
     shopContent.querySelectorAll('[data-buff-id]').forEach(el => {
-        el.textContent = `⏳ ${formatBuffTime(shopBuffs[el.dataset.buffId])} left`;
+        el.textContent = '✅ Active';
     });
 }
 
@@ -1709,7 +1709,7 @@ function renderShop() {
         SHOP_ITEMS.forEach(item => {
             let active = isShopBuffActive(item.id);
             let shortBy = item.cost - inventory.coins;
-            let meta = active ? `⏳ ${formatBuffTime(shopBuffs[item.id])} left`
+            let meta = active ? '✅ Active'
                 : (shortBy > 0 ? `🪙 ${item.cost} (need ${shortBy} more)` : `🪙 ${item.cost}`);
             let btn = active
                 ? makeShopButton('Active', 'shopActionBtnActive', true, null)
