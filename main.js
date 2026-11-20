@@ -90,7 +90,7 @@ function runGameFrame(timestamp) {
         checkTutorialTriggers();   // perk-point / fully-grown-pet tips (tutorial.js)
         updateGardenButtons();   // Buy Plot / Fertilize / Water button (Region 10)
         updateFishingButton();   // FISH button at the lake edge / dock (Region 5, fishing.js)
-        if (isGardenBoostActive()) {
+        if (currentRegion === 10 && isGardenBoostActive()) {   // garden bonus line: Region 10 only
             const gb = Math.round(countWateredBlooms() * GARDEN_BOOST * 100);
             drawPetText(`🌸 Garden bonus: +${gb}% coins · bees +${gb}% faster`, canvas.width / 2, 64, { size: 10, color: '#ffd1e8' });
         }

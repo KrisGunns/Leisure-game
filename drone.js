@@ -113,6 +113,8 @@ function tickDrone(dt) {
     if (!drone.unlocked) { drone.scan -= dt; if (drone.scan <= 0) { drone.scan = 2; droneCheckUnlock(); } return; }
     if (!droneActive()) return;
     drone.time -= dt;
+    drone.uiTick = (drone.uiTick || 0) + dt;                 // countdown refresh: BEFORE the state machine, which returns early in places
+    if (drone.uiTick > 0.25) { drone.uiTick = 0; updateDroneButton(); }
     if (drone.time <= 0) {
         drone.time = 0; drone.mode = 'idle'; drone.job = null;
         showInfoToast('🚁 The drone has landed. Tap the button to send it out again.');
@@ -142,9 +144,6 @@ function tickDrone(dt) {
         }
         drone.timer = 1.5;                                // nothing to do anywhere: hover and look again shortly
     }
-    // keep the button's countdown fresh (about 4x a second is plenty)
-    drone.uiTick = (drone.uiTick || 0) + dt;
-    if (drone.uiTick > 0.25) { drone.uiTick = 0; updateDroneButton(); }
 }
 
 // ---- drawing (pixel sprite, 2x scaled blocks) --------------------------------------------------

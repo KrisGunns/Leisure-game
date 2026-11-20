@@ -1762,3 +1762,13 @@ When the blue GIVE button appears beside TAKE / DROP (sugar gliders, Region 9) t
 ### 2026-11-20 (89) — Top-left HUD: smaller drone icon + buff icons
 
 The drone button is now just a small pixel icon (no "DRONE" word; the 5:00 countdown shows under it only while flying). It lives in a new top-left stack `#leftHud` that moves down automatically under the tracked-task text when a task is tracked. Running shop buffs (Cake, Wisdom Potion) show in the same stack as icon + time only (`updateLeftHud()` in `drone.js`). The shop no longer shows the countdown for those buffs (it says "Active"). Files: `drone.js`, `index.html`, `style.css` (`?v=4.0`), `ui.js`.
+
+### 2026-11-20 (90) — Drone timer fix, garden bonus Region 10 only, achievement popup, perktree.js, faster levelling
+
+- **Drone countdown stuck:** the button's refresh ran at the END of `tickDrone()`, which returns early while the drone idles/waits, so the label froze for stretches. The refresh now runs right after the timer ticks (`drone.js`).
+- **Garden bonus line:** the "🌸 Garden bonus" text is only drawn in Region 10 now (`main.js`).
+- **Achievement popup:** `tickAchievementReady()` (state.js, called from `tickShopBuffs`) checks about once a second and shows the existing blue toast ("🏆 <title> level N reached! +X 💎 waiting") the first time a tier becomes claimable. Non-blocking, fades after ~3 s. Tiers already waiting when the game loads are not re-announced. Claiming is still manual.
+- **Perk tree in its own file:** `perktree.js` (loads before `state.js`; script tag added to `index.html`) holds `PERK_TYPES`, `PERK_TREE_LAYOUT`, `PERK_TREE`, `PERK_BY_ID`, with an edit guide at the top. Nothing else changed in how perks work. `balance/sim2.js` now reads it too.
+- **Faster levelling:** `CHARACTER_XP_STEP` 6 -> 4 (Lv20 needs ~72k XP instead of ~104k). Simulated level at 2 h: casual L16 -> L19, active L18 -> L22. Whole-game time is unchanged (~27 h) because pets, not character level, set it.
+
+Files: `perktree.js` (new), `state.js`, `index.html`, `main.js`, `claude/drone.js`, `balance/sim2.js`, `CHANGELOG.md`.
