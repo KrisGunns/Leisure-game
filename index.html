@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Just a little leisure</title>
-    <link rel="stylesheet" href="style.css?v=3.8">
+    <link rel="stylesheet" href="style.css?v=3.9">
 </head>
 <body>
     <div id="bootCover" style="position:fixed; inset:0; z-index:99999; background:#1e272e; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#f1c40f; font-family:monospace; text-align:center;">
@@ -44,6 +44,9 @@
     <!-- Transparent overlay, drawn at the screen's full pixel density, that pet name/level/state labels are
          drawn onto so they stay sharp (see the CRISP PET TEXT note in world.js). Ignores touches. -->
     <canvas id="labelCanvas"></canvas>
+
+    <!-- Drone helper (drone.js): appears on the left once a pet reaches Lv50; tapping it starts the 5-minute flight. -->
+    <button id="droneBtn" style="display:none;"><canvas id="droneBtnIcon" width="32" height="20"></canvas><span id="droneBtnLabel" class="boneLabel" data-text="DRONE" style="--bone-fill: linear-gradient(180deg,#d4f1ff 20%,#6cc3f5);">DRONE</span></button>
 
     <!-- The task the player chose to TRACK (MENU -> TASKS): name + progress, e.g. "Easter 3/8". Hidden when none. -->
     <div id="trackedTaskBox" style="display: none;"></div>
@@ -489,6 +492,7 @@
     <script src="fishing.js"></script>
     <script src="updater.js"></script>
     <script src="nutcracker.js"></script>
+    <script src="drone.js"></script>
     <script src="main.js"></script>
 </body>
 </html>

@@ -1007,10 +1007,67 @@ function bgBuildBedroom(c, W, H, r) {
     bgVignette(c, W, H, 0.2);
 }
 
+// ---------- REGION 10: FLOWER GARDEN -------------------------------------------------------
+// Same pixel look as the other regions: speckled mown lawn, hedge, flagstones, a plank-built raised bed.
+// The 12 plots themselves are drawn per frame by drawGardenPlots() (world.js) on top of this.
+function bgBuildGarden(c, W, H, r) {
+    const L = getGardenLayout(), bed = L.bed;
+    c.fillStyle = '#62bd5c'; c.fillRect(0, 0, W, H);
+    for (let y = 0; y < H; y += 56) { c.fillStyle = 'rgba(255,255,255,0.06)'; c.fillRect(0, y, W, 28); }
+    bgSpeckle(c, r, 0, 0, W, H, ['#58b053', '#4fa54b', '#70cc69', '#7bd374', '#5cb457'], W * H / 6, 2, 1);
+    bgBlades(c, r, 0, 4, W, H, ['#3f8f3d', '#48a044', '#7ede77', '#8be884', '#5cb857'], W * H / 150, 3, 7);
+    for (let i = 0; i < 60; i++) {                                               // clover
+        const x = r() * W | 0, y = r() * H | 0;
+        c.fillStyle = '#3f9444'; c.fillRect(x, y, 2, 2); c.fillRect(x + 3, y + 1, 2, 2); c.fillRect(x + 1, y + 3, 2, 2);
+        c.fillStyle = '#5fc062'; c.fillRect(x, y, 1, 1); c.fillRect(x + 3, y + 1, 1, 1); c.fillRect(x + 1, y + 3, 1, 1);
+    }
+    // meadow flowers, kept off the raised bed
+    const cols = ['#ff8fb1', '#ffffff', '#ffd54f', '#b39ddb', '#ff7043', '#81d4fa'];
+    for (let i = 0; i < 70; i++) {
+        const x = 8 + r() * (W - 16), y = 44 + r() * (H - 52);
+        if (x > bed.x - 14 && x < bed.x + bed.w + 14 && y > bed.y - 14 && y < bed.y + bed.h + 14) continue;
+        const col = cols[Math.floor(r() * cols.length)];
+        if (col === '#ffffff') bgDaisy(c, x, y, '#ffffff', '#f6c93a'); else bgDot(c, x, y, col, '#ffffff');
+    }
+    // stepping stones from the bottom to the bed
+    let px = W / 2;
+    for (let y = H - 16, k = 0; y > bed.y + bed.h + 22; y -= 30, k++) {
+        px = W / 2 + (k % 2 ? 12 : -12) + (r() - 0.5) * 6;
+        bgStone(c, r, px | 0, y, 18 + r() * 4, 10 + r() * 2);
+        bgTuft(c, r, (px - 24) | 0, y + 4, 3, 3, 5, ['#3f8f3d', '#5cb857']);
+        bgTuft(c, r, (px + 25) | 0, y + 3, 3, 3, 5, ['#3f8f3d', '#5cb857']);
+    }
+    // hedge along the top: layered leaf clumps with blossoms
+    const hedge = { leafD: '#2c7a3a', leafM: '#3d9a4a', leafL: '#63c46a', fruit: '#ff8fb6' };
+    c.fillStyle = '#25692f'; c.fillRect(0, 0, W, 30);
+    for (let x = -6; x < W + 12; x += 18) bgBush(c, r, x, 22 + ((x / 18 | 0) % 2) * 3, 30, hedge);
+    bgSpeckle(c, r, 0, 0, W, 30, ['#1f5a28', '#3d9a4a', '#63c46a'], 160, 2, 1);
+    bgShadow(c, W / 2, 33, W / 2, 5, 0.2);
+    // raised bed: plank frame, dark earth, soil stripes
+    bgShadow(c, bed.x + bed.w / 2 + 4, bed.y + bed.h + 8, bed.w / 2 + 8, 8, 0.3);
+    c.fillStyle = '#6b4526'; c.fillRect(bed.x - 8, bed.y - 8, bed.w + 16, bed.h + 16);
+    c.fillStyle = '#9a6a3f'; c.fillRect(bed.x - 8, bed.y - 8, bed.w + 16, 4);
+    c.fillStyle = '#4e3220'; c.fillRect(bed.x - 8, bed.y + bed.h + 4, bed.w + 16, 4);
+    for (let x = bed.x - 8; x < bed.x + bed.w + 8; x += 22) { c.fillStyle = 'rgba(40,20,5,0.45)'; c.fillRect(x, bed.y - 8, 1, 4); c.fillRect(x, bed.y + bed.h + 4, 1, 4); }
+    for (let y = bed.y - 4; y < bed.y + bed.h + 4; y += 22) { c.fillStyle = 'rgba(40,20,5,0.45)'; c.fillRect(bed.x - 8, y, 4, 1); c.fillRect(bed.x + bed.w + 4, y, 4, 1); }
+    bgSpeckle(c, r, bed.x - 8, bed.y - 8, bed.w + 16, 4, ['#b98450', '#80552f'], 40, 3, 1);
+    c.fillStyle = '#5e4129'; c.fillRect(bed.x, bed.y, bed.w, bed.h);
+    bgSpeckle(c, r, bed.x, bed.y, bed.w, bed.h, ['#4c331f', '#6c4a2f', '#3b2616', '#7a5636'], bed.w * bed.h / 14, 2, 1);
+    c.fillStyle = 'rgba(0,0,0,0.12)';
+    for (let x = bed.x + 6; x < bed.x + bed.w - 6; x += 17) c.fillRect(x, bed.y + 3, 3, bed.h - 6);
+    // corner posts
+    [[bed.x - 10, bed.y - 10], [bed.x + bed.w + 2, bed.y - 10], [bed.x - 10, bed.y + bed.h + 2], [bed.x + bed.w + 2, bed.y + bed.h + 2]].forEach(q => {
+        c.fillStyle = '#4e3220'; c.fillRect(q[0], q[1], 8, 8); c.fillStyle = '#b98450'; c.fillRect(q[0], q[1], 8, 2); c.fillRect(q[0], q[1], 2, 8);
+    });
+    bgRock(c, r, W - 26, H - 60, 14);
+    bgLightPools(c, r, W, H, 6, 0.1, '255,255,210');
+    bgVignette(c, W, H, 0.18);
+}
+
 // ---------- cache + public entry points -----------------------------------------------------
 const REGION_BG_BUILDERS = {
     1: bgBuildLawn, 2: bgBuildSafari, 3: bgBuildBackyard, 4: bgBuildBeeYard,
-    5: bgBuildLake, 6: bgBuildSty, 7: bgBuildBamboo, 8: bgBuildJungle, 9: bgBuildBedroom
+    5: bgBuildLake, 6: bgBuildSty, 7: bgBuildBamboo, 8: bgBuildJungle, 9: bgBuildBedroom, 10: bgBuildGarden
 };
 const REGION_BG_CACHE = {};
 

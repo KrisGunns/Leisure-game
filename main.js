@@ -63,9 +63,10 @@ function runGameFrame(timestamp) {
 
         // --- REGION GRID BACKGROUNDS RENDERING LAYER ---
         // Regions 1-9: detailed scenery painted once into a cache and blitted here (backgrounds.js).
-        if (currentRegion <= 9) {
-            drawRegionBackground(currentRegion);   // 9 = bedroom, painted from getBedroomLayout() (world.js)
-        } else if (currentRegion === 10) {
+        if (currentRegion <= 10) {
+            drawRegionBackground(currentRegion);   // 9 = bedroom (getBedroomLayout), 10 = garden bed (getGardenLayout)
+            if (currentRegion === 10) drawGardenPlots();   // plots are live, so they are drawn per frame
+        } else if (false) {
             // Flower garden: lawn, hedge, meadow flowers and the raised bed with the 12 plots
             // (world.js). Plots are part of the ground, so they are drawn here, under the pets.
             drawGardenBackground();
@@ -191,6 +192,7 @@ function runGameFrame(timestamp) {
             player.draw();
             drawHeldGlider();
         }
+        drawDrone();           // helper drone (drone.js) flies above walkers
         drawRegionForeground(currentRegion);   // Region 6: the bottom fence stands in front of the walkers' legs
 
         // Bird excursion fly-away/landing poof effects (world.js) — drawn last so they

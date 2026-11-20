@@ -635,7 +635,7 @@ const shopBuffs = {
 // straight from this list. `id` must match a key in `shopBuffs` above; `duration` is in seconds.
 const SHOP_ITEMS = [
     { id: 'cake',         icon: '🍰', name: 'Cake',          cost: 200, duration: 180, desc: 'Increases all pets\' speed and foraging speed by 50%.' },
-    { id: 'wisdomPotion', icon: '🧪', name: 'Wisdom Potion', cost: 500, duration: 180, desc: 'Increases the exp the character gains by 50%.' }
+    { id: 'wisdomPotion', icon: '🧪', name: 'Wisdom Potion', cost: 500, duration: 180, desc: 'Increases the exp the character gains by 200% (triple).' }
 ];
 
 // Gold paid per unit sold. Keys are `inventory` keys, so the Sell tab (ui.js) can read
@@ -816,6 +816,7 @@ function tickShopBuffs() {
     if (dt > 0.25) dt = 0.25;
     gameStats.playSeconds += dt;   // total time played: only frames that actually render, so it pauses while backgrounded
     tickTasks();
+    if (typeof tickDrone === 'function') tickDrone(dt);
 
     SHOP_ITEMS.forEach(item => {
         if (shopBuffs[item.id] > 0) {
@@ -861,13 +862,13 @@ function showBuffExpiredToast(item) {
 // in exactly one place. (They read the timer live, so they switch off the instant it expires.)
 function getPetSpeedMultiplier()   { return isShopBuffActive('cake') ? 1.5 : 1; }
 function getPetForageMultiplier()  { return isShopBuffActive('cake') ? 1.5 : 1; }
-function getXPMultiplier()         { return isShopBuffActive('wisdomPotion') ? 1.5 : 1; }
+function getXPMultiplier()         { return isShopBuffActive('wisdomPotion') ? 3 : 1; }
 
 // Global Core XP Injection Engine Function
 function gainPlayerXP(amount) {
     if (typeof amount !== 'number' || isNaN(amount)) return;
 
-    // Wisdom Potion: +50% XP. character.xp is allowed to hold fractions (a 1-XP grant
+    // Wisdom Potion: +200% XP (x3). character.xp is allowed to hold fractions (a 1-XP grant
     // becomes 1.5) — rounding each grant instead would erase the bonus on the common
     // "+1 per item" grants. Every place that *displays* xp floors it.
     amount *= getXPMultiplier();
@@ -1365,6 +1366,8 @@ function saveGameProgress() {
 
         stateMatrix.characterData = character;
 
+        if (typeof droneSaveData === 'function') stateMatrix.drone = droneSaveData();
+
         stateMatrix.shopBuffs = {
             cake: shopBuffs.cake,
             wisdomPotion: shopBuffs.wisdomPotion
@@ -1435,6 +1438,8 @@ function loadGameProgress() {
                     .map(e => ({ x: Number(e.x), y: Number(e.y) }));
             }
         });
+
+        guard('drone', () => { if (typeof droneLoadData === 'function') droneLoadData(stateMatrix.drone); });
 
         guard('character', () => {
             // Diamond purchases (themes / tamers) — restored BEFORE the character so a saved Nutcracker model is still valid.
