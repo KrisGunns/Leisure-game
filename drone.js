@@ -110,6 +110,8 @@ function tickDrone(dt) {
     drone.hudT = (drone.hudT || 0) - dt;
     if (drone.hudT <= 0) { drone.hudT = 0.2; updateLeftHud(); }
     drone.rotor += dt * 40;
+    drone.badgeT = (drone.badgeT || 0) - dt;
+    if (drone.badgeT <= 0) { drone.badgeT = 0.25; updateRegionsDroneBadge(); }
     if (!drone.unlocked) { drone.scan -= dt; if (drone.scan <= 0) { drone.scan = 2; droneCheckUnlock(); } return; }
     if (!droneActive()) return;
     drone.time -= dt;
@@ -172,6 +174,24 @@ function drawDrone() {
         for (let k = 0; k < 3; k++) c.fillRect(x - 4 + k * 4, y + 22 + ((performance.now() / 90 + k * 3) % 10), 2, 2);
     }
     c.restore();
+}
+
+// ---- Regions screen: a small drone icon on the card of the region the drone is in (a trip counts as the region it is heading to) ----
+function updateRegionsDroneBadge() {
+    const list = document.getElementById('regionsList');
+    if (!list) return;
+    const target = (droneActive() && drone.unlocked) ? ((drone.mode === 'transit' && drone.job) ? drone.job.region : drone.region) : 0;
+    const old = list.querySelector('.regionDrone');
+    if (old && Number(old.parentNode.dataset.region) === target) return;
+    if (old) old.remove();
+    if (!target) return;
+    const card = list.querySelector('.regionCard[data-region="' + target + '"]');
+    if (!card) return;
+    const src = document.getElementById('droneBtnIcon');
+    const b = document.createElement('div'); b.className = 'regionDrone'; b.title = 'Drone is here';
+    const cv = document.createElement('canvas'); cv.width = 32; cv.height = 20;
+    if (src) cv.getContext('2d').drawImage(src, 0, 0);
+    b.appendChild(cv); card.appendChild(b);
 }
 
 // ---- button -------------------------------------------------------------------------------------

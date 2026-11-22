@@ -1368,3 +1368,8 @@ body, html {
     background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.35);
     border-radius: 8px; padding: 2px 6px; pointer-events: none;
 }
+
+/* Drone marker on the Regions screen card of the region the drone is in (drone.js) */
+.regionCard { position: relative; }
+.regionDrone { position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.6); border: 1px solid #8fd3ff; border-radius: 6px; padding: 2px 3px; line-height: 0; pointer-events: none; }
+.regionDrone canvas { width: 32px !important; height: 20px !important; image-rendering: pixelated; display: block; }

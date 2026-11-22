@@ -1772,3 +1772,7 @@ The drone button is now just a small pixel icon (no "DRONE" word; the 5:00 count
 - **Faster levelling:** `CHARACTER_XP_STEP` 6 -> 4 (Lv20 needs ~72k XP instead of ~104k). Simulated level at 2 h: casual L16 -> L19, active L18 -> L22. Whole-game time is unchanged (~27 h) because pets, not character level, set it.
 
 Files: `perktree.js` (new), `state.js`, `index.html`, `main.js`, `claude/drone.js`, `balance/sim2.js`, `CHANGELOG.md`.
+
+### 2026-11-20 (91) — Drone marker on the Regions screen
+
+While the drone is flying, the Regions screen shows its small pixel icon in the top-right corner of the card of the region it is in (while travelling: the region it is heading to). `updateRegionsDroneBadge()` (`drone.js`) refreshes it 4x a second, also while the window is open; `buildRegionsWindow()` (`ui.js`) tags cards with `data-region`. CSS `.regionDrone` (`style.css`, now `?v=4.1`). Files: `drone.js`, `ui.js`, `style.css`, `index.html`, `CHANGELOG.md`.

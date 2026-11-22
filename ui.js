@@ -2805,6 +2805,7 @@ function buildRegionsWindow() {
         const owned = isRegionUnlocked(info.n);
         const card = document.createElement('div');
         card.className = 'regionCard' + (owned ? '' : ' regionLocked') + (owned && info.n === currentRegion ? ' regionCurrent' : '');
+        card.dataset.region = info.n;
         const cv = document.createElement('canvas');
         card.appendChild(cv);
         drawRegionPreview(cv, info.n, !owned);
@@ -2833,6 +2834,7 @@ function buildRegionsWindow() {
         card.addEventListener('click', onPick);
         regionsListEl.appendChild(card);
     });
+    if (typeof updateRegionsDroneBadge === 'function') updateRegionsDroneBadge();
 }
 
 function openRegionsWindow() {
