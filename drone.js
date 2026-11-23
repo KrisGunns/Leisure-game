@@ -37,7 +37,8 @@ function droneCheckUnlock() {
     try { ok = getCodexPets().some(p => p.level >= DRONE_UNLOCK_LEVEL); } catch (e) { ok = false; }
     if (!ok) return;
     drone.unlocked = true;
-    showInfoToast('🚁 A pet reached Lv50 - the Drone is unlocked! Tap the button on the left.');
+    if (typeof playUnlockFx === 'function') playUnlockFx({ icon: '🚁', title: 'Drone', sub: 'A pet reached Lv50 - tap the drone button (top-left)' });
+    else showInfoToast('🚁 A pet reached Lv50 - the Drone is unlocked! Tap the button on the left.');
     updateDroneButton();
     saveGameProgress();
 }

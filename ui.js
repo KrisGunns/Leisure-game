@@ -1625,6 +1625,7 @@ function buyFeederUpgrade(n) {
     inventory.coins -= up.cost;
     feederUpgradeLevel = n;
     saveGameProgress();
+    if (typeof playUnlockFx === 'function') playUnlockFx({ icon: '📦', title: 'Feeder Upgrade ' + n, sub: 'Feeders now hold ' + up.capacity + ' food', big: false });
     renderShop();
     updateUI();
 }

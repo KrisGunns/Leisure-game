@@ -1776,3 +1776,7 @@ Files: `perktree.js` (new), `state.js`, `index.html`, `main.js`, `claude/drone.j
 ### 2026-11-20 (91) — Drone marker on the Regions screen
 
 While the drone is flying, the Regions screen shows its small pixel icon in the top-right corner of the card of the region it is in (while travelling: the region it is heading to). `updateRegionsDroneBadge()` (`drone.js`) refreshes it 4x a second, also while the window is open; `buildRegionsWindow()` (`ui.js`) tags cards with `data-region`. CSS `.regionDrone` (`style.css`, now `?v=4.1`). Files: `drone.js`, `ui.js`, `style.css`, `index.html`, `CHANGELOG.md`.
+
+### 2026-11-22 (92) — Unlock effects
+
+New `unlockfx.js` (script tag in `index.html`, after `drone.js`): `playUnlockFx({icon,title,sub,big})` = gold flash + pixel confetti/sparkle burst + pop-in "UNLOCKED!" banner (~2.4 s; small version ~1.5 s with the banner higher up). Never blocks input, sits above every menu screen, queues when several unlocks happen together. Hooked into: regions and shop pets (`buyUnlockable`), themes and tamers (`buyShopExtra`), perks (`unlockPerk`, small), feeder upgrades (`buyFeederUpgrade`, small), and the Drone unlock (`droneCheckUnlock`, replaces its old toast). Files: `unlockfx.js` (new), `state.js`, `ui.js`, `claude/drone.js`, `index.html`, `CHANGELOG.md`.

@@ -474,6 +474,7 @@ function unlockPerk(id) {
     character.perkPoints -= perk.cost;
     character.perks.push(perk.id);
     saveGameProgress();
+    if (typeof playUnlockFx === 'function') playUnlockFx({ icon: perk.icon, title: perk.name, sub: perk.text, big: false });
     return true;
 }
 
@@ -670,6 +671,7 @@ function buyShopExtra(kind, item) {
     inventory.diamonds -= item.costDiamonds;
     extraUnlocks[key] = true;
     saveGameProgress();
+    if (typeof playUnlockFx === 'function') playUnlockFx({ icon: item.icon, title: item.name, sub: kind === 'theme' ? 'Equip it from the Bag' : 'Pick it on the Tamers screen' });
     return true;
 }
 // Equips a theme ('none' = the normal look). Backgrounds are cached per theme, so the caches are dropped here.
@@ -687,6 +689,7 @@ function buyUnlockable(id) {
     inventory.coins -= u.cost;
     unlockedIds[id] = true;
     saveGameProgress();
+    if (typeof playUnlockFx === 'function') playUnlockFx({ icon: u.icon, title: u.name, sub: u.kind === 'region' ? 'A new region is open - find it under REGIONS' : 'A new pet has joined!' });
     return true;
 }
 
