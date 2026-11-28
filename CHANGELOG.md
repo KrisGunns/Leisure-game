@@ -1784,3 +1784,15 @@ New `unlockfx.js` (script tag in `index.html`, after `drone.js`): `playUnlockFx(
 ### 2026-11-22 (93) — Settings: Wipe local data
 
 New `wipe.js` (loaded after `account.js`; `account.js` itself is unchanged): it wraps `openSettingsMenu()` and adds a red "🗑️ Wipe local data" button under Account / Developer. After a confirm dialog it deletes this device's save and its safety copy and reloads into a brand-new game. The cloud save is never deleted or overwritten. If the player is signed in, the device is signed out locally first and its one-device lock is released (lock fields only, no save data is sent), because otherwise the fresh game's autosave would overwrite the cloud save. Afterwards the player signs in again and loads the cloud save as normal (Account -> sign in -> USE CLOUD; with no local save it loads automatically). Not signed in: the dialog warns that nothing can be recovered. Files: `wipe.js` (new), `index.html`, `CHANGELOG.md`.
+
+### 2026-11-28 (94) — Account deletion, Android back button, privacy policy + delete-account pages
+
+**Added**
+- **Settings > ❌ Delete account & cloud data** (signed-in players only, in `wipe.js`): asks for the password again, signs in fresh to prove it, deletes the Firestore document `saves/{uid}`, then the Firebase login (`accounts:delete`), then signs out locally and reloads. The save on this device is kept. Wrong password / no internet changes nothing (error toast). Order is save first, login second.
+- **Settings > 📄 Privacy policy** button opens `PRIVACY_POLICY_URL` (top of `wipe.js`, assumed `https://krisgunns.github.io/Leisure-game/privacy.html`).
+- **`backbutton.js`** (new, loads after `unlockfx.js`): Android BACK closes the top-most open dialog/screen first; the tutorial pop-up swallows BACK (OK closes it); fishing gives up the line; with nothing open the first press shows "Press back again to exit" and a second within 2.5 s saves and exits. Uses the Capacitor App plugin if installed (`@capacitor/app`), otherwise a history trap. `window.jallHandleBack()` exists for testing.
+- **`privacy.html`** and **`delete-account.html`** (new static pages; placeholders for name/email/date must be filled in).
+
+**Verified:** Playwright with mocked Firebase calls (right password: sign-in, DELETE doc, delete login, signed out; wrong password: nothing deleted) and back-button stack order. Not tested against real Firebase.
+**Phone test advisable:** back button and account deletion (use a throwaway account).
+**Files:** `wipe.js`, `backbutton.js`, `privacy.html`, `delete-account.html`, `index.html` (one script tag), `ROADMAP.md`, `CHANGELOG.md`.
